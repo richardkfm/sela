@@ -1,0 +1,61 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# --- Node ---
+node_modules/
+dist/
+build/
+.next/
+.cache/
+*.tsbuildinfo
+
+# --- Logs ---
+*.log
+npm-debug.log*
+
+# --- Geodata artefacts ---
+# Spatial work produces large binaries. Data is referenced by its source and
+# licence in docs/data/, never committed to the repository.
+data/raw/
+data/interim/
+data/processed/
+*.gpkg
+*.geojsonl
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.tif
+*.tiff
+*.img
+*.laz
+*.las
+*.parquet
+*.fgb
+*.mbtiles
+*.pmtiles
+*.sqlite
+*.gdb/
