@@ -1,0 +1,11 @@
+# GDAL-based, run-once ingest container (ADR-0002). Not long-lived: it runs
+# ingest/run.sh and exits, invoked via `docker compose --profile ingest run
+# ingest`. Phase 1 placeholder — see ingest/README.md.
+
+FROM ghcr.io/osgeo/gdal:alpine-small-3.9.2
+
+WORKDIR /ingest
+COPY ingest/ .
+RUN chmod +x run.sh
+
+CMD ["./run.sh"]

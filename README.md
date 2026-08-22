@@ -2,7 +2,7 @@
 
 **Spatial decision-support for land-use trade-offs — comparing what is built, what is preserved, and what is restored.**
 
-> **Status: `0.1.0` — planning, moving to `0.2.x`.** This repository currently contains planning documents only. Implementation has not begun, but the stack and the route to a first deployment are now decided — see [`docs/architecture/roadmap-to-first-deployment.md`](docs/architecture/roadmap-to-first-deployment.md).
+> **Status: `0.2.0` — domain model and architecture.** The ADRs deciding the spatial unit, stack, and basemap are written, and a Docker-deployable application skeleton exists — empty of real data and scoring, which are `0.2.1` and `0.3.0`. See [`docs/architecture/roadmap-to-first-deployment.md`](docs/architecture/roadmap-to-first-deployment.md).
 
 ---
 
@@ -69,19 +69,37 @@ docs/product/mvp.md              MVP definition — scope, flows, screens, succe
 docs/product/design-language.md  Visual standard and shareability format
 docs/architecture/               ADRs and system design
   roadmap-to-first-deployment.md Route from planning documents to a deployable web app
+  adr-0001-spatial-unit.md       Generated hex grid, not ALKIS Flurstück — closes U1
+  adr-0002-geodata-stack.md      Next.js + PostGIS + MapLibre, and the TypeScript/GDAL boundary
+  adr-0003-basemap.md            Self-hosted PMTiles from OSM — closes U8
+docs/domain/glossary.md          DE/EN vocabulary
+docs/data/sources.md             Dataset inventory — the licence gate on Phase 2 ingestion
+app/                             Next.js App Router — map explorer, method page, health check
+lib/design/tokens.ts             Semantic design tokens (design-language.md §4.2)
+lib/db/                          Migration runner and SQL migrations
+lib/scoring/                     Pure scoring functions — placeholder, Phase 2
+ingest/                          GDAL + SQL pipeline — placeholder, Phase 2
+docker/                          Dockerfile (app) and Dockerfile.ingest
+compose.yaml                     app · db (PostGIS) · ingest (profile)
 ```
 
-Directories for `docs/domain/`, `docs/data/`, and application code are created when their phase begins.
+## Running it
+
+```
+cp .env.example .env
+docker compose up          # app on :3000, PostGIS on :5432, migrations applied automatically
+docker compose down -v     # tear down, including the database volume
+```
+
+This currently serves an empty application — no pilot-region data, no scoring, no map tiles yet
+(`0.2.1` and `0.3.0`). It exists to prove the deployment path works before real data arrives.
 
 ## Next planning documents
 
 | Document | Purpose | Band |
 |---|---|---|
-| `docs/domain/glossary.md` | Shared vocabulary — parcel, scenario, criterion, outcome, in DE and EN | `0.1.x` |
-| `docs/data/sources.md` | Dataset inventory: coverage, licence, resolution, update cadence, redistributability | `0.1.x` |
 | `docs/domain/scoring-criteria.md` | Criteria catalogue per technology, with direction, weight rationale, and citation | `0.2.x` |
-| `docs/architecture/adr-0001-spatial-unit.md` | ALKIS *Flurstück* vs. generated grid — the decision everything else depends on | `0.2.x` |
-| `docs/architecture/adr-0002-geodata-stack.md` | Storage, processing, and tile serving | `0.2.x` |
+| `docs/architecture/adr-0004-constraints.md` | Hard regulatory constraints as filters vs. scored penalties (U4) | `0.2.1` |
 
 ## Versioning
 
