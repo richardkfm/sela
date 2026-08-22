@@ -1,11 +1,16 @@
 # GDAL-based, run-once ingest container (ADR-0002). Not long-lived: it runs
 # ingest/run.sh and exits, invoked via `docker compose --profile ingest run
-# ingest`. Phase 1 placeholder — see ingest/README.md.
+# ingest` (add `-- --fixture` for the synthetic dev/test path — see
+# ingest/fixtures/README.md). GDAL provides ogr2ogr/gdalwarp; jq and
+# postgresql-client are added for the pipeline's manifest check and SQL
+# steps (roadmap §4.2).
 
 FROM ghcr.io/osgeo/gdal:alpine-small-3.9.2
 
+RUN apk add --no-cache jq postgresql-client
+
 WORKDIR /ingest
 COPY ingest/ .
-RUN chmod +x run.sh
+RUN chmod +x *.sh
 
-CMD ["./run.sh"]
+ENTRYPOINT ["./run.sh"]

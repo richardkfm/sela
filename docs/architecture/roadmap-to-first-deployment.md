@@ -118,6 +118,18 @@ enabled. `docker compose down -v && docker compose up` reproduces it.
 scenarios across the shared outcome dimensions, and every number carries a criterion with a
 source, licence, weight and confidence.
 
+**Status note (2026-08-22):** §2.2's gate did not close before this phase's work started — as of
+this date, every candidate dataset in `docs/data/sources.md` is still `to_confirm` or
+`unconfirmed`, and two of four licence-verification fetches attempted this session failed outright
+(see that document's verification log). Rather than either stall on licence research indefinitely
+or quietly ingest data whose redistributability is unverified — both of which `CLAUDE.md` §5
+forbids implicitly or explicitly — this phase's **architecture** landed first: the schema (§4.1),
+ADR-0004 (§4.3), the scoring engine (§4.3), and the ingest pipeline's mechanics (§4.2), the last of
+these proved end-to-end against synthetic fixtures (`ingest/fixtures/`) rather than real data. Real
+ingestion — and therefore this section's full "done when" bar — remains open, tracked as follow-up
+work gated on `docs/data/sources.md` reaching Confirmed per dataset. This split was confirmed with
+the project owner before implementation, per `CLAUDE.md` §3.
+
 Keeping this phase headless is deliberate: it makes the scoring testable in isolation, before
 any pixel can hide a gap in it.
 
@@ -158,10 +170,12 @@ deltas against the `status_quo` baseline. Every output row records a `method_ver
 
 Two open questions must close here:
 
-- **U4 — hard constraints as filters or as scored penalties.** Recommendation: *filter, with the
-  reason surfaced*. A cell inside a Naturschutzgebiet returns "excluded", naming the constraint,
-  rather than a low score. A low score invites arguing the weight; an exclusion states the law.
-  Record as ADR-0004 — it changes both the interface and sela's legal exposure.
+- **U4 — hard constraints as filters or as scored penalties. Closed — `docs/architecture/adr-0004-constraints-as-filters.md`.**
+  Recommendation: *filter, with the reason surfaced*. A cell inside a Naturschutzgebiet returns
+  "excluded", naming the constraint, rather than a low score. A low score invites arguing the
+  weight; an exclusion states the law. It changes both the interface and sela's legal exposure —
+  implemented in `lib/db/migrations/0002_domain_schema.sql`'s `suitability_verdict` table and
+  `lib/scoring/suitability.ts`.
 - **U2 — nature-capital indicators.** Ship only what is citable to an established method. Where
   an indicator is not defensible for v0.1 it is `not_modelled`, which §4.1 already makes a
   first-class answer rather than a gap.

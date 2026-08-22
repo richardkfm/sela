@@ -1,0 +1,21 @@
+{
+  "$comment": "Machine-readable mirror of docs/data/sources.md's Licence position / Status columns. This is what 01_fetch.sh actually reads to decide whether a real fetch may run — the prose document is the record of *why*, this file is what the pipeline checks before touching a network. The two must be kept in sync by hand: whenever a row in docs/data/sources.md changes status, update the matching entry here in the same change.",
+  "sources": {
+    "bfn-schutzgebiete": {
+      "status": "to_confirm",
+      "docRow": "BfN Schutzgebiete (WFS)"
+    },
+    "bkg-clc5": {
+      "status": "to_confirm",
+      "docRow": "BKG CORINE Land Cover 5 ha (CLC5)"
+    },
+    "osm-geofabrik": {
+      "status": "to_confirm",
+      "docRow": "OpenStreetMap via Geofabrik"
+    },
+    "dwd-cdc-radiation": {
+      "status": "unconfirmed",
+      "docRow": "DWD CDC radiation grids"
+    }
+  }
+}

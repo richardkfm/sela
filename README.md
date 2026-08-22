@@ -2,7 +2,7 @@
 
 **Spatial decision-support for land-use trade-offs — comparing what is built, what is preserved, and what is restored.**
 
-> **Status: `0.2.0` — domain model and architecture.** The ADRs deciding the spatial unit, stack, and basemap are written, and a Docker-deployable application skeleton exists — empty of real data and scoring, which are `0.2.1` and `0.3.0`. See [`docs/architecture/roadmap-to-first-deployment.md`](docs/architecture/roadmap-to-first-deployment.md).
+> **Status: `0.2.1` — domain schema, scoring engine, and ingest pipeline mechanics.** The domain schema, ADR-0004, a fully-tested pure scoring engine, and a working (fixture-proven) ingest pipeline exist. **Real dataset ingestion is not yet live** — every candidate dataset in [`docs/data/sources.md`](docs/data/sources.md) is still below Confirmed licence status, so the pipeline currently runs only against synthetic fixtures. See [`docs/architecture/roadmap-to-first-deployment.md`](docs/architecture/roadmap-to-first-deployment.md) §4's status note.
 
 ---
 
@@ -72,13 +72,15 @@ docs/architecture/               ADRs and system design
   adr-0001-spatial-unit.md       Generated hex grid, not ALKIS Flurstück — closes U1
   adr-0002-geodata-stack.md      Next.js + PostGIS + MapLibre, and the TypeScript/GDAL boundary
   adr-0003-basemap.md            Self-hosted PMTiles from OSM — closes U8
+  adr-0004-constraints-as-filters.md  Hard constraints exclude rather than penalize — closes U4
 docs/domain/glossary.md          DE/EN vocabulary
-docs/data/sources.md             Dataset inventory — the licence gate on Phase 2 ingestion
+docs/domain/scoring-criteria.md  Criteria catalogue per technology — weights deliberately left open
+docs/data/sources.md             Dataset inventory and verification log — the licence gate on real ingestion
 app/                             Next.js App Router — map explorer, method page, health check
 lib/design/tokens.ts             Semantic design tokens (design-language.md §4.2)
-lib/db/                          Migration runner and SQL migrations
-lib/scoring/                     Pure scoring functions — placeholder, Phase 2
-ingest/                          GDAL + SQL pipeline — placeholder, Phase 2
+lib/db/                          Migration runner and SQL migrations (domain schema in 0002)
+lib/scoring/                     Pure scoring engine — suitability, outcomes, deltas; unit-tested
+ingest/                          GDAL + SQL pipeline — real mechanics, gated on sources.md, fixture-proven
 docker/                          Dockerfile (app) and Dockerfile.ingest
 compose.yaml                     app · db (PostGIS) · ingest (profile)
 ```
@@ -89,17 +91,23 @@ compose.yaml                     app · db (PostGIS) · ingest (profile)
 cp .env.example .env
 docker compose up          # app on :3000, PostGIS on :5432, migrations applied automatically
 docker compose down -v     # tear down, including the database volume
+
+pnpm install
+pnpm test                  # lib/scoring/ unit + integration tests
+DATABASE_URL=postgresql://sela:sela@localhost:5432/sela ./ingest/run.sh --fixture   # synthetic data, proves the pipeline
 ```
 
-This currently serves an empty application — no pilot-region data, no scoring, no map tiles yet
-(`0.2.1` and `0.3.0`). It exists to prove the deployment path works before real data arrives.
+The application still serves no pilot-region data, real scoring, or map tiles (`0.3.0`) — real
+ingestion is gated on `docs/data/sources.md` reaching Confirmed licence status per dataset, and
+real scoring weights are gated on the `CLAUDE.md` §3 confirmation process against
+`docs/domain/scoring-criteria.md`.
 
 ## Next planning documents
 
 | Document | Purpose | Band |
 |---|---|---|
-| `docs/domain/scoring-criteria.md` | Criteria catalogue per technology, with direction, weight rationale, and citation | `0.2.x` |
-| `docs/architecture/adr-0004-constraints.md` | Hard regulatory constraints as filters vs. scored penalties (U4) | `0.2.1` |
+| `docs/data/sources.md` | Closing the licence gate per dataset so real ingestion can start | `0.2.x`, ongoing |
+| `docs/domain/scoring-criteria.md` | Setting real weights per technology through the `CLAUDE.md` §3 confirmation gate | `0.2.x`, ongoing |
 
 ## Versioning
 

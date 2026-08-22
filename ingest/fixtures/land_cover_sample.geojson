@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "_comment": "SYNTHETIC FIXTURE — coordinates are at (0,0), deliberately chosen off the coast of west Africa ('null island') so this cannot be mistaken for real German pilot-region data. CRS is EPSG:4326, GeoJSON's standard, exercised by 02_reproject.sh exactly like a real vector source would be.",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "class_code": "fixture-arable" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [0.0, 0.0],
+            [0.008, 0.0],
+            [0.008, 0.008],
+            [0.0, 0.008],
+            [0.0, 0.0]
+          ]
+        ]
+      }
+    }
+  ]
+}
