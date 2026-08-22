@@ -25,7 +25,13 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+
+- **`docs/architecture/roadmap-to-first-deployment.md`** — the agreed route from the `0.1.0` planning artefacts to a `docker compose up` deployment, in three phases: `0.2.0` decisions plus a Docker-deployable skeleton, `0.2.1` real pilot-region data and a headless scoring engine, `0.3.0` the five screens and the shareable export. Records the two risks carried by the stack and data choices, the schema constraints that make the product principles unviolatable, and which open questions each phase closes.
+
+### Changed
+
+- **`README.md`** — status no longer states that no technology stack has been chosen; four decisions inside the `CLAUDE.md` §3 confirmation gate are now made (stack, first-deployable scope, spatial unit, basemap), closing **U1** and **U8** subject to their ADRs being written in `0.2.0`.
 
 ---
 
