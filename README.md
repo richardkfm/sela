@@ -2,7 +2,7 @@
 
 **Spatial decision-support for land-use trade-offs — comparing what is built, what is preserved, and what is restored.**
 
-> **Status: `0.1.0` — planning.** This repository currently contains planning documents only. No implementation has begun, and no technology stack has been chosen.
+> **Status: `0.1.0` — planning, moving to `0.2.x`.** This repository currently contains planning documents only. Implementation has not begun, but the stack and the route to a first deployment are now decided — see [`docs/architecture/roadmap-to-first-deployment.md`](docs/architecture/roadmap-to-first-deployment.md).
 
 ---
 
@@ -67,9 +67,11 @@ CHANGELOG.md                     Version history and version ladder
 .claude/settings.json            Plan mode by default
 docs/product/mvp.md              MVP definition — scope, flows, screens, success criteria
 docs/product/design-language.md  Visual standard and shareability format
+docs/architecture/               ADRs and system design
+  roadmap-to-first-deployment.md Route from planning documents to a deployable web app
 ```
 
-Directories for `docs/domain/`, `docs/data/`, `docs/architecture/`, and application code are created when their phase begins.
+Directories for `docs/domain/`, `docs/data/`, and application code are created when their phase begins.
 
 ## Next planning documents
 
