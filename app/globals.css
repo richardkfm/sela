@@ -1,0 +1,57 @@
+/*
+ * CSS custom properties mirroring lib/design/tokens.ts (design-language.md
+ * §4.2, §10). Kept in sync by hand at this scale; if the token set grows
+ * enough for that to drift, generate this file from tokens.ts instead of
+ * duplicating values by convention.
+ */
+
+:root {
+  --ground: #faf9f6;
+  --surface-1: #ffffff;
+  --text-primary: #1f1e1b;
+  --text-secondary: #54524c;
+
+  --scenario-status-quo: #6f6e6a;
+  --scenario-solar-pv: #eda100;
+  --scenario-agri-pv: #eda100;
+  --scenario-onshore-wind: #2a78d6;
+  --scenario-preserve: #008300;
+  --scenario-restore: #e87ba4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #161513;
+    --surface-1: #1f1e1b;
+    --text-primary: #f2f1ee;
+    --text-secondary: #b8b6b0;
+
+    --scenario-status-quo: #8b8a85;
+    --scenario-solar-pv: #c98500;
+    --scenario-agri-pv: #c98500;
+    --scenario-onshore-wind: #3987e5;
+    --scenario-preserve: #008300;
+    --scenario-restore: #d55181;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--ground);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Tabular numerals wherever figures are compared — design-language.md §5. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
