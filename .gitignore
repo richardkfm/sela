@@ -31,6 +31,11 @@ build/
 .cache/
 *.tsbuildinfo
 
+# Copied from the installed maplibre-gl package by scripts/copy-maplibre-worker.mjs
+# (predev/prebuild) — see app/(map)/Map.tsx's setWorkerUrl call.
+public/maplibre-gl-worker.mjs
+public/maplibre-gl-shared.mjs
+
 # --- Playwright (tests/e2e/) ---
 test-results/
 playwright-report/
