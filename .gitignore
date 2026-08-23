@@ -31,6 +31,11 @@ build/
 .cache/
 *.tsbuildinfo
 
+# --- Playwright (tests/e2e/) ---
+test-results/
+playwright-report/
+blob-report/
+
 # --- Logs ---
 *.log
 npm-debug.log*

@@ -13,7 +13,20 @@ export type Scenario =
   | "preserve"
   | "restore";
 
+/** Canonical enumeration order, matching the `outcome.scenario` CHECK constraint. */
+export const SCENARIOS: readonly Scenario[] = [
+  "status_quo",
+  "develop_pv",
+  "develop_agripv",
+  "develop_wind",
+  "preserve",
+  "restore",
+];
+
 export type Technology = "pv" | "agripv" | "wind";
+
+/** Canonical enumeration order, matching the `suitability_verdict.technology` CHECK constraint. */
+export const TECHNOLOGIES: readonly Technology[] = ["pv", "agripv", "wind"];
 
 export type OutcomeDimension =
   | "energy"
@@ -22,6 +35,16 @@ export type OutcomeDimension =
   | "soil_water"
   | "land_use"
   | "local_benefit";
+
+/** Canonical enumeration order, matching the `outcome.dimension` CHECK constraint. */
+export const OUTCOME_DIMENSIONS: readonly OutcomeDimension[] = [
+  "energy",
+  "climate",
+  "nature_capital",
+  "soil_water",
+  "land_use",
+  "local_benefit",
+];
 
 export type Direction = "higher_better" | "lower_better" | "non_monotonic";
 

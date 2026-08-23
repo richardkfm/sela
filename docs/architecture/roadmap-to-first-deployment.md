@@ -192,6 +192,19 @@ and the `not_modelled` path; an integration test asserting that no `outcome` row
 the comparison screen could be published in an article without redesign
 (`design-language.md` §12).
 
+**Status note (2026-08-23):** as at the start of this phase, `docs/data/sources.md` still had no
+`Confirmed` dataset and `docs/domain/scoring-criteria.md`'s weights were still all `open` —
+neither `0.2.1` gate had closed. Rather than block this phase on either, it repeats `0.2.1`'s
+architecture-first split, confirmed with the project owner beforehand: all five screens below, the
+basemap, and the export route are built and demoed against the synthetic fixture dataset with an
+explicitly arbitrary, visibly-labelled illustrative weighting (`lib/scoring/illustrative-weights.ts`)
+rather than real pilot data or real weights. This phase's own "done when" bar above is therefore
+met for the mechanism, not for a real place — see `CHANGELOG.md` `[0.3.0]` for what was actually
+built and verified (including a real PMTiles basemap built end to end against a real, small,
+licence-clear OSM extract, and the full ingest → materialize → screens path run against a real
+local PostGIS instance). Real pilot ingestion, real weights, and the pilot *Landkreis* itself
+(§2.3) remain open.
+
 ### 5.1 Screens (`mvp.md` §7)
 
 | Screen | Route | Note |
@@ -240,11 +253,11 @@ Open questions that stay open, and are not resolved by assumption:
 | # | Question | Status after Phase 3 |
 |---|---|---|
 | U1 | Spatial unit | Closed — ADR-0001 |
-| U2 | Nature-capital indicators | Partially closed — what is defensible ships, the rest is `not_modelled` |
+| U2 | Nature-capital indicators | **Still open.** Phase 3 exercises the `not_modelled` path for real (`restore` × `local_benefit`), but only against `lib/scoring/illustrative-weights.ts`'s explicitly arbitrary aggregation — no real, method-citable indicator has shipped |
 | U3 | Grid-connection capacity in scope | Open |
 | U4 | Constraints as filters or penalties | Closed — ADR-0004 |
 | U5 | Anonymous vs. account-gated | Open |
 | U6 | Disclaimer posture | Open — but the advisory disclaimer appears on the comparison screen and on every export from Phase 3 onward, rather than being added before launch |
-| U7 | Per-source licensing | Closed for the pilot datasets only |
-| U8 | Basemap provider | Closed — ADR-0003 |
+| U7 | Per-source licensing | **Still open.** No candidate dataset reached `Confirmed` before or during Phase 3 (`docs/data/sources.md`); this phase's screens run on synthetic fixture data instead — see `CHANGELOG.md` `[0.3.0]` |
+| U8 | Basemap provider | Closed — ADR-0003. Phase 3 additionally proved the self-hosted PMTiles path end to end against a real (non-pilot) OSM extract — see `ingest/basemap/README.md` |
 | U9 | Wordmark and public name | Open |

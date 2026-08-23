@@ -5,6 +5,8 @@
  * value, per design-language.md §10.
  */
 
+import type { Scenario, Technology } from "@/lib/scoring/types";
+
 export type SecondaryEncoding =
   | "none"
   | "hatch-45"
@@ -69,6 +71,38 @@ export const scenarioTokens = {
 } as const satisfies Record<string, ScenarioToken>;
 
 export type ScenarioTokenKey = keyof typeof scenarioTokens;
+
+/** Joins lib/scoring/types.ts's schema-shaped Scenario to this file's presentation tokens. */
+export const scenarioToTokenKey: Record<Scenario, ScenarioTokenKey> = {
+  status_quo: "statusQuo",
+  develop_pv: "solarPv",
+  develop_agripv: "agriPv",
+  develop_wind: "onshoreWind",
+  preserve: "preserve",
+  restore: "restore",
+};
+
+/** Joins lib/scoring/types.ts's Technology to this file's presentation tokens. */
+export const technologyToTokenKey: Record<Technology, ScenarioTokenKey> = {
+  pv: "solarPv",
+  agripv: "agriPv",
+  wind: "onshoreWind",
+};
+
+/**
+ * CSS custom property name per scenario token — must stay in sync with
+ * app/globals.css's `--scenario-*` declarations (that file's own header
+ * comment says the same). Lets components read the theme-aware (light/dark)
+ * colour via `var(...)` instead of hardcoding tokens.ts's light-mode hex.
+ */
+export const scenarioTokenCssVar: Record<ScenarioTokenKey, string> = {
+  statusQuo: "--scenario-status-quo",
+  solarPv: "--scenario-solar-pv",
+  agriPv: "--scenario-agri-pv",
+  onshoreWind: "--scenario-onshore-wind",
+  preserve: "--scenario-preserve",
+  restore: "--scenario-restore",
+};
 
 /**
  * Roles that fall below the 3:1 contrast floor in light mode

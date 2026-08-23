@@ -26,4 +26,15 @@ without pretending the licence gate has closed.
 |---|---|
 | `pilot_boundary.geojson` | A synthetic ~1.1 km × 1.1 km boundary polygon at "null island" (0,0), EPSG:4326 |
 | `land_cover_sample.geojson` | A synthetic land-cover-shaped polygon nested inside the boundary, same CRS and location, so the two genuinely overlap once both are reprojected by the same `02_reproject.sh` step a real vector source would go through |
-| `seed_fixture_definitions.sql` | A `fixture-land-cover` source row and a `fixture_land_cover_coverage` criterion_definition, weight 1, not a hard constraint |
+| `seed_fixture_definitions.sql` | Three source rows and four criterion_definition rows, weight 1 each: `fixture_land_cover_coverage` (pv), `fixture_agripv_suitability` (agripv), `fixture_wind_resource` (wind), and `fixture_protection_status` — a hard constraint applying to all three, so the ADR-0004 exclusion path is exercised |
+
+### Phase 3 (`0.3.0`) additions
+
+`ingest/05b_sample_illustrative_variation.sql` (invoked by `run.sh --fixture` alongside
+`05_sample.sql`) derives the `fixture_agripv_suitability`, `fixture_wind_resource`, and
+`fixture_protection_status` values deterministically from each hex cell's centroid position within
+the fixture boundary's own bounding box — never `random()`, so idempotency holds. The cell(s)
+nearest the boundary's origin corner are flagged as protected, so at least one unit demonstrates
+`verdict = 'excluded'` once `ingest/07_materialize_scores.ts` runs. All of this stays inside the
+existing `fixture_` / `fixture-` namespace and the null-island boundary — nothing here makes the
+fixture look more like a real pilot region.

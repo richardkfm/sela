@@ -51,6 +51,9 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region='fixture-region' -v cell
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region='fixture-region' \
   -f "$SCRIPT_DIR/05_sample.sql"
 
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region='fixture-region' \
+  -f "$SCRIPT_DIR/05b_sample_illustrative_variation.sql"
+
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v method_version='fixture-v0' \
   -f "$SCRIPT_DIR/06_write_criterion_values.sql"
 

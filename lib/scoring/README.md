@@ -10,6 +10,7 @@ no I/O, no geometry, no raster math.
 | `method-version.ts` | `CURRENT_METHOD_VERSION` — bump whenever scoring logic changes output |
 | `suitability.ts` | `computeSuitability` — flow F2 (verdict + limiting criterion) and the ADR-0004 filter path |
 | `outcomes.ts` | `computeOutcomeRow` / `computeOutcomeDelta` — the six shared outcome dimensions (`mvp.md` §8.3) and deltas vs. the `status_quo` baseline |
+| `illustrative-weights.ts` | Phase 3 (`0.3.0`) demo-only input: an arbitrary `normalize`, weighting, threshold, and outcome aggregation fed into the functions above so Phase 3's screens/exports have something to render against the synthetic fixture dataset. **Not a step toward closing `docs/domain/scoring-criteria.md`** — every value it produces is arbitrary by construction and must carry `ILLUSTRATIVE_MARKER` wherever it reaches the UI. See `CHANGELOG.md` `[0.3.0]`. |
 | `__tests__/` | `node --test` coverage: limiting-criterion logic, ADR-0004 exclusion, the `not_modelled` path, and a provenance check |
 
 **Deliberately not here:** real criterion weights, normalization thresholds, and the

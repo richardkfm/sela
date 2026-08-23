@@ -1,31 +1,41 @@
 // Map explorer — the map-first primary surface (design-language.md §3).
-//
-// This is the Phase 1 (0.2.0) skeleton: it proves the route and the
-// container path, nothing more. There is no pilot-region data to show yet
-// (docs/data/sources.md gates that), and basemap serving is Phase 3 work
-// (docs/architecture/adr-0003-basemap.md). The map itself, the parcel
-// search, and scenario comparison land in 0.2.1 / 0.3.0.
+// Phase 3 (0.3.0): renders the synthetic fixture dataset (see
+// lib/pilot-region.ts) via lib/scoring/illustrative-weights.ts. See
+// CHANGELOG.md [0.3.0] and IllustrativeBanner.
 
-export default function MapExplorerPage() {
+import { IllustrativeBanner } from "@/components/IllustrativeBanner";
+import { listSpatialUnitsGeoJSON } from "@/lib/db/queries/spatial-units";
+import { listVerdictsForPilotRegion } from "@/lib/db/queries/verdicts";
+import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
+import { DEFAULT_PILOT_REGION } from "@/lib/pilot-region";
+import { Map } from "./Map";
+import { UnitList } from "./UnitList";
+
+// Reads live scored data — never statically prerendered (also means a
+// build with no DATABASE_URL, e.g. this repo's own `pnpm build` outside
+// Docker, can't prerender it; see docker/Dockerfile's `builder` stage,
+// which sets one).
+export const dynamic = "force-dynamic";
+
+export default async function MapExplorerPage() {
+  const [units, verdicts] = await Promise.all([
+    listSpatialUnitsGeoJSON(DEFAULT_PILOT_REGION),
+    listVerdictsForPilotRegion(DEFAULT_PILOT_REGION, "pv", CURRENT_METHOD_VERSION),
+  ]);
+
   return (
-    <main
-      style={{
-        minHeight: "100dvh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.5rem",
-        textAlign: "center",
-        padding: "2rem",
-      }}
-    >
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0 }}>sela</h1>
-      <p style={{ color: "var(--text-secondary)", maxWidth: "32rem", margin: 0 }}>
-        Map explorer arrives once pilot-region data is loaded (0.2.1) and the
-        four-scenario comparison ships (0.3.0). This container confirms the
-        deployment path works.
-      </p>
+    <main style={{ display: "flex", flexDirection: "column", height: "100dvh" }}>
+      <div style={{ padding: "0.5rem 0.75rem" }}>
+        <IllustrativeBanner />
+      </div>
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <div style={{ width: "18rem", flexShrink: 0, borderRight: "1px solid var(--surface-1)" }}>
+          <UnitList units={units} verdicts={verdicts} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Map initialUnits={units} initialVerdicts={verdicts} initialTechnology="pv" />
+        </div>
+      </div>
     </main>
   );
 }

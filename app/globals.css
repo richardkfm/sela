@@ -55,3 +55,25 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Secondary encodings (design-language.md §4.3 obligation 1): every
+ * scenario fill carries one of these on top of its colour, keyed to
+ * lib/design/tokens.ts's SecondaryEncoding, so colour is never the only
+ * carrier of a scenario's identity (greyscale print, colourblind vision).
+ */
+.pattern-hatch-45 {
+  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.55) 0 2px, transparent 2px 7px);
+}
+.pattern-crosshatch-45 {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.55) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0 2px, transparent 2px 7px);
+}
+.pattern-hatch-135 {
+  background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0 2px, transparent 2px 7px);
+}
+.pattern-stipple {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.65) 1px, transparent 1.5px);
+  background-size: 6px 6px;
+}
