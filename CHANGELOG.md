@@ -27,6 +27,123 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ---
 
+## [0.3.0] - 2026-08-23
+
+Phase 3 of the roadmap: the deployable web app, fixture-first. Neither gate from `0.2.1` closed
+before this phase started — `docs/data/sources.md` still has no `Confirmed` dataset, and every
+weight in `docs/domain/scoring-criteria.md` is still explicitly `open`, pending the `CLAUDE.md` §3
+confirmation gate. Rather than block Phase 3 on either gate, this release repeats `0.2.1`'s
+architecture-first split, confirmed with the project owner beforehand: all five screens, the
+basemap, and the export route are built and **demoed against the synthetic fixture dataset**
+(`ingest/fixtures/`), with an obviously-arbitrary illustrative weighting — never against real
+pilot data or real weights. Every screen and export carries a visible "ILLUSTRATIVE — not yet
+confirmed" marker wherever a number derived from that weighting reaches the interface.
+
+### Added
+
+- **`lib/db/client.ts`, `lib/db/queries/{spatial-units,criteria,verdicts,outcomes}.ts`** — the
+  app's first request-time database access layer (previously only `lib/db/migrate.ts`'s one-shot
+  migration runner existed). Plain reads against the `0.2.1` schema, mapped to `lib/scoring/types.ts`'s
+  shapes; `outcomes.ts` computes each scenario's delta against `status_quo` at read time via the
+  existing pure `computeOutcomeDelta` — deltas are never stored.
+- **`lib/scoring/illustrative-weights.ts`** — the demo-only, explicitly arbitrary weighting fed
+  into `lib/scoring/`'s unmodified, existing `computeSuitability`/`computeOutcomeRow` as their
+  normal caller-supplied parameters (never hardcoded into `lib/scoring/` itself). Deliberately
+  produces at least one `not_modelled` outcome (`restore` × `local_benefit`) so that first-class
+  schema state is genuinely exercised, not just theoretically supported. 8 new `node --test` cases.
+- **`ingest/07_materialize_scores.ts`** — the missing bridge from `criterion_value` rows to
+  `suitability_verdict`/`outcome` rows: `ingest/run.sh` stopped after writing criterion values;
+  nothing previously called `lib/scoring/` at all. Runs from the app/Node side, not the GDAL
+  `ingest` container, per ADR-0002's TypeScript/geometry boundary. `pnpm db:materialize`.
+- **Fixture expansion** — `ingest/fixtures/seed_fixture_definitions.sql` and the new
+  `ingest/05b_sample_illustrative_variation.sql` add `fixture_agripv_suitability` (agripv),
+  `fixture_wind_resource` (wind), and `fixture_protection_status` (a hard constraint applying to
+  all three technologies) alongside the existing PV-only criterion, so all three technologies vary
+  independently and the ADR-0004 exclusion path is genuinely exercised. Derived deterministically
+  from each cell's centroid position — never `random()` — so idempotency holds.
+- **Five screens** (`docs/product/mvp.md` §7): map explorer (`/`, MapLibre + PMTiles, a
+  keyboard-reachable unit list alongside the map per design-language.md §9), parcel detail
+  (`/unit/[id]`, flow F2), scenario comparison (`/unit/[id]/compare`, the centrepiece — all
+  scenarios × outcome dimensions + deltas, a decorative SVG chart plus an always-present semantic
+  `<table>`), evidence view (`/criterion/[id]`, flow F4), and method page (`/method`, rewritten to
+  render live `criterion_definition`/`source` rows instead of static placeholder text). Shared
+  components (`ScenarioBadge`, `IllustrativeBanner`, `ConfidenceMark`, `NotModelledBadge`) read
+  `lib/design/tokens.ts` so labeling and the design-language §4.2 palette can't drift between them.
+- **Self-hosted PMTiles basemap** (ADR-0003, `docker/Dockerfile`'s new `basemap` build stage,
+  `app/api/tiles/{[z]/[x]/[y],style.json}/route.ts`) — built via Planetiler against a small, real,
+  licence-clear OSM extract (Bremen; OSM/ODbL is the dataset closest to `Confirmed` in
+  `docs/data/sources.md`), **not** the fixture boundary itself: `ingest/fixtures/pilot_boundary.geojson`
+  sits at "null island" deliberately, so serving fabricated-looking real streets under it would
+  risk the exact credibility failure `CLAUDE.md` forbids. Serving the real extract globally instead
+  means the tile-serving mechanism is proven against genuine data, and the fixture boundary
+  correctly shows no basemap detail at all. No symbol/text layers in this pass, so no
+  glyph/sprite pipeline is needed to satisfy ADR-0003's self-hosting rule. `ingest/basemap/build.sh`
+  degrades to no archive (never a hard build failure) if Geofabrik or Java aren't reachable at
+  build time; the app then serves a flat ground-colour style with no vector source.
+- **`app/api/unit/[id]/card/route.tsx`** — `next/og` scenario card export (1200×630, 1080×1080,
+  and a print variant), implementing design-language.md §7's "a card that cannot cite itself must
+  not render" as actual control flow: every source the card needs is resolved before
+  `ImageResponse` is constructed, and a missing lookup returns a 4xx/5xx JSON error, not an image.
+- **`tests/e2e/`** (Playwright + `@axe-core/playwright` + `sharp`, new devDependencies) — automated
+  WCAG 2.2 AA checks on all five screens, a keyboard-only path into unit selection and the compare
+  screen's table, and a greyscale test that screenshots the comparison screen's pattern legend,
+  converts it with `sharp`, and asserts each patterned scenario fill (all but the two intentionally
+  flat ones) shows measurably higher local variance than a flat fill — the actual legibility
+  property design-language.md §4.3's documented luminance-collision numbers exist to protect,
+  checked directly rather than assumed present.
+- **`lib/pilot-region.ts`** — the one place `DEFAULT_PILOT_REGION = "fixture-region"` is named,
+  imported everywhere a screen or API route needs it.
+
+### Fixed
+
+- **`lib/db/migrate.ts`** — `import.meta.dirname` was left unset when `tsx` transpiles this script
+  to CJS for `pnpm db:migrate`, breaking the migration runner outright; derived from
+  `import.meta.url` instead, which works under both.
+
+### Changed
+
+- **`app/(map)/page.tsx`, `app/method/page.tsx`** — rewritten from Phase 1 static placeholders to
+  the real screens above.
+- **`docker/Dockerfile`** — new `basemap` build stage; `compose.yaml` gets a `materialize` service.
+- **`package.json`** — `maplibre-gl`, `pmtiles` (deps); `@playwright/test`, `@axe-core/playwright`,
+  `sharp` (devDeps); `db:materialize` and `test:e2e` scripts; version → `0.3.0`.
+
+### Verification
+
+- `pnpm typecheck`, `pnpm test` (27/27, including 8 new illustrative-weights cases), and
+  `pnpm build` all pass.
+- **Actually run end to end in this session's dev environment**, not left as a stated risk: a
+  system PostgreSQL 16 + PostGIS instance was set up (the PostGIS extension package was missing
+  and installed); `ingest/run.sh --fixture` and the new `05b` step ran for real (33 hex cells, 4
+  criteria each, re-run 3× with identical row counts — idempotency holds); `pnpm db:materialize`
+  populated 99 verdicts (30 excluded correctly by the protection-status constraint, the rest split
+  suitable/unsuitable per technology) and 1,188 outcome rows (33 correctly `not_modelled` — exactly
+  the `restore`×`local_benefit` cells) against real `lib/scoring/` calls; all five screens were
+  fetched and rendered correctly against this real data (a date-serialization bug in the evidence
+  view was caught and fixed this way, not left for a later session to find).
+- **The basemap was actually built, not simulated**: Planetiler + a real ~20 MB Bremen extract from
+  Geofabrik produced an ~11 MB `.pmtiles` archive in about two minutes; served locally, a tile over
+  Bremen returned real vector data (200, ~41 KB) and a tile over the fixture boundary's null-island
+  coordinates correctly returned no data (204) rather than anything fabricated.
+- **The export route was actually exercised**: all three size variants render real PNGs for a unit
+  with a verdict; a nonexistent unit id correctly returns 404 instead of an image.
+- **The Playwright suite actually ran and passed (8/8)** against the live seeded database — zero
+  axe violations on all five screens, the keyboard-only path works, and the greyscale variance
+  check passes for every patterned scenario fill.
+- **The production build was verified**, including running the built `standalone` server directly
+  (`docker compose up` itself was still not run — no Docker daemon in this development
+  environment, the same limitation `0.2.0`/`0.2.1` recorded).
+
+### Notes
+
+- Real pilot ingestion (`docs/data/sources.md` reaching `Confirmed`), real `criterion_definition`
+  weights (`docs/domain/scoring-criteria.md`, gated by `CLAUDE.md` §3), and pinning the real pilot
+  *Landkreis* (roadmap §2.3) remain open — this release is explicitly, visibly a demo of the
+  mechanism, not a claim about any real place. `docs/architecture/roadmap-to-first-deployment.md`
+  §6: none of U1–U9 close as a result of this phase.
+
+---
+
 ## [0.2.1] - 2026-08-22
 
 Phase 2 of the roadmap, architecture-first: the domain schema, ADR-0004, the scoring engine, and
@@ -173,7 +290,8 @@ Initial project setup. Establishes the mission, the working agreement, the MVP d
 - Nine open questions are recorded rather than assumed. The most consequential are the choice of spatial unit (ALKIS *Flurstück* vs. a generated grid), whether grid-connection capacity is in MVP scope, and per-source data licensing — each is capable of reshaping the data model or blocking public release.
 - No LICENSE, contribution guide, CI configuration, or dependency manifest yet; these follow once the stack is chosen in the `0.2.x` band.
 
-[Unreleased]: https://github.com/richardkfm/sela/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/richardkfm/sela/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/richardkfm/sela/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/richardkfm/sela/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/richardkfm/sela/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/richardkfm/sela/releases/tag/v0.1.0

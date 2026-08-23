@@ -12,8 +12,12 @@ ingest/
   03_load.sh <file> <table>      load into staging.<table> via ogr2ogr -f PostgreSQL
   04_generate_grid.sql           ST_HexagonGrid, clipped to the pilot boundary (ADR-0001)
   05_sample.sql                  sample/intersect onto cells — one example query per criterion
+  05b_sample_illustrative_variation.sql  fixture-only: synthetic per-cell variation for the
+                                  remaining fixture criteria (Phase 3, 0.3.0) — see fixtures/README.md
   06_write_criterion_values.sql  write criterion_value rows, each with its source_id
-  run.sh [--fixture]             orchestrates the above, in order
+  07_materialize_scores.ts       Phase 3 (0.3.0), TypeScript-side, run separately (see below):
+                                  calls lib/scoring/ to populate suitability_verdict/outcome
+  run.sh [--fixture]             orchestrates 00-06, in order
   fixtures/                      synthetic data proving the pipeline works — see fixtures/README.md
 ```
 
@@ -47,3 +51,20 @@ Runs the identical reproject → load → generate-grid → sample → write seq
 CRS handling, hex clipping, area-weighted sampling, `source_id` propagation) can be exercised and
 tested in CI independently of the licence gate above. See `ingest/fixtures/README.md`. This path
 is never used against a real deployment.
+
+## Materializing scores (Phase 3, `0.3.0`)
+
+`run.sh` stops after writing `criterion_value` rows; `suitability_verdict` and `outcome` stay
+empty until a separate step calls `lib/scoring/`. That step is TypeScript, not SQL or shell,
+deliberately: per `docs/architecture/adr-0002-geodata-stack.md` this is arithmetic and comparison
+over already-computed values, not geometry or raster math, so it does not belong in this
+GDAL-based container (which has no Node runtime) — it runs from the app/builder image instead:
+
+```sh
+export DATABASE_URL=postgresql://sela:sela@localhost:5432/sela
+pnpm db:materialize -- --pilot-region=fixture-region
+```
+
+Against the fixture dataset this uses `lib/scoring/illustrative-weights.ts` — an arbitrary,
+explicitly-labelled weighting, not a real scoring decision. See that file's header and
+`CHANGELOG.md` `[0.3.0]`.

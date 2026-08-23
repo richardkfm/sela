@@ -27,6 +27,24 @@ services:
       db:
         condition: service_healthy
 
+  materialize:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: builder
+    # Phase 3 (0.3.0): bridges criterion_value rows to suitability_verdict/
+    # outcome rows via lib/scoring/ — see ingest/README.md "Materializing
+    # scores". Run after `docker compose --profile ingest run ingest --
+    # --fixture` (or a confirmed real ingest run); not part of `up` by
+    # default since it depends on data the ingest step must produce first.
+    command: ["pnpm", "db:materialize", "--", "--pilot-region=fixture-region"]
+    profiles: ["ingest"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://sela:sela@db:5432/sela}
+    depends_on:
+      db:
+        condition: service_healthy
+
   app:
     build:
       context: .

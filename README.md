@@ -2,7 +2,7 @@
 
 **Spatial decision-support for land-use trade-offs — comparing what is built, what is preserved, and what is restored.**
 
-> **Status: `0.2.1` — domain schema, scoring engine, and ingest pipeline mechanics.** The domain schema, ADR-0004, a fully-tested pure scoring engine, and a working (fixture-proven) ingest pipeline exist. **Real dataset ingestion is not yet live** — every candidate dataset in [`docs/data/sources.md`](docs/data/sources.md) is still below Confirmed licence status, so the pipeline currently runs only against synthetic fixtures. See [`docs/architecture/roadmap-to-first-deployment.md`](docs/architecture/roadmap-to-first-deployment.md) §4's status note.
+> **Status: `0.3.0` — the deployable web app, fixture-first.** All five MVP screens, a self-hosted PMTiles basemap, and a scenario-card export exist and are demoed against a synthetic fixture dataset with an explicitly arbitrary illustrative weighting — **not** real pilot data or real scoring weights. Every candidate dataset in [`docs/data/sources.md`](docs/data/sources.md) is still below Confirmed licence status, and every weight in [`docs/domain/scoring-criteria.md`](docs/domain/scoring-criteria.md) is still open pending the `CLAUDE.md` §3 confirmation gate. See [`docs/architecture/roadmap-to-first-deployment.md`](docs/architecture/roadmap-to-first-deployment.md) §5's status note and [`CHANGELOG.md`](CHANGELOG.md) `[0.3.0]`.
 
 ---
 
@@ -76,31 +76,49 @@ docs/architecture/               ADRs and system design
 docs/domain/glossary.md          DE/EN vocabulary
 docs/domain/scoring-criteria.md  Criteria catalogue per technology — weights deliberately left open
 docs/data/sources.md             Dataset inventory and verification log — the licence gate on real ingestion
-app/                             Next.js App Router — map explorer, method page, health check
+app/                             Next.js App Router — map explorer, parcel detail, scenario
+                                  comparison, evidence view, method page, PMTiles tile routes,
+                                  scenario-card export
+components/                      Shared UI: ScenarioBadge, IllustrativeBanner, ConfidenceMark,
+                                  NotModelledBadge
 lib/design/tokens.ts             Semantic design tokens (design-language.md §4.2)
-lib/db/                          Migration runner and SQL migrations (domain schema in 0002)
-lib/scoring/                     Pure scoring engine — suitability, outcomes, deltas; unit-tested
-ingest/                          GDAL + SQL pipeline — real mechanics, gated on sources.md, fixture-proven
-docker/                          Dockerfile (app) and Dockerfile.ingest
-compose.yaml                     app · db (PostGIS) · ingest (profile)
+lib/db/                          Migration runner, SQL migrations (domain schema in 0002), and the
+                                  request-time query layer (lib/db/queries/)
+lib/scoring/                     Pure scoring engine — suitability, outcomes, deltas; unit-tested.
+                                  illustrative-weights.ts is Phase 3 demo-only input, not real weights
+lib/basemap/                     PMTiles archive reader for the tile routes
+ingest/                          GDAL + SQL pipeline — real mechanics, gated on sources.md,
+                                  fixture-proven; basemap/ builds the self-hosted PMTiles archive;
+                                  07_materialize_scores.ts bridges criterion values to scored rows
+tests/e2e/                       Playwright: WCAG 2.2 AA, keyboard-only navigation, greyscale
+docker/                          Dockerfile (app + basemap build stage) and Dockerfile.ingest
+compose.yaml                     app · db (PostGIS) · ingest (profile) · materialize (profile)
 ```
 
 ## Running it
 
 ```
 cp .env.example .env
-docker compose up          # app on :3000, PostGIS on :5432, migrations applied automatically
-docker compose down -v     # tear down, including the database volume
+docker compose up                                   # app on :3000, PostGIS on :5432, migrations applied automatically
+docker compose --profile ingest run ingest -- --fixture   # synthetic data, proves the pipeline
+docker compose --profile ingest run materialize      # populates suitability_verdict/outcome from it
+docker compose down -v                               # tear down, including the database volume
 
 pnpm install
 pnpm test                  # lib/scoring/ unit + integration tests
-DATABASE_URL=postgresql://sela:sela@localhost:5432/sela ./ingest/run.sh --fixture   # synthetic data, proves the pipeline
+DATABASE_URL=postgresql://sela:sela@localhost:5432/sela pnpm db:migrate
+DATABASE_URL=postgresql://sela:sela@localhost:5432/sela ./ingest/run.sh --fixture     # synthetic data
+DATABASE_URL=postgresql://sela:sela@localhost:5432/sela pnpm db:materialize          # score it
+PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm test:e2e   # against a running `pnpm dev`
 ```
 
-The application still serves no pilot-region data, real scoring, or map tiles (`0.3.0`) — real
-ingestion is gated on `docs/data/sources.md` reaching Confirmed licence status per dataset, and
-real scoring weights are gated on the `CLAUDE.md` §3 confirmation process against
-`docs/domain/scoring-criteria.md`.
+Every screen and export currently renders the synthetic fixture dataset above with an explicitly
+arbitrary illustrative weighting (`lib/scoring/illustrative-weights.ts`) — never real pilot data or
+real scoring weights. Real ingestion is gated on `docs/data/sources.md` reaching Confirmed licence
+status per dataset, and real scoring weights are gated on the `CLAUDE.md` §3 confirmation process
+against `docs/domain/scoring-criteria.md`. The self-hosted PMTiles basemap
+(`ingest/basemap/build.sh`) is built from a small real OSM extract chosen only for build
+tractability, not the (still unpinned) real pilot region — see `ingest/basemap/README.md`.
 
 ## Next planning documents
 

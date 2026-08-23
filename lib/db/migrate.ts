@@ -7,9 +7,12 @@
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Client } from "pg";
 
-const MIGRATIONS_DIR = path.join(import.meta.dirname, "migrations");
+// import.meta.dirname is left unset when tsx transpiles this to CJS for
+// `pnpm db:migrate`; deriving it from import.meta.url works under both.
+const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "migrations");
 
 async function main() {
   const connectionString = process.env.DATABASE_URL;

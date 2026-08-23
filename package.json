@@ -1,7 +1,7 @@
 {
   "name": "sela",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Spatial decision-support for land-use trade-offs.",
   "scripts": {
     "dev": "next dev",
@@ -9,23 +9,33 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx lib/db/migrate.ts",
-    "test": "node --import tsx --test lib/scoring/__tests__/suitability.test.ts lib/scoring/__tests__/outcomes.test.ts lib/scoring/__tests__/pipeline.test.ts"
+    "db:materialize": "tsx ingest/07_materialize_scores.ts",
+    "test": "node --import tsx --test lib/scoring/__tests__/suitability.test.ts lib/scoring/__tests__/outcomes.test.ts lib/scoring/__tests__/pipeline.test.ts lib/scoring/__tests__/illustrative-weights.test.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "maplibre-gl": "^6.5.0",
     "next": "15.1.6",
     "pg": "8.13.1",
+    "pmtiles": "^4.5.0",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "22.10.7",
     "@types/pg": "8.11.10",
     "@types/react": "19.0.7",
     "@types/react-dom": "19.0.3",
+    "sharp": "^0.35.3",
     "tsx": "4.19.2",
     "typescript": "5.7.3"
   },
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["sharp", "esbuild"]
   }
 }
