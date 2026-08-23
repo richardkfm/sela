@@ -25,6 +25,22 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ## [Unreleased]
 
+### Fixed
+
+- **`app/(map)/Map.tsx`** — the map explorer's GeoJSON fill layer never painted in any browser:
+  MapLibre resolves its background worker script relative to `import.meta.url`, which doesn't
+  survive Next.js's webpack bundling (it resolved to the page's own URL, so the worker loaded the
+  page's HTML as JavaScript and died immediately, and the source's tiling never completed). Fixed
+  by pointing `maplibregl.setWorkerUrl` at a static copy of the installed package's worker bundle,
+  produced by the new `scripts/copy-maplibre-worker.mjs` (wired into `predev`/`prebuild` so the
+  copy always matches the installed `maplibre-gl` version rather than a hand-committed file that
+  can drift on upgrade).
+
+### Added
+
+- **`README.md`** — a Screenshots section with the five MVP screens, captured against the running
+  app (synthetic fixture dataset).
+
 ---
 
 ## [0.3.0] - 2026-08-23

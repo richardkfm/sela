@@ -10,6 +10,7 @@
 import {
   Map as MaplibreMap,
   NavigationControl,
+  setWorkerUrl,
   type MapLayerMouseEvent,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -71,6 +72,14 @@ export function Map({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+
+    // MapLibre resolves its background worker script relative to
+    // import.meta.url, which Next.js's webpack bundling doesn't preserve as
+    // a loadable URL (it resolves empty, so the worker silently loads the
+    // page's own HTML and dies — the GeoJSON source then never finishes
+    // processing and no fill ever paints). Point it at the copy of the
+    // matching maplibre-gl version's worker bundle in public/ instead.
+    setWorkerUrl("/maplibre-gl-worker.mjs");
 
     const map = new MaplibreMap({
       container: containerRef.current,

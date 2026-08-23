@@ -6,6 +6,24 @@
 
 ---
 
+## Screenshots
+
+The five MVP screens, rendered against the synthetic fixture dataset described above — illustrative only, not real pilot data or real scoring weights.
+
+| Map explorer (`develop` suitability) | Parcel detail |
+|---|---|
+| [![Map explorer](docs/product/screenshots/map-explorer.png)](docs/product/screenshots/map-explorer.png) | [![Parcel detail](docs/product/screenshots/parcel-detail.png)](docs/product/screenshots/parcel-detail.png) |
+
+| Scenario comparison | Evidence view |
+|---|---|
+| [![Scenario comparison](docs/product/screenshots/scenario-comparison.png)](docs/product/screenshots/scenario-comparison.png) | [![Evidence view](docs/product/screenshots/evidence-view.png)](docs/product/screenshots/evidence-view.png) |
+
+| Method page |
+|---|
+| [![Method page](docs/product/screenshots/method.png)](docs/product/screenshots/method.png) |
+
+---
+
 ## Vision
 
 Decisions about land are made once and felt for decades. A field can carry a solar park, a wind turbine, a wildflower meadow, a restored peatland, or the crop rotation it carries today — and each of those futures produces a different set of gains and losses for climate, biodiversity, soil, water, and the local budget.
