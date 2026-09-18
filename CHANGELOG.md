@@ -25,6 +25,54 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ## [Unreleased]
 
+### Added
+
+- **Verified facts that unblock real ingestion work, none of which existed before** — recorded in
+  `docs/data/sources.md` §2: the DWD grids are **EPSG:31467** (Gauß-Krüger zone 3, Bessel/Potsdam),
+  so a reprojection step to the EPSG:25832 storage CRS is required and `ingest/02_reproject.sh` has
+  a real job to do; DWD publishes a **±6 % mean uncertainty** for those grids, which is the first
+  citable number this project has for the `criterion_value.confidence` column rather than an
+  invented one; the BKG CLC5 download exists in a **UTM32S variant** that matches sela's storage CRS
+  and needs no reprojection at all; and the three BfN layers sela actually needs (*Naturschutz-*,
+  *Landschaftsschutzgebiete*, *Nationalparke*) were each checked individually in the GDI-DE
+  catalogue rather than generalized from a sample.
+
+- **`README.md`** — a Screenshots section with the five MVP screens, captured against the running
+  app (synthetic fixture dataset).
+
+### Changed
+
+- **`docs/data/sources.md`** — rewritten. **U7's licence research is done: all four datasets' terms
+  are now read at a primary source**, closing four of the five dead ends the `0.2.1` session logged
+  (each of those URLs was retried, and the ones that had failed were either reachable again or
+  reached at a corrected URL). BfN is **GeoNutzV** (full text read — §2 permits combining the data
+  into *selbständige neue Datensätze* and transmitting them to third parties, §3 requires an
+  attribution and change notice, and there is no share-alike), BKG CLC5-2018 is **`dl-de/by-2-0`**
+  with the exact artefact pinned by size and `Last-Modified`, and DWD CDC is **CC BY 4.0** — a row
+  `0.2.1` recorded as outright blocked with its terms unread. Each row now answers the question U7
+  actually asks — may *derived, aggregated, scored* outputs be published — rather than "is the raw
+  data open". New sections: the exact attribution string each publisher requires (§3), the ODbL
+  decision below (§4), the BfN use limitation below (§5), a two-part verification log that
+  distinguishes a publisher-side block from an environment-side one (§6), and a fourth "Confirmed"
+  condition — the attribution must be implemented before the data reaches a public screen, not
+  added later (§7).
+- **`docs/data/sources.md` §4 — the substantive finding, recorded as an open `CLAUDE.md` §3
+  decision rather than taken.** The `0.2.1` note that a derived criterion value counts as an ODbL
+  "produced work" outside share-alike was an interpretation stated as a fact, and reading the ODbL
+  legal code does not support it: a Produced Work is defined as *an image, audiovisual material,
+  text or sounds*, while extracting a substantial part of the contents into a new database is a
+  **Derivative Database**. A `criterion_value` table built from OSM settlement geometry is therefore
+  most defensibly a Derivative Database, which puts §4.4 share-alike and §4.6 (offer a
+  machine-readable copy of the derivative database or of the alterations) on **sela's own scoring
+  database** — beside GeoNutzV, `dl-de/by-2-0` and CC BY 4.0 rows that carry no such term. §4.6
+  follows the scenario cards too, since they are Produced Works *from* a Derivative Database. Three
+  options are stated with their costs; the basemap path is unaffected either way.
+- **`docs/architecture/roadmap-to-first-deployment.md`** — §2.2 gets a status note (the gate's
+  verification work is done, and "verified open licence" turns out not to be a single bar because
+  one source changes what may be done with everything stored beside it); §3.1's Phase-1 licence
+  table is marked superseded rather than quietly edited, since two of its four entries are now known
+  wrong; U7 in §6 moves from "still open" to **narrowed** — one decision and two access problems.
+
 ### Fixed
 
 - **`app/(map)/Map.tsx`** — the map explorer's GeoJSON fill layer never painted in any browser:
@@ -36,10 +84,25 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   copy always matches the installed `maplibre-gl` version rather than a hand-committed file that
   can drift on upgrade).
 
-### Added
+### Notes
 
-- **`README.md`** — a Screenshots section with the five MVP screens, captured against the running
-  app (synthetic fixture dataset).
+- **The machine gate is deliberately untouched.** `ingest/sources.manifest.json` — what
+  `ingest/01_fetch.sh` reads before touching a network — still says `to_confirm`/`unconfirmed` for
+  every row. Allowing real ingestion is a `CLAUDE.md` §3 decision; this change is the evidence for
+  that conversation, not the decision itself. The two files must move together.
+- **Two unreachable hosts, two different causes**, distinguished in the verification log so a later
+  session does not conflate them: `geodienste.bfn.de` returns a BfN-branded HTTP 403 to this
+  environment for every path including the GetCapabilities request that succeeded on 2026-08-22
+  (publisher-side; retry from another network), while `download.geofabrik.de` and `mis.bfn.de` are
+  refused at CONNECT by this environment's own egress policy (nothing to do with the publishers —
+  `ingest/basemap/build.sh` fetched from Geofabrik successfully during the `0.3.0` session).
+  Neither the BfN extract nor the OSM extract can be pinned from here, which is what keeps those two
+  rows short of the full `Confirmed` bar.
+- **`docs/data/sources.md` §5 feeds U6.** Every BfN record carries the use limitation *"Nicht für
+  Planungszwecke geeignet"* — confirmed as a metadata field, not an incidental remark in a service
+  description. It does not block sela's advisory use, but sela's audience includes municipal
+  planning offices, and this is an input to the disclaimer-posture decision.
+- No code, schema, scoring or user-visible behaviour changed in this entry.
 
 ---
 
