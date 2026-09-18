@@ -1,6 +1,6 @@
 # Roadmap — from planning documents to a deployable web app
 
-**Version band:** `0.2.x` → `0.3.0` · **Status:** agreed · **Last updated:** 2026-08-22
+**Version band:** `0.2.x` → `0.3.0` · **Status:** agreed · **Last updated:** 2026-09-18
 
 This document plans the route from the `0.1.0` planning artefacts to a sela that runs with
 `docker compose up` and serves real land in a real German pilot region. It refines
@@ -48,6 +48,14 @@ asserting a licence we have not checked. Therefore `docs/data/sources.md` is a *
 deliverable that **gates Phase 2**, and only datasets with a verified open licence enter the
 pilot.
 
+**Status note (2026-09-18):** the verification work this gate calls for has now been done — see
+`docs/data/sources.md` §6. Three of the four datasets clear it outright. The fourth, OSM, raises a
+question this section did not anticipate: ODbL's share-alike term can reach sela's *own* database,
+not just what sela redistributes, because a table of OSM-derived criterion values is a Derivative
+Database rather than a Produced Work under the licence's own definitions. "Verified open licence"
+is therefore not a single bar — it is per-source, and one of the sources changes what sela may do
+with everything stored beside it. `docs/data/sources.md` §4 states the decision and its options.
+
 ### 2.3 Stated assumption — the pilot region
 
 The pilot is one *Landkreis* in Brandenburg: high real PV and wind pressure, good state open
@@ -82,6 +90,11 @@ Candidates carried into the inventory, with the licence position established so 
 
 CLC5's 2018 vintage is recorded as a stated data-currency limitation rather than passing
 silently.
+
+> **Superseded (2026-09-18).** The table above is the licence position as understood in Phase 1 and
+> is left standing as a record of it. Two entries are now known to be wrong: BfN is **GeoNutzV**,
+> not `dl-de/by-2-0`, and the DWD terms have since been read in full — they are **CC BY 4.0**.
+> `docs/data/sources.md` is authoritative; do not read a licence off this table.
 
 ### 3.2 The application skeleton
 
@@ -258,6 +271,6 @@ Open questions that stay open, and are not resolved by assumption:
 | U4 | Constraints as filters or penalties | Closed — ADR-0004 |
 | U5 | Anonymous vs. account-gated | Open |
 | U6 | Disclaimer posture | Open — but the advisory disclaimer appears on the comparison screen and on every export from Phase 3 onward, rather than being added before launch |
-| U7 | Per-source licensing | **Still open.** No candidate dataset reached `Confirmed` before or during Phase 3 (`docs/data/sources.md`); this phase's screens run on synthetic fixture data instead — see `CHANGELOG.md` `[0.3.0]` |
+| U7 | Per-source licensing | **Narrowed, not closed (2026-09-18).** All four datasets' licence terms are now read at a primary source (`docs/data/sources.md` §6): BfN (GeoNutzV), BKG (`dl-de/by-2-0`) and DWD (CC BY 4.0) explicitly permit publishing derived, aggregated outputs with attribution and a change notice, and BKG's and DWD's exact versions are pinned. What remains is **one decision and two access problems**: ODbL share-alike may attach to sela's own database wherever OSM-derived rows enter `criterion_value` (`docs/data/sources.md` §4 — a `CLAUDE.md` §3 decision, stated with options, not taken); `geodienste.bfn.de` returns 403 and `download.geofabrik.de` is unreachable from the current environment, so neither extract can be pinned yet |
 | U8 | Basemap provider | Closed — ADR-0003. Phase 3 additionally proved the self-hosted PMTiles path end to end against a real (non-pilot) OSM extract — see `ingest/basemap/README.md` |
 | U9 | Wordmark and public name | Open |
