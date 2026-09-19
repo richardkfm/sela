@@ -27,6 +27,30 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **The map shows real geography.** At the project owner's request ("use the carto tiles for now so
+  we can see something"), the explorer now renders a remote basemap and the real pilot-region
+  outline instead of synthetic cells at null island. `lib/basemap/basemap-source.ts` is the single
+  place that decides which basemap is serving and what attribution comes with it — one module so
+  the live map (`app/api/tiles/style.json`) and the export card
+  (`app/api/unit/[id]/card/route.tsx`) cannot drift apart on a credit line that ADR-0003 makes
+  mandatory on both.
+- **The fallback is basemap.de, not CARTO, because CARTO was tested and found watermarked.**
+  Rendering the CARTO configuration in a real browser returned 49/49 tiles — each stamped
+  *"API KEY REQUIRED"* diagonally across it. `richardkfm/alpha`'s setup no longer yields a clean
+  map without an account. BKG's **basemap.de** WMTS does: no key, 49/49 clean tiles, **CC BY 4.0**
+  with no share-alike (already verified in `docs/data/sources.md` §4.1), and its `_grau` style is
+  the match for `design-language.md` §4.1's desaturated requirement. CARTO stays selectable behind
+  `SELA_BASEMAP=carto` for anyone holding a key.
+- **`SELA_BASEMAP`** (`auto` | `pmtiles` | `basemapde` | `carto` | `none`) and
+  `NEXT_PUBLIC_MAP_VIEW=fixture`, both documented in `.env.example`. `auto` prefers the ADR-0003
+  archive whenever one exists and only falls back when it does not, so building the archive changes
+  nothing else. The fixture view is kept reachable rather than deleted — the `0.3.0` scoring demo
+  still works, it simply is not the default now that there is real geography to show.
+- **`ingest/02c_pilot_boundary_display.sh` and `public/pilot-uckermark.geojson`** — a display-only
+  boundary, simplified at 25 m and reprojected to EPSG:4326 (12 733 → 1 355 vertices, 673 KB → 30 KB).
+  Explicitly **not** an analysis input: `04_generate_grid.sql` clips against the full-precision
+  EPSG:25832 file, because a simplified boundary would silently add and drop cells along the edge.
+
 - **The pilot region is decided: Landkreis Uckermark** (AGS `12073`, NUTS `DE40I`), delegated to
   this session by the project owner. `docs/architecture/roadmap-to-first-deployment.md` §2.3 stops
   being a stated assumption and becomes a decision, with the grounds written down: all four
@@ -228,7 +252,14 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   2026-04-23, derived from LBM-DE2021, same `dl-de/by-2-0`). Moving to it would cut the
   data-currency gap by three years and is a **§3-gated source-version change** — recorded in §6,
   not taken. It is published as GeoPackage only; no shapefile variant exists for 2021.
-- **No schema, scoring or user-visible behaviour changed in this entry.** The code that changed is
+- **User-visible behaviour did change, on explicit instruction.** The map's default view and its
+  basemap are both different: it opens on the Uckermark over a remote raster basemap rather than on
+  synthetic cells over a flat ground colour. Two honest caveats. The raster tiles carry **baked-in
+  labels** where the PMTiles style deliberately carries none until a self-hosted glyph pipeline
+  exists, so this is a visible deviation from `design-language.md` §4.1 rather than a neutral swap.
+  And ADR-0003's self-hosted archive is still what must exist before anything public ships — what
+  landed is a reversible development default behind one environment variable, not an amendment.
+- **Scoring and schema are untouched.** The code that changed is
   ingest-side only (`01_fetch.sh`, `run.sh`), and no fetched data reaches a screen: `data/raw/` is
   git-ignored, nothing was loaded into PostGIS, and `docs/data/sources.md` §7 condition 4 still
   blocks publication until each source's *Quellenvermerk* is rendered in the interface.

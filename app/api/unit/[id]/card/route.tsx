@@ -7,6 +7,7 @@
 // missing lookup returns a JSON error instead of an image.
 
 import { ImageResponse } from "next/og";
+import { getActiveBasemap } from "@/lib/basemap/basemap-source";
 import { getCriterionDefinition, getSource, type SourceRow } from "@/lib/db/queries/criteria";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
@@ -71,6 +72,7 @@ export async function GET(
   }
 
   const sources: SourceRow[] = [source];
+  const basemapAttribution = getActiveBasemap().attribution;
   const tokenKey = technologyToTokenKey[headline.technology];
   const token = scenarioTokens[tokenKey];
   const { width, height } = SIZES[format];
@@ -116,7 +118,9 @@ export async function GET(
               {`${s.dataset} · ${s.publisher} · ${s.licence} · abgerufen ${s.retrievedAt ?? "unbekannt"}`}
             </div>
           ))}
-          <div>© OpenMapTiles © OpenStreetMap contributors</div>
+          {/* Whichever basemap is actually serving — never a second
+              hard-coded credit that can drift from the live map. */}
+          {basemapAttribution ? <div>{basemapAttribution}</div> : null}
           <div>
             {`Methodenversion ${CURRENT_METHOD_VERSION} · erzeugt am ${new Date().toISOString().slice(0, 10)}`}
           </div>

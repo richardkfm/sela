@@ -390,8 +390,29 @@ all:** it is still OSM-derived, so ODbL attribution follows it, but a hosted bas
 data into `criterion_value` — and that, not the map background, is the leg §4 turns on. Its honest
 role is as a stopgap that would put a real map on screen while the basemap question is decided.
 
-**Switching the basemap is an ADR-0003 change and therefore §3-gated.** It is recorded here, not
-taken. What it changes about §4 is the shape of option (b): if both legs move off OSM, ODbL leaves
+**Tested 2026-09-19, and the result reordered the options.** Both remote basemaps were rendered in
+a real browser against the pilot region:
+
+- **CARTO watermarks every unauthenticated tile.** All 49 tiles returned HTTP 200 and drew
+  correctly — with *"API KEY REQUIRED — carto.com/basemaps/apikey"* stamped diagonally across each
+  one. `richardkfm/alpha`'s configuration therefore no longer produces a clean map; whatever it
+  looked like when that code was written, an account is needed now. Unusable as a stopgap without
+  one.
+- **basemap.de works with no account.** Its WMTS at
+  `sgx.geodatenzentrum.de/wmts_basemapde` publishes a `GLOBAL_WEBMERCATOR` matrix set, which is
+  plain XYZ as far as MapLibre is concerned — no WMS plumbing, no key, 49/49 tiles clean. Two
+  styles, `de_basemapde_web_raster_grau` and `_farbe`; the grey one is the match for
+  `design-language.md` §4.1's desaturated requirement. Note the path order is WMTS's
+  `{TileMatrix}/{TileRow}/{TileCol}` — **z/y/x**, not MapLibre's usual z/x/y.
+
+So the development fallback wired up on 2026-09-19 is **basemap.de**, with CARTO kept selectable
+behind `SELA_BASEMAP=carto` for anyone who has a key. One caveat against §4.1's earlier framing:
+these raster tiles carry **baked-in labels**, where the PMTiles style deliberately carries none
+until a self-hosted glyph pipeline exists. That is a visible difference, not a neutral swap.
+
+**Switching the basemap *permanently* is an ADR-0003 change and therefore §3-gated.** What was
+taken on 2026-09-19 is a reversible development default, switchable by one environment variable;
+ADR-0003's self-hosted archive is still what has to exist before anything public ships. What it changes about §4 is the shape of option (b): if both legs move off OSM, ODbL leaves
 sela's stack entirely and §4.6's machine-readable-access duty never attaches to anything — which is
 a materially different proposition from the 2026-09-18 framing, where option (b) still left an ODbL
 obligation sitting on the basemap archive.
