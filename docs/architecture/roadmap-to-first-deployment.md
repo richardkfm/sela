@@ -67,11 +67,40 @@ worth carrying forward: the binding condition for those two rows is no longer th
 substitutes exist for **both** of sela's OSM dependencies, which changes what §4's option (b) costs
 without deciding it.
 
-### 2.3 Stated assumption — the pilot region
+### 2.3 The pilot region — decided 2026-09-19
 
 The pilot is one *Landkreis* in Brandenburg: high real PV and wind pressure, good state open
 data. The region is a single config value plus a boundary polygon; changing it is a re-run of
-ingestion, not a code change. Confirm or substitute at the start of Phase 2.
+ingestion, not a code change.
+
+**Decided: Landkreis Uckermark** (AGS `12073`, NUTS `DE40I`), delegated to this session by the
+project owner and chosen on these grounds:
+
+- **All four scenarios have content there.** The pilot has to exercise `develop_pv`,
+  `develop_wind`, `preserve` and `restore` — a region strong on renewables but empty of
+  conservation value would make `preserve` a blank column, and sela's product is the comparison,
+  not the suitability score (`CLAUDE.md` §4.2). The Uckermark is the Brandenburg district where
+  large-scale agriculture, heavy wind build-out, major protected areas and active peatland
+  rewetting coexist, so the trade-off sela exists to show is real there rather than hypothetical.
+- **It is the largest Landkreis in Brandenburg** — 3 082.4 km², measured from the VG25 boundary
+  itself. That is the one real cost: ≈ 118 600 hex cells at `ST_HexagonGrid(100, …)`, against
+  ≈ 47 000 for the smallest (Oberspreewald-Lausitz). Still small for PostGIS, and a bigger canvas
+  is worth more than faster iteration for a pilot meant to be shown to a municipality.
+- **Its boundary is simple** — one polygon, one ring, no exclaves and no holes, so no edge case in
+  grid clipping is hiding in the pilot itself.
+
+The boundary lives in `ingest/pilot/uckermark-12073.geojson` (BKG VG25, CC BY 4.0, Produktstand
+31.12.2025); see `ingest/pilot/README.md` and `docs/data/sources.md` §2.5.
+
+**Not yet verified — stated as the reason for the choice, not as fact.** The claims about wind
+build-out, protected-area coverage and peatland extent in the Uckermark are the *rationale*, and
+none of them has been measured against a dataset: BfN's protection-area service returns 403 from
+this environment (`docs/data/sources.md` §6), and no wind-turbine register is in the inventory at
+all. `CLAUDE.md` §5 forbids asserting them as findings, and nothing downstream may cite this
+paragraph as evidence. Confirm them against real data at the start of Phase 2 — and if they do not
+hold, substituting the region costs one argument to
+`ingest/02b_extract_pilot_boundary.sh` plus one config value, which is exactly why it was built
+that way. Changing it is a **scope decision** under `CLAUDE.md` §3.
 
 ---
 

@@ -39,6 +39,19 @@
         ],
         "$comment": "The full published series is fetched because *which* years feed pv_irradiation_annual (a single year, a rolling mean, the 1991-2020 normal) is an open scoring decision under CLAUDE.md §3 — see docs/data/sources.md §5.1. Fetching everything keeps that decision open instead of pre-empting it. lastYear is extended by DWD around February each year."
       }
+    },
+    "bkg-vg25": {
+      "status": "confirmed",
+      "docRow": "BKG Verwaltungsgebiete 1:25 000 (VG25)",
+      "licence": "CC BY 4.0",
+      "fetch": {
+        "kind": "single-file",
+        "url": "https://daten.gdz.bkg.bund.de/produkte/vg/vg25_ebenen/aktuell/vg25.utm32s.gpkg.zip",
+        "filename": "vg25.utm32s.gpkg.zip",
+        "pinnedBytes": 325132397,
+        "pinnedLastModified": "Fri, 10 Jul 2026 10:18:54 GMT",
+        "$comment": "Supplies the pilot region boundary (docs/architecture/roadmap-to-first-deployment.md §2.3). UTM32S matches the EPSG:25832 storage CRS, so no reprojection. Only layer vg25_krs, AGS 12073 (Landkreis Uckermark) is used; the rest of the federal coverage is fetched but not ingested. Licence read from nutzungsbedingungen_vg25.pdf inside the archive itself — it is CC BY 4.0, NOT dl-de/by-2-0 like BKG's CLC5."
+      }
     }
   }
 }

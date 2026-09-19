@@ -18,6 +18,7 @@ read at the source cited. Where that has not happened, the row says so.
 | BfN Schutzgebiete | GeoNutzV | **Yes**, with attribution + change notice | **Licence cleared; access blocked** — `geodienste.bfn.de` returns 403 to this environment (§6) |
 | BKG CORINE Land Cover 5 ha (CLC5-2018) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed** — pinned artefact fetched and checksummed 2026-09-19 (§2.2, §6) |
 | DWD CDC annual global radiation grids | CC BY 4.0 | **Yes**, with attribution + change notice | **Confirmed** — full 1991–2025 series fetched and checksummed 2026-09-19 (§2.3, §6) |
+| BKG Verwaltungsgebiete 1:25 000 (VG25) | **CC BY 4.0** | **Yes**, with attribution + change notice | **Confirmed** — fetched and checksummed 2026-09-19; supplies the pilot boundary (§2.5) |
 | OpenStreetMap via Geofabrik | ODbL 1.0 | **Yes, but share-alike may attach to sela's own database** | **Open decision — §4.** Geofabrik also unreachable from this environment (§6) |
 
 **The machine gate now stands open for two rows and closed for two.** `ingest/sources.manifest.json`
@@ -170,6 +171,33 @@ resampling — which matters for §5.2.
    accumulation period.** Recorded because the mislabelling is silent and would produce a plausible
    wrong answer rather than an error.
 
+### 2.5 BKG Verwaltungsgebiete 1:25 000 (VG25) — the pilot region boundary
+
+| | |
+|---|---|
+| Publisher | Bundesamt für Kartographie und Geodäsie (BKG), Geodatenzentrum |
+| Use in sela | The pilot-region boundary that `04_generate_grid.sql` clips the hex grid to (ADR-0001). Not a scoring input — it defines *where*, not *what*. |
+| Version / vintage | **Produktstand 31.12.2025** (`aktualitaet.txt` in the archive); terms document dated 08.07.2026 |
+| Coverage / geometry | Federal, vector, layered by administrative level — `vg25_krs` (*Kreise*) is the one sela reads |
+| Retrieved artefact | `https://daten.gdz.bkg.bund.de/produkte/vg/vg25_ebenen/aktuell/vg25.utm32s.gpkg.zip` — **fetched 2026-09-19**, 325 132 397 bytes, `Last-Modified: Fri, 10 Jul 2026 10:18:54 GMT`, sha256 in `data/raw/bkg-vg25/fetch-provenance.json` |
+| Projection | **EPSG:25832** — confirmed from the GeoPackage's own `srs_id`, not from the filename. Already ADR-0002's storage CRS; **no reprojection.** |
+| Licence | **CC BY 4.0** — *not* `dl-de/by-2-0` |
+| Evidence | `nutzungsbedingungen_vg25.pdf`, shipped **inside the archive**, read in full 2026-09-19 |
+
+**Derived outputs — confirmed permitted.** The terms document is one page and unambiguous: the data
+is provided free of charge under the *Creative Commons Namensnennung 4.0 International* licence,
+and data under CC BY 4.0 may be shared, reproduced and adapted with attribution. No share-alike.
+
+**A caution worth carrying:** this row is the reason `CLAUDE.md` §5 is written the way it is. VG25
+sits on the same host, under the same publisher, one directory across from CLC5 — and it is a
+**different licence**. The manifest entry for `bkg-vg25` was first written as `dl-de/by-2-0` by
+analogy with §2.2 and corrected only after the in-archive terms document was read. Per-product
+verification is not ceremony.
+
+**What was extracted.** Landkreis Uckermark, AGS `12073` — see `ingest/pilot/README.md` for the
+region, its measured extent, and why that region. Only one polygon out of the federal coverage is
+used; the rest of the archive is fetched but not ingested.
+
 ### 2.4 OpenStreetMap via Geofabrik — basemap, settlement geometry
 
 | | |
@@ -197,6 +225,7 @@ licence verified and then not attributed is worse than one never used.
 |---|---|---|
 | BfN | `Bundesamt für Naturschutz (BfN) <Jahr>` plus the GeoNutzV reference (`https://sg.geodatenzentrum.de/web_public/gdz/lizenz/geonutzv.pdf`) | GeoNutzV §3: must be "erkennbar und in optischem Zusammenhang" with the data, and carry a *Veränderungshinweis* for any alteration. Template is from BfN's own metadata records; re-read the live capabilities document before ingest (§2.1). |
 | BKG | **`© GeoBasis-DE / BKG <Jahr des letzten Datenbezugs> (Daten verändert)`** — the *(Daten verändert)* form, not the plain one | Taken from `quellenvermerk_datenlizenz_deutschland.txt`, which ships **inside the CLC5 archive itself** (read 2026-09-19) — the publisher's own instruction rather than a web page. It gives exactly two forms, unchanged and *"(Daten verändert)"*, and **sela must always use the second**: a `criterion_value` derived from CLC5 polygons is by definition an alteration. It requires the notice to be placed "erkennbar und in optischem Zusammenhang" with the data and, on a web page, the *Quellenvermerk* hyperlinked to `http://www.bkg.bund.de`. Note a **discrepancy to resolve before rendering**: this file's form does **not** include the `dl-de/by-2-0` label, while BKG's GDI-DE metadata record for CLC5 gives `© GeoBasis-DE / BKG (Jahr des Datenbezugs) dl-de/by-2-0`. Carrying both the licence label (linked to `https://www.govdata.de/dl-de/by-2-0`) and the change notice satisfies both readings and is the safe choice. |
+| BKG — **VG25 only** | **`© BKG <Jahr des letzten Datenbezugs> CC BY 4.0, Datenquellen: https://sgx.geodatenzentrum.de/web_public/gdz/datenquellen/datenquellen_vg25.pdf`** | From `nutzungsbedingungen_vg25.pdf` inside the VG25 archive (read 2026-09-19). **Do not reuse the CLC5 notice for this** — VG25 is CC BY 4.0 and its *Quellenvermerk* is `© BKG`, without the `GeoBasis-DE /` prefix. On a web page "BKG" links to `https://www.bkg.bund.de` and "CC BY 4.0" to `https://creativecommons.org/licenses/by/4.0`. A *Veränderungshinweis* is required for any edited or transformed use, which clipping a grid to this boundary is. |
 | DWD | `Quelle: Deutscher Wetterdienst` (text form; the DWD logo is an accepted alternative) | Per §7 DWD-Gesetz. To be placed **immediately at the DWD information used**. For substantial modification DWD expects at minimum to be named in a central source list or the Impressum, together with a change notice — DWD's own examples include *"Datenbasis: Deutscher Wetterdienst, Einzelwerte gemittelt"*, which is precisely what sampling a 1 km grid onto hex cells is. The dataset additionally carries its own required citation: `DWD Climate Data Center (CDC): Gridded annual sum of incoming shortwave radiation (global radiation) on the horizontal plain for Germany based on ground and satellite measurements, Version V003, <current year>.` |
 | OSM | `© OpenStreetMap contributors` with the data made clear to be available under the Open Database License — linking to `https://www.openstreetmap.org/copyright` satisfies the latter for a browsable map; printed works must carry the full URL | ADR-0003 already records this as a standing duty on **every screen and every export**. Distributing OSM in data form requires naming and linking the licence directly. |
 
@@ -323,7 +352,8 @@ from OSM building geometry, and `CLAUDE.md` §4.5 requires that difference to be
 interface as confidence, not hidden. The honest framing is that option (b) trades a licensing
 constraint for a documented accuracy cost — it does not avoid a cost.
 
-#### The basemap question — an unexpected finding
+#### The basemap question — two options that are not OSM-self-hosted
+
 
 §4 records that the basemap leg is "unaffected by the choice", because a self-contained OSM tile
 archive can carry its own ODbL notice in isolation. That remains true. But it is now also true that
@@ -348,6 +378,17 @@ This is a lead, not a recommendation, and three things about it are **not** yet 
 3. Restyling latitude. sela's design language (`docs/product/design-language.md`) constrains the
    basemap's appearance; a pre-built vector tile set is restylable in principle, but its layer
    schema is BKG's, not Planetiler's, so `ingest/basemap/` would be rewritten, not reconfigured.
+
+**A third option, from sela's own prior art.** `richardkfm/alpha` — the earlier project — used
+**hosted raster tiles from CARTO** (`basemaps.cartocdn.com`, styles `dark_all`, `dark_nolabels`,
+`light_nolabels`), attributed as *"© OpenStreetMap © CARTO"*. Inspected 2026-09-19. Its properties
+are the opposite of ADR-0003's choice in every respect: no build pipeline, no archive, no storage —
+and no control. It is a third-party service with its own terms and usage limits, it is raster where
+sela's design language wants restylable vector, and ADR-0003 rejected exactly this dependency shape
+("a container that fetches fonts from a CDN is not self-contained"). **It does not change §4 at
+all:** it is still OSM-derived, so ODbL attribution follows it, but a hosted basemap never puts OSM
+data into `criterion_value` — and that, not the map background, is the leg §4 turns on. Its honest
+role is as a stopgap that would put a real map on screen while the basemap question is decided.
 
 **Switching the basemap is an ADR-0003 change and therefore §3-gated.** It is recorded here, not
 taken. What it changes about §4 is the shape of option (b): if both legs move off OSM, ODbL leaves
@@ -402,6 +443,33 @@ that work being done.
 
 Entries record what was actually fetched and read, so a later session does not repeat a dead end or
 mistake an attempt for a confirmation.
+
+### 2026-09-19 (later), pilot region chosen
+
+The project owner delegated the choice of pilot *Landkreis*. Picking one needs a boundary, so this
+added a fifth dataset.
+
+- `daten.gdz.bkg.bund.de/produkte/vg/vg25_ebenen/aktuell/vg25.utm32s.gpkg.zip` — **fetched**
+  (325 132 397 bytes). Chosen over VG250 because 1:25 000 is the precision a 100 m grid deserves,
+  and over the GK3/shape variants because the UTM32S GeoPackage is already EPSG:25832.
+- `nutzungsbedingungen_vg25.pdf` (inside the archive) — read in full. **VG25 is CC BY 4.0**, and the
+  manifest entry written before reading it said `dl-de/by-2-0` by analogy with CLC5. Corrected. The
+  *Quellenvermerk* is `© BKG …`, without CLC5's `GeoBasis-DE /` prefix.
+- **All 14 Brandenburg *Landkreise* measured from the geometry itself**, not from a reference
+  work: Uckermark 3 082.4 km² (largest), Potsdam-Mittelmark 2 593.9, Ostprignitz-Ruppin 2 528.2,
+  Dahme-Spreewald 2 278.8, Oder-Spree 2 262.0, Märkisch-Oderland 2 163.3, Prignitz 2 138.9,
+  Teltow-Fläming 2 107.0, Elbe-Elster 1 902.1, Oberhavel 1 810.3, Havelland 1 728.5,
+  Spree-Neiße 1 661.4, Barnim 1 482.0, Oberspreewald-Lausitz 1 226.0.
+- **`richardkfm/alpha` inspected** for the basemap it used, at the owner's prompting: hosted raster
+  tiles from `basemaps.cartocdn.com` (`dark_all`, `dark_nolabels`, `light_nolabels`), attributed to
+  OpenStreetMap + CARTO. Recorded in §4.1 as a third basemap option — it is OSM-derived and so does
+  not avoid ODbL attribution, but it never puts OSM data into sela's database, which is the leg §4
+  is actually about.
+
+**Caveat on how the boundary was cut.** GDAL is not installed in this environment, so the
+GeoPackage was parsed directly and `ingest/02b_extract_pilot_boundary.sh` — the reproducible
+`ogr2ogr` path — **has not been run**. Diff its output against the committed file before trusting
+either.
 
 ### 2026-09-19, first real fetch + alternatives research
 

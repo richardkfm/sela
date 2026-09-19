@@ -27,6 +27,40 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **The pilot region is decided: Landkreis Uckermark** (AGS `12073`, NUTS `DE40I`), delegated to
+  this session by the project owner. `docs/architecture/roadmap-to-first-deployment.md` §2.3 stops
+  being a stated assumption and becomes a decision, with the grounds written down: all four
+  scenarios have real content there, its boundary is a single ring with no exclaves or holes, and
+  it is the **largest** Brandenburg *Landkreis* at **3 082.4 km²** — measured from the boundary
+  geometry itself, not looked up. That size is the one real cost: ≈ 118 600 hex cells at
+  `ST_HexagonGrid(100, …)` against ≈ 47 000 for the smallest district. The claims about wind
+  build-out, protected areas and peatland that motivate the choice are recorded explicitly as
+  *rationale, not findings* — none is measured yet, BfN is still returning 403, and `CLAUDE.md` §5
+  forbids anything downstream citing them as evidence.
+- **`ingest/pilot/`** — the real boundary (`uckermark-12073.geojson`, EPSG:25832, 12 733 vertices,
+  rounded to 0.01 m because VG25 is a 1:25 000 product) plus a README covering the region, its
+  measured extent, the mandatory attribution and how to cut a different *Landkreis*. Committed
+  rather than generated so the pipeline runs without the 325 MB fetch.
+- **`ingest/02b_extract_pilot_boundary.sh`** — the reproducible `ogr2ogr` path for that extraction,
+  parameterised by AGS. **It has not been executed**: GDAL is not installed in this environment, so
+  the committed GeoJSON came from a one-off GeoPackage reader instead. Flagged in the README and
+  the verification log — diff the two before trusting either.
+- **A fifth dataset: BKG VG25** (*Verwaltungsgebiete 1:25 000*), fetched and checksummed, Produktstand
+  31.12.2025. Chosen over VG250 because 1:25 000 is the precision a 100 m grid deserves, and over
+  the GK3/shape variants because the UTM32S GeoPackage is already EPSG:25832 — confirmed from the
+  GeoPackage's own `srs_id`, not from the filename.
+- **`docs/data/sources.md` §2.5 records a near-miss worth keeping.** VG25 is **CC BY 4.0**, *not*
+  `dl-de/by-2-0` like BKG's CLC5 — same publisher, same host, one directory across, different
+  licence. The manifest entry was first written as `dl-de/by-2-0` by analogy and corrected only
+  after reading `nutzungsbedingungen_vg25.pdf` **inside the archive**. Its *Quellenvermerk* also
+  differs: `© BKG …`, without CLC5's `GeoBasis-DE /` prefix. §3 now carries both, separately.
+- **A third basemap option, from sela's own prior art.** `richardkfm/alpha` used hosted CARTO
+  raster tiles (`basemaps.cartocdn.com`), attributed "© OpenStreetMap © CARTO". Recorded in §4.1
+  with its trade-offs: no build pipeline and no archive, but a third-party dependency of exactly
+  the shape ADR-0003 rejected, and raster where the design language wants restylable vector. It
+  does **not** change the §4 decision — a hosted basemap never puts OSM data into `criterion_value`,
+  and that is the leg share-alike turns on.
+
 - **The first real data sela has ever fetched.** `ingest/01_fetch.sh` gained working fetch
   implementations and was run for both confirmed sources: the pinned BKG CLC5-2018 shapefile
   archive (1 361 366 128 bytes — the `HEAD` pin recorded on 2026-09-18 still matches exactly) and

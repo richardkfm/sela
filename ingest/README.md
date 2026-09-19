@@ -12,6 +12,8 @@ ingest/
   01_fetch.sh <source_id>        fetch — gated on sources.manifest.json reading "confirmed";
                                   writes data/raw/<source_id>/ + fetch-provenance.json
   02_reproject.sh <in> <out>     reproject to EPSG:25832 (ogr2ogr, falls back to gdalwarp)
+  02b_extract_pilot_boundary.sh  cut one Landkreis out of the fetched VG25 archive
+  pilot/                         the real pilot-region boundary — see pilot/README.md
   03_load.sh <file> <table>      load into staging.<table> via ogr2ogr -f PostgreSQL
   04_generate_grid.sql           ST_HexagonGrid, clipped to the pilot boundary (ADR-0001)
   05_sample.sql                  sample/intersect onto cells — one example query per criterion
@@ -32,6 +34,7 @@ datasets and reports the other two as skipped:
 | Source id | Status | |
 |---|---|---|
 | `bkg-clc5` | `confirmed` | fetched — `dl-de/by-2-0`, no share-alike |
+| `bkg-vg25` | `confirmed` | fetched — **CC BY 4.0** (not `dl-de/by-2-0`; same publisher, different licence), supplies the pilot boundary |
 | `dwd-cdc-radiation` | `confirmed` | fetched — CC BY 4.0, no share-alike |
 | `bfn-schutzgebiete` | `to_confirm` | licence cleared (GeoNutzV); `geodienste.bfn.de` returns 403 |
 | `osm-geofabrik` | `to_confirm` | ODbL share-alike decision open — `docs/data/sources.md` §4 |
