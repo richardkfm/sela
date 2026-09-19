@@ -31,9 +31,16 @@ On a web page, "BKG" links to `https://www.bkg.bund.de` and "CC BY 4.0" to
 
 ## Why the boundary is committed
 
-`uckermark-12073.geojson` is 673 KB of derived data. It is committed so the pipeline can run
+`uckermark-12073.geojson` is 291 KB of derived data. It is committed so the pipeline can run
 without the 325 MB VG25 fetch, and because a boundary is the one input you never want silently
-regenerated differently. Regenerate or cut a different *Landkreis* with:
+regenerated differently.
+
+It is stored **minified, on one line**, on purpose: pretty-printed it is 50 965 lines, and every
+future change to it would bury a reviewer in diff noise for a file no human reads by eye. One line
+means the diff says "the boundary changed", which is the only thing worth reading about it. Pipe it
+through `jq .` to inspect.
+
+Regenerate or cut a different *Landkreis* with:
 
 ```sh
 ./ingest/01_fetch.sh bkg-vg25          # once — 325 MB

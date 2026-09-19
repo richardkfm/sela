@@ -40,6 +40,7 @@ ogr2ogr -f GeoJSON "$OUTPUT" "$INPUT" \
 
 [ -s "$OUTPUT" ] || { echo "ogr2ogr produced no output" >&2; exit 1; }
 echo "display boundary -> $OUTPUT"
+echo "Both boundary files are stored minified on one line — see ingest/pilot/README.md."
 echo "Attribution (BKG VG25, CC BY 4.0) is required wherever this renders —"
 echo "see docs/data/sources.md §3; the map carries it via MapLibre's"
 echo "attribution control, sourced from lib/basemap/basemap-source.ts."
