@@ -3,9 +3,10 @@ set -eu
 # Orchestrates the numbered ingest steps (roadmap §4.2), in order. Each step
 # script is individually re-runnable; this just sequences them.
 #
-# Default (no flags): the real pipeline. As of this writing every candidate
-# dataset in docs/data/sources.md is still "to_confirm" or "unconfirmed", so
-# this always stops at the fetch gate — see ingest/README.md.
+# Default (no flags): the real pipeline. Sources whose docs/data/sources.md
+# status is "confirmed" are fetched; sources still behind the licence gate are
+# reported and skipped rather than aborting the run, so a partially-confirmed
+# manifest is still usable — see ingest/README.md.
 #
 # --fixture: runs the same grid-generation/sampling/write machinery against
 # the synthetic data in ingest/fixtures/ instead, to prove the pipeline
@@ -24,12 +25,27 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$SCRIPT_DIR/00_staging_schema.sql"
 
 if [ "$MODE" = "real" ]; then
   echo "== real ingest run =="
+  FETCHED=""
+  SKIPPED=""
   for source_id in bfn-schutzgebiete bkg-clc5 osm-geofabrik dwd-cdc-radiation; do
-    "$SCRIPT_DIR/01_fetch.sh" "$source_id"
+    # `set -e` must not kill the run on a gated source: a blocked licence (1)
+    # or a confirmed source whose fetch is not written yet (3) is an expected
+    # state of this pipeline, not a failure. Anything else still aborts.
+    rc=0
+    "$SCRIPT_DIR/01_fetch.sh" "$source_id" || rc=$?
+    case "$rc" in
+      0) FETCHED="$FETCHED $source_id" ;;
+      1|3) SKIPPED="$SKIPPED $source_id" ;;
+      *) echo "01_fetch.sh '$source_id' failed with exit $rc — stopping." >&2; exit "$rc" ;;
+    esac
   done
-  # Unreachable while every source above is unconfirmed — 01_fetch.sh exits
-  # non-zero and `set -e` stops the script. Reproject/load/grid/sample/write
-  # for real sources are added here once fetch actually produces files.
+  echo "== fetch summary =="
+  echo "  fetched:${FETCHED:- (none)}"
+  echo "  skipped (gated or not implemented):${SKIPPED:- (none)}"
+  # Reproject/load/grid/sample/write for real sources are added below once the
+  # per-source steps are written. They are deliberately absent rather than
+  # stubbed: fetching a dataset is not the same as knowing how to sample it
+  # onto the grid, and ADR-0004 exclusions must not be half-applied.
   exit 0
 fi
 

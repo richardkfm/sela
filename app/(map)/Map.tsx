@@ -23,6 +23,20 @@ import { TECHNOLOGIES, type SuitabilityVerdict, type Technology } from "@/lib/sc
 const SOURCE_ID = "units";
 const FILL_LAYER_ID = "units-fill";
 const OUTLINE_LAYER_ID = "units-outline";
+const PILOT_SOURCE_ID = "pilot-boundary";
+const PILOT_LAYER_ID = "pilot-boundary-line";
+
+// Display-only outline of the pilot region (Landkreis Uckermark), generated
+// by ingest/02c_pilot_boundary_display.sh. Deliberately *not* an analysis
+// input — 04_generate_grid.sql clips against the full-precision EPSG:25832
+// file in ingest/pilot/, never this simplified WGS84 one.
+const PILOT_BOUNDARY_URL = "/pilot-uckermark.geojson";
+
+// The synthetic fixture cells sit at "null island" (0,0), a whole hemisphere
+// from the real pilot region, so one initial view cannot show both. Default
+// to the real region now that there is a basemap under it; set
+// NEXT_PUBLIC_MAP_VIEW=fixture to get the 0.3.0 demo view back.
+const FIXTURE_VIEW = { center: [0.005, 0.005] as [number, number], zoom: 15 };
 const UNSUITABLE_COLOR = "#d8d5cc";
 const EXCLUDED_COLOR = "#8a8a8a";
 const UNSCORED_COLOR = "#cccccc";
@@ -81,13 +95,12 @@ export function Map({
     // matching maplibre-gl version's worker bundle in public/ instead.
     setWorkerUrl("/maplibre-gl-worker.mjs");
 
+    const showFixtureView = process.env.NEXT_PUBLIC_MAP_VIEW === "fixture";
     const map = new MaplibreMap({
       container: containerRef.current,
       style: "/api/tiles/style.json",
-      // The fixture boundary sits at "null island" (0,0) — deliberately
-      // synthetic, see ingest/fixtures/pilot_boundary.geojson.
-      center: [0.005, 0.005],
-      zoom: 15,
+      center: FIXTURE_VIEW.center,
+      zoom: FIXTURE_VIEW.zoom,
       attributionControl: { compact: true },
     });
     mapRef.current = map;
@@ -112,6 +125,49 @@ export function Map({
       });
 
       applyVerdicts(initialVerdicts, initialTechnology);
+
+      // Real geography, fetched rather than bundled: 30 KB of boundary has no
+      // business in the JS payload. A failure here is non-fatal — the map is
+      // still usable without the outline, so it warns and carries on rather
+      // than taking the explorer down.
+      if (!showFixtureView) {
+        void fetch(PILOT_BOUNDARY_URL)
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((boundary: GeoJSONFeatureCollection & { bbox?: number[] }) => {
+            if (!mapRef.current) return;
+            map.addSource(PILOT_SOURCE_ID, { type: "geojson", data: boundary });
+            map.addLayer({
+              id: PILOT_LAYER_ID,
+              type: "line",
+              source: PILOT_SOURCE_ID,
+              paint: { "line-color": "#54524c", "line-width": 1.5, "line-dasharray": [3, 2] },
+            });
+            // A length check doesn't narrow number[] to a 4-tuple, so the
+            // corners are pulled out and checked individually rather than
+            // asserted with a cast.
+            const [west, south, east, north] = boundary.bbox ?? [];
+            if (
+              typeof west === "number" &&
+              typeof south === "number" &&
+              typeof east === "number" &&
+              typeof north === "number"
+            ) {
+              map.fitBounds(
+                [
+                  [west, south],
+                  [east, north],
+                ],
+                { padding: 40, animate: false },
+              );
+            }
+          })
+          .catch((error: unknown) => {
+            console.warn(`pilot boundary not shown (${String(error)})`);
+          });
+      }
 
       map.on("click", FILL_LAYER_ID, (e: MapLayerMouseEvent) => {
         const id = e.features?.[0]?.id;

@@ -27,6 +27,114 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **The map shows real geography.** At the project owner's request ("use the carto tiles for now so
+  we can see something"), the explorer now renders a remote basemap and the real pilot-region
+  outline instead of synthetic cells at null island. `lib/basemap/basemap-source.ts` is the single
+  place that decides which basemap is serving and what attribution comes with it — one module so
+  the live map (`app/api/tiles/style.json`) and the export card
+  (`app/api/unit/[id]/card/route.tsx`) cannot drift apart on a credit line that ADR-0003 makes
+  mandatory on both.
+- **The fallback is basemap.de, not CARTO, because CARTO was tested and found watermarked.**
+  Rendering the CARTO configuration in a real browser returned 49/49 tiles — each stamped
+  *"API KEY REQUIRED"* diagonally across it. `richardkfm/alpha`'s setup no longer yields a clean
+  map without an account. BKG's **basemap.de** WMTS does: no key, 49/49 clean tiles, **CC BY 4.0**
+  with no share-alike (already verified in `docs/data/sources.md` §4.1), and its `_grau` style is
+  the match for `design-language.md` §4.1's desaturated requirement. CARTO stays selectable behind
+  `SELA_BASEMAP=carto` for anyone holding a key.
+- **`SELA_BASEMAP`** (`auto` | `pmtiles` | `basemapde` | `carto` | `none`) and
+  `NEXT_PUBLIC_MAP_VIEW=fixture`, both documented in `.env.example`. `auto` prefers the ADR-0003
+  archive whenever one exists and only falls back when it does not, so building the archive changes
+  nothing else. The fixture view is kept reachable rather than deleted — the `0.3.0` scoring demo
+  still works, it simply is not the default now that there is real geography to show.
+- **`ingest/02c_pilot_boundary_display.sh` and `public/pilot-uckermark.geojson`** — a display-only
+  boundary, simplified at 25 m and reprojected to EPSG:4326 (12 733 → 1 355 vertices, 673 KB → 30 KB).
+  Explicitly **not** an analysis input: `04_generate_grid.sql` clips against the full-precision
+  EPSG:25832 file, because a simplified boundary would silently add and drop cells along the edge.
+
+- **The pilot region is decided: Landkreis Uckermark** (AGS `12073`, NUTS `DE40I`), delegated to
+  this session by the project owner. `docs/architecture/roadmap-to-first-deployment.md` §2.3 stops
+  being a stated assumption and becomes a decision, with the grounds written down: all four
+  scenarios have real content there, its boundary is a single ring with no exclaves or holes, and
+  it is the **largest** Brandenburg *Landkreis* at **3 082.4 km²** — measured from the boundary
+  geometry itself, not looked up. That size is the one real cost: ≈ 118 600 hex cells at
+  `ST_HexagonGrid(100, …)` against ≈ 47 000 for the smallest district. The claims about wind
+  build-out, protected areas and peatland that motivate the choice are recorded explicitly as
+  *rationale, not findings* — none is measured yet, BfN is still returning 403, and `CLAUDE.md` §5
+  forbids anything downstream citing them as evidence.
+- **`ingest/pilot/`** — the real boundary (`uckermark-12073.geojson`, EPSG:25832, 12 733 vertices,
+  rounded to 0.01 m because VG25 is a 1:25 000 product) plus a README covering the region, its
+  measured extent, the mandatory attribution and how to cut a different *Landkreis*. Committed
+  rather than generated so the pipeline runs without the 325 MB fetch.
+- **`ingest/02b_extract_pilot_boundary.sh`** — the reproducible `ogr2ogr` path for that extraction,
+  parameterised by AGS. **It has not been executed**: GDAL is not installed in this environment, so
+  the committed GeoJSON came from a one-off GeoPackage reader instead. Flagged in the README and
+  the verification log — diff the two before trusting either.
+- **A fifth dataset: BKG VG25** (*Verwaltungsgebiete 1:25 000*), fetched and checksummed, Produktstand
+  31.12.2025. Chosen over VG250 because 1:25 000 is the precision a 100 m grid deserves, and over
+  the GK3/shape variants because the UTM32S GeoPackage is already EPSG:25832 — confirmed from the
+  GeoPackage's own `srs_id`, not from the filename.
+- **`docs/data/sources.md` §2.5 records a near-miss worth keeping.** VG25 is **CC BY 4.0**, *not*
+  `dl-de/by-2-0` like BKG's CLC5 — same publisher, same host, one directory across, different
+  licence. The manifest entry was first written as `dl-de/by-2-0` by analogy and corrected only
+  after reading `nutzungsbedingungen_vg25.pdf` **inside the archive**. Its *Quellenvermerk* also
+  differs: `© BKG …`, without CLC5's `GeoBasis-DE /` prefix. §3 now carries both, separately.
+- **A third basemap option, from sela's own prior art.** `richardkfm/alpha` used hosted CARTO
+  raster tiles (`basemaps.cartocdn.com`), attributed "© OpenStreetMap © CARTO". Recorded in §4.1
+  with its trade-offs: no build pipeline and no archive, but a third-party dependency of exactly
+  the shape ADR-0003 rejected, and raster where the design language wants restylable vector. It
+  does **not** change the §4 decision — a hosted basemap never puts OSM data into `criterion_value`,
+  and that is the leg share-alike turns on.
+
+- **The first real data sela has ever fetched.** `ingest/01_fetch.sh` gained working fetch
+  implementations and was run for both confirmed sources: the pinned BKG CLC5-2018 shapefile
+  archive (1 361 366 128 bytes — the `HEAD` pin recorded on 2026-09-18 still matches exactly) and
+  the **complete** DWD annual global radiation series 1991–2025 (35 grids plus both description
+  PDFs, 37 artefacts). Everything lands in git-ignored `data/raw/<source_id>/` alongside a
+  `fetch-provenance.json` recording the retrieval time and each artefact's URL, byte count,
+  upstream `Last-Modified` and sha256 — so a later session can verify a claim in
+  `docs/data/sources.md` instead of taking it on trust.
+- **`docs/data/sources.md` §3 — BKG's required attribution corrected from the publisher's own file.**
+  The CLC5 archive ships `quellenvermerk_datenlizenz_deutschland.txt`, which gives exactly two
+  permitted forms and makes clear that **sela must always use the *(Daten verändert)* one** — a
+  `criterion_value` derived from CLC5 polygons is by definition an alteration. The previously
+  recorded string used the plain form. A discrepancy is flagged rather than papered over: the
+  in-archive file omits the `dl-de/by-2-0` label that BKG's own catalogue record includes, so the
+  safe rendering carries both the label and the change notice. Also verified from inside the
+  archive: every layer's `.prj` is `ETRS_1989_UTM_Zone_32N`, so **no reprojection is needed for
+  CLC5** — previously inferred from the filename, now read off the data.
+- **Artefact pinning enforced by the pipeline, not just documented.** `sources.manifest.json` now
+  carries a `fetch` block per confirmed source (URL, `pinnedBytes`, `pinnedLastModified`), and
+  `01_fetch.sh` compares what the server offers against it **before writing anything**, exiting 4
+  on drift. A publisher silently re-issuing a file under the same URL would otherwise change
+  sela's inputs with nobody noticing.
+- **`docs/data/sources.md` §4.1 — the non-ODbL alternatives research §4 left outstanding.** Option
+  (b) was recorded in the previous entry with the caveat that no substitute dataset had been
+  identified. Two now have been, both licence-verified in the publisher's own ISO 19139 metadata:
+  **BKG CLC5 classes 111/112** (*Durchgängig* / *Nicht durchgängig städtische Prägung*) under
+  `dl-de/by-2-0`, and **BKG DLM250 layer SIE01_F** (ATKIS `52001 AX_Ortslage`) under GeoNutzV — the
+  regime sela already cleared for BfN. Neither matches OSM: CLC5 has a **5 ha minimum mapping
+  unit**, so hamlets below it are absent and class 112 encloses gardens and roads inside the
+  settlement edge; DLM250 is generalized for 1:250 000 and models a settlement **as a point** where
+  it is a *Sammelgemeinde* without its own *Ortslage*. Option (b) therefore trades a licensing
+  constraint for a documented accuracy cost rather than avoiding a cost.
+- **Three candidates ruled out in §4.1, with reasons recorded so they are not re-researched.**
+  **LBM-DE2021** — the 1 ha model CLC5 is generalized from, and the obvious finer substitute — is
+  **not open**: its GDI-DE records carry *"Es gelten Zugriffsbeschränkungen"* and point at the AdV
+  for acquiring usage rights, even though the `.gpkg.zip` sits on the same open-data host as CLC5.
+  That is the trap this project's "no invented facts" rule exists for: reachable on the open-data
+  server is not openly licensed. **DLM250's building layer** (`31001 AX_Gebaeude`) is a *selection*
+  per BKG's own capture criteria — parliaments, supreme federal courts, planetaria, churches partly
+  by height — not a building stock. **BKG Hausumringe (HU-DE)** appears under no category on the
+  open-data host at all.
+- **`docs/data/sources.md` §4.1 — an unexpected second finding: the basemap need not be OSM
+  either.** BKG publishes **basemap.de Web Vektor** as vector tiles with styles, fonts and sprites,
+  and its terms of use (read in full) place it under **CC BY 4.0**, with `dl-de/by-2-0` as an
+  alternative — no share-alike. This materially changes what option (b) means: if both legs move
+  off OSM, ODbL leaves sela's stack entirely and §4.6's machine-readable-access duty never attaches
+  to anything. Recorded with its three unverified costs (ADR-0003 chose PMTiles built with
+  Planetiler; the archive is pre-tiled in EPSG:3857; the layer schema is BKG's, so
+  `ingest/basemap/` would be rewritten rather than reconfigured). **An ADR-0003 change is
+  §3-gated** — this is a lead, not a decision.
 - **Verified facts that unblock real ingestion work, none of which existed before** — recorded in
   `docs/data/sources.md` §2: the DWD grids are **EPSG:31467** (Gauß-Krüger zone 3, Bessel/Potsdam),
   so a reprojection step to the EPSG:25832 storage CRS is required and `ingest/02_reproject.sh` has
@@ -42,6 +150,34 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Changed
 
+- **The machine gate is open for two of four sources.** `ingest/sources.manifest.json` now reads
+  `confirmed` for `bkg-clc5` and `dwd-cdc-radiation`. This is a `CLAUDE.md` §3 decision (data
+  sources and licensing) and was taken by the project owner on 2026-09-19, on the basis that both
+  rows are licence-cleared, version-pinned and carry no share-alike term. `bfn-schutzgebiete` and
+  `osm-geofabrik` were held at `to_confirm` deliberately — the first because no extract can be
+  retrieved, the second because the ODbL question below is still open. `docs/data/sources.md` §1
+  and the manifest were changed together, as they must be.
+- **`ingest/run.sh` — a gated source is now skipped, not fatal.** The real pipeline used to abort
+  at the first `01_fetch.sh` call, which was correct when every row was unconfirmed and useless the
+  moment some were not. It now distinguishes `01_fetch.sh`'s exit codes (0 fetched, 1 blocked by
+  the gate, 2 unknown id, 3 confirmed-but-unimplemented, 4 pin mismatch), continues past 1 and 3,
+  aborts on 2 and 4, and prints a fetch summary. Reproject/load/sample for real sources are still
+  deliberately absent rather than stubbed: fetching a dataset is not the same as knowing how to
+  sample it onto the grid, and ADR-0004 exclusions must not be half-applied.
+- **`docs/data/sources.md` §2.3 — DWD specifications re-verified against the delivered files, not
+  only the description PDF**, and two upstream defects found. The grid header confirms V003,
+  654 × 866, `CELLSIZE 1000`, `NODATA_VALUE -999`, kWh/m² and Gauß-Krüger 3rd meridian strip on
+  Potsdam datum, identical in origin and extent across every year sampled — so a multi-year
+  aggregate needs no resampling. But: (1) a **22-line DWD preamble precedes the Esri header**, so
+  the file is not a bare Esri ASCII grid and needs a strip step before `02_reproject.sh`; and
+  (2) **`Titel_2` is wrong in the four most recent files** — 2022–2025 say `Monatssumme` in a
+  dataset of annual sums, while 1991–2021 say `Jahressumme`. The values (1 092–1 307 kWh/m² for
+  2025) prove the label wrong, not the data. Nothing in the ingest path may read `Titel_2` to
+  determine units or accumulation period; the mislabelling is silent and would produce a plausible
+  wrong answer rather than an error.
+- **`ingest/README.md`** — "Real ingestion is currently blocked" becomes "partially open", with a
+  per-source status table, the exit-code contract `run.sh` depends on, and the reminder that being
+  fetched is not being publishable (§7 condition 4 still binds for every row).
 - **`docs/data/sources.md`** — rewritten. **U7's licence research is done: all four datasets' terms
   are now read at a primary source**, closing four of the five dead ends the `0.2.1` session logged
   (each of those URLs was retried, and the ones that had failed were either reachable again or
@@ -86,10 +222,11 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Notes
 
-- **The machine gate is deliberately untouched.** `ingest/sources.manifest.json` — what
-  `ingest/01_fetch.sh` reads before touching a network — still says `to_confirm`/`unconfirmed` for
-  every row. Allowing real ingestion is a `CLAUDE.md` §3 decision; this change is the evidence for
-  that conversation, not the decision itself. The two files must move together.
+- **The machine gate was untouched when the evidence was gathered, and opened separately once the
+  §3 decision was taken.** `ingest/sources.manifest.json` said `to_confirm`/`unconfirmed` for every
+  row throughout the research; two rows were flipped on 2026-09-19 by the project owner's explicit
+  decision, and the other two were not. The separation is the point: the session that verifies a
+  licence does not get to act on it.
 - **Two unreachable hosts, two different causes**, distinguished in the verification log so a later
   session does not conflate them: `geodienste.bfn.de` returns a BfN-branded HTTP 403 to this
   environment for every path including the GetCapabilities request that succeeded on 2026-08-22
@@ -102,7 +239,30 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   Planungszwecke geeignet"* — confirmed as a metadata field, not an incidental remark in a service
   description. It does not block sela's advisory use, but sela's audience includes municipal
   planning offices, and this is an input to the disclaimer-posture decision.
-- No code, schema, scoring or user-visible behaviour changed in this entry.
+- **`docs/data/sources.md` §5.2 is a new open scoring question, raised by the data rather than by
+  a plan.** A single annual radiation grid is a weather observation, not a site property — the
+  series spans 909 kWh/m² (2000) to 1 319 kWh/m² (2020), so scoring a parcel from one year makes
+  the verdict a function of which year was picked. Single recent year, rolling mean, or the
+  1991–2020 climate normal are all defensible and give different numbers for the same land. That is
+  a `CLAUDE.md` §3 scoring decision and is **not** taken; instead `01_fetch.sh` fetches the entire
+  published series so the choice is not silently pre-empted by what happens to be on disk. Related:
+  the ±6 % uncertainty DWD publishes is for a single grid, and `criterion_value.confidence` must
+  not carry it for a multi-year mean until the combined figure is actually derived.
+- **`CLC5-2021` exists and sela is pinned to 2018** (`clc5_2021.utm32s.gpkg.zip`, published
+  2026-04-23, derived from LBM-DE2021, same `dl-de/by-2-0`). Moving to it would cut the
+  data-currency gap by three years and is a **§3-gated source-version change** — recorded in §6,
+  not taken. It is published as GeoPackage only; no shapefile variant exists for 2021.
+- **User-visible behaviour did change, on explicit instruction.** The map's default view and its
+  basemap are both different: it opens on the Uckermark over a remote raster basemap rather than on
+  synthetic cells over a flat ground colour. Two honest caveats. The raster tiles carry **baked-in
+  labels** where the PMTiles style deliberately carries none until a self-hosted glyph pipeline
+  exists, so this is a visible deviation from `design-language.md` §4.1 rather than a neutral swap.
+  And ADR-0003's self-hosted archive is still what must exist before anything public ships — what
+  landed is a reversible development default behind one environment variable, not an amendment.
+- **Scoring and schema are untouched.** The code that changed is
+  ingest-side only (`01_fetch.sh`, `run.sh`), and no fetched data reaches a screen: `data/raw/` is
+  git-ignored, nothing was loaded into PostGIS, and `docs/data/sources.md` §7 condition 4 still
+  blocks publication until each source's *Quellenvermerk* is rendered in the interface.
 
 ---
 

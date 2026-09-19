@@ -1,21 +1,57 @@
 {
-  "$comment": "Machine-readable mirror of docs/data/sources.md's Licence position / Status columns. This is what 01_fetch.sh actually reads to decide whether a real fetch may run — the prose document is the record of *why*, this file is what the pipeline checks before touching a network. The two must be kept in sync by hand: whenever a row in docs/data/sources.md changes status, update the matching entry here in the same change.",
+  "$comment": "Machine-readable mirror of docs/data/sources.md's Licence position / Status columns. This is what 01_fetch.sh actually reads to decide whether a real fetch may run — the prose document is the record of *why*, this file is what the pipeline checks before touching a network. The two must be kept in sync by hand: whenever a row in docs/data/sources.md changes status, update the matching entry here in the same change. A `fetch` block is the pinned artefact from that row's 'Pinned artefacts' line; 01_fetch.sh verifies what the server returns against `pinned*` before writing anything, so a silently re-issued file fails loudly instead of changing sela's inputs.",
   "sources": {
     "bfn-schutzgebiete": {
       "status": "to_confirm",
-      "docRow": "BfN Schutzgebiete (WFS)"
+      "docRow": "BfN Schutzgebiete (WFS)",
+      "blockedBy": "geodienste.bfn.de returned HTTP 403 on every path on 2026-09-18; no extract could be pinned. Licence (GeoNutzV) is cleared — see docs/data/sources.md §2.1."
     },
     "bkg-clc5": {
-      "status": "to_confirm",
-      "docRow": "BKG CORINE Land Cover 5 ha (CLC5)"
+      "status": "confirmed",
+      "docRow": "BKG CORINE Land Cover 5 ha (CLC5)",
+      "licence": "dl-de/by-2-0",
+      "fetch": {
+        "kind": "single-file",
+        "url": "https://daten.gdz.bkg.bund.de/produkte/dlm/clc5_2018/aktuell/clc5_2018.utm32s.shape.zip",
+        "filename": "clc5_2018.utm32s.shape.zip",
+        "pinnedBytes": 1361366128,
+        "pinnedLastModified": "Fri, 25 Mar 2022 13:15:09 GMT"
+      }
     },
     "osm-geofabrik": {
       "status": "to_confirm",
-      "docRow": "OpenStreetMap via Geofabrik"
+      "docRow": "OpenStreetMap via Geofabrik",
+      "blockedBy": "ODbL share-alike decision is open — docs/data/sources.md §4. Separately, download.geofabrik.de is unreachable from the current environment (egress policy, not the publisher)."
     },
     "dwd-cdc-radiation": {
-      "status": "unconfirmed",
-      "docRow": "DWD CDC radiation grids"
+      "status": "confirmed",
+      "docRow": "DWD CDC radiation grids",
+      "licence": "CC BY 4.0",
+      "fetch": {
+        "kind": "annual-series",
+        "baseUrl": "https://opendata.dwd.de/climate_environment/CDC/grids_germany/annual/radiation_global/",
+        "filenameTemplate": "grids_germany_annual_radiation_global_{year}.zip",
+        "firstYear": 1991,
+        "lastYear": 2025,
+        "alsoFetch": [
+          "DESCRIPTION_gridsgermany_annual_radiation_global_en.pdf",
+          "BESCHREIBUNG_gridsgermany_annual_radiation_global_de.pdf"
+        ],
+        "$comment": "The full published series is fetched because *which* years feed pv_irradiation_annual (a single year, a rolling mean, the 1991-2020 normal) is an open scoring decision under CLAUDE.md §3 — see docs/data/sources.md §5.1. Fetching everything keeps that decision open instead of pre-empting it. lastYear is extended by DWD around February each year."
+      }
+    },
+    "bkg-vg25": {
+      "status": "confirmed",
+      "docRow": "BKG Verwaltungsgebiete 1:25 000 (VG25)",
+      "licence": "CC BY 4.0",
+      "fetch": {
+        "kind": "single-file",
+        "url": "https://daten.gdz.bkg.bund.de/produkte/vg/vg25_ebenen/aktuell/vg25.utm32s.gpkg.zip",
+        "filename": "vg25.utm32s.gpkg.zip",
+        "pinnedBytes": 325132397,
+        "pinnedLastModified": "Fri, 10 Jul 2026 10:18:54 GMT",
+        "$comment": "Supplies the pilot region boundary (docs/architecture/roadmap-to-first-deployment.md §2.3). UTM32S matches the EPSG:25832 storage CRS, so no reprojection. Only layer vg25_krs, AGS 12073 (Landkreis Uckermark) is used; the rest of the federal coverage is fetched but not ingested. Licence read from nutzungsbedingungen_vg25.pdf inside the archive itself — it is CC BY 4.0, NOT dl-de/by-2-0 like BKG's CLC5."
+      }
     }
   }
 }

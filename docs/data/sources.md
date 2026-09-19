@@ -1,6 +1,6 @@
 # Data source inventory
 
-**Version band:** `0.2.x` · **Status:** licence terms now read in full for all four datasets — see §1 · **Last updated:** 2026-09-18
+**Version band:** `0.3.x` · **Status:** BKG and DWD **Confirmed and fetched**; BfN and OSM still gated — see §1 · **Last updated:** 2026-09-19
 
 This is the gate `docs/architecture/roadmap-to-first-deployment.md` §2.2 and §3.1 requires before
 any dataset enters ingestion: `CLAUDE.md` §5 forbids asserting a licence that has not been
@@ -16,16 +16,23 @@ read at the source cited. Where that has not happened, the row says so.
 | Dataset | Licence | Derived outputs publishable? | Ingest gate |
 |---|---|---|---|
 | BfN Schutzgebiete | GeoNutzV | **Yes**, with attribution + change notice | **Licence cleared; access blocked** — `geodienste.bfn.de` returns 403 to this environment (§6) |
-| BKG CORINE Land Cover 5 ha (CLC5-2018) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Licence cleared; version pinned** (§2.2) |
-| DWD CDC annual global radiation grids | CC BY 4.0 | **Yes**, with attribution + change notice | **Licence cleared; version pinned** (§2.3) |
+| BKG CORINE Land Cover 5 ha (CLC5-2018) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed** — pinned artefact fetched and checksummed 2026-09-19 (§2.2, §6) |
+| DWD CDC annual global radiation grids | CC BY 4.0 | **Yes**, with attribution + change notice | **Confirmed** — full 1991–2025 series fetched and checksummed 2026-09-19 (§2.3, §6) |
+| BKG Verwaltungsgebiete 1:25 000 (VG25) | **CC BY 4.0** | **Yes**, with attribution + change notice | **Confirmed** — fetched and checksummed 2026-09-19; supplies the pilot boundary (§2.5) |
 | OpenStreetMap via Geofabrik | ODbL 1.0 | **Yes, but share-alike may attach to sela's own database** | **Open decision — §4.** Geofabrik also unreachable from this environment (§6) |
 
-**None of these rows flips the machine gate on its own.** `ingest/sources.manifest.json` — which
-`ingest/01_fetch.sh` actually reads before touching a network — is deliberately left at
-`to_confirm`/`unconfirmed` by the session that wrote this document. Allowing real ingestion is a
-`CLAUDE.md` §3 decision (data sources and licensing), and this document is the evidence for that
-conversation, not a substitute for it. The two files must be changed together, in the change that
-takes that decision.
+**The machine gate now stands open for two rows and closed for two.** `ingest/sources.manifest.json`
+— which `ingest/01_fetch.sh` actually reads before touching a network — reads `confirmed` for
+`bkg-clc5` and `dwd-cdc-radiation` as of 2026-09-19, and still reads `to_confirm` for
+`bfn-schutzgebiete` and `osm-geofabrik`.
+
+That flip was **not** made by the session that gathered the evidence. It was taken as a
+`CLAUDE.md` §3 decision (data sources and licensing) by the project owner on 2026-09-19, on the
+explicit basis that the two rows flipped are licence-cleared, version-pinned, and carry no
+share-alike term — so nothing about them constrains what sela may publish. The two remaining rows
+were held back deliberately: BfN because no extract can be retrieved (§6), OSM because §4 is an
+open decision. **This document and the manifest must continue to be changed together**, in the
+change that takes any further such decision.
 
 ---
 
@@ -76,7 +83,7 @@ BfN's generic one, taken from the metadata records rather than from the service 
 | Use in sela | `pv_land_cover`; current-use input to the `status_quo` baseline |
 | Version / vintage | CLC5, Stand 2018. Derived from *Landbedeckungsmodell Deutschland 2018* (LBM-DE2018) **in its revised 2021 version**, minimum object size 1 ha, generalized to a 5 ha minimum area for CLC5 |
 | Coverage / geometry | Federal, **vector** (CLC nomenclature; LB/LN classes with *Versiegelungs-* and *Vegetationsanteil*) |
-| Pinned artefact | `https://daten.gdz.bkg.bund.de/produkte/dlm/clc5_2018/aktuell/clc5_2018.utm32s.shape.zip` — 1 361 366 128 bytes, `Last-Modified: Fri, 25 Mar 2022 13:15:09 GMT` (verified by HTTP HEAD, 2026-09-18). GK3 and TM32 variants exist at the same path; **UTM32S is the one to take** — it matches ADR-0002's EPSG:25832 storage, so no reprojection step is needed. |
+| Retrieved artefact | `https://daten.gdz.bkg.bund.de/produkte/dlm/clc5_2018/aktuell/clc5_2018.utm32s.shape.zip` — **fetched in full 2026-09-19**: 1 361 366 128 bytes (exactly the size pinned by HEAD on 2026-09-18), `Last-Modified: Fri, 25 Mar 2022 13:15:09 GMT`, sha256 `98a6f2329e62b066e270ef019b7e29f6a0d6b693aca270e74e5f26e0aea71ac0`, archive integrity verified (`unzip -t`, no errors). GK3 and TM32 variants exist at the same path; **UTM32S is the one to take.** |
 | Documentation | `https://sgx.geodatenzentrum.de/web_public/gdz/dokumentation/deu/clc5_2018.pdf` |
 | Licence | **`dl-de/by-2-0`** (Datenlizenz Deutschland – Namensnennung – Version 2.0), stated on BKG's own product page; price "kostenfrei", category "Open Data" |
 | Evidence | BKG product page `gdz.bkg.bund.de/index.php/default/corine-land-cover-5-ha-stand-2018-clc5-2018.html` and canonical licence text at `govdata.de/dl-de/by-2-0`, both fetched and read 2026-09-18 |
@@ -92,6 +99,25 @@ the change notice of §1(3). No share-alike.
 the underlying LBM-DE2018 was itself revised in 2021, and the published artefact was last modified
 in March 2022. Land cover is the input most likely to be out of date against the ground.
 
+**Verified from inside the archive, 2026-09-19** — three things that were previously read off a
+product page or a filename and are now read off the data itself:
+
+- **No reprojection is needed, confirmed from the data.** Every layer's `.prj` reads
+  `PROJCS["ETRS_1989_UTM_Zone_32N", … SPHEROID["GRS_1980" …]]` — ETRS89 / UTM zone 32N, which is
+  ADR-0002's EPSG:25832 storage CRS. `ingest/02_reproject.sh` is a no-op for this source. (Contrast
+  §2.3, where DWD arrives in EPSG:31467 and must be warped.)
+- **`aktualitaet.txt`** states *"Referenzjahr 2018 (Vegetationsperiode) / nach grundlegender
+  Neubearbeitung am BKG / in Vertrieb ab: 08/2021"* — corroborating the 2021 revision of the
+  underlying model from the publisher's own file rather than from a web page.
+- **The archive ships BKG's own `quellenvermerk_datenlizenz_deutschland.txt`**, which is the
+  authoritative form of the attribution — see §3.
+
+Layer structure: the shapefiles are split by CLC class group —
+`clc5_class1xx` (774 686 944 byte `.shp`), `class2xx` (2 061 879 512), `class3xx` (1 852 493 264),
+`class4xx` (29 002 248) and `class5xx` (73 889 008) — five layers, matching the CLC nomenclature's
+top-level divisions. **`clc5_class1xx` is the one that carries CLC 111/112**, which matters for
+§4.1: the settlement-geometry option needs that single layer, not the whole model.
+
 ### 2.3 DWD CDC annual global radiation grids — solar irradiation
 
 | | |
@@ -104,7 +130,7 @@ in March 2022. Land cover is the input most likely to be out of date against the
 | Projection | **EPSG:31467** — Gauß-Krüger zone 3, Bessel ellipsoid, Potsdam datum. **Reprojection to EPSG:25832 is required** at ingest (`ingest/02_reproject.sh`); this is not a dataset that arrives in sela's storage CRS. |
 | Format | Esri ASCII raster, preceded by a 22-line header section |
 | Stated uncertainty | Mean uncertainty **±6 %**, from a uniform method developed in an EU project (European Solar Radiation Atlas, 2000) with DWD's own follow-up studies |
-| Pinned artefacts | `https://opendata.dwd.de/climate_environment/CDC/grids_germany/annual/radiation_global/` — annual files `grids_germany_annual_radiation_global_{1991..2025}.zip` present; the 2025 file is dated 2026-01-15. The directory is extended around February with the previous year. |
+| Retrieved artefacts | `https://opendata.dwd.de/climate_environment/CDC/grids_germany/annual/radiation_global/` — **the complete published series, 1991–2025, fetched 2026-09-19**: 35 annual `.zip` files plus both description PDFs, 37 artefacts, 7 021 079 bytes total, each with its sha256 and upstream `Last-Modified` recorded in `data/raw/dwd-cdc-radiation/fetch-provenance.json`. The 2025 file is dated 2026-01-15. The directory is extended around February with the previous year, so `lastYear` in `ingest/sources.manifest.json` is a value that ages. |
 | Licence | **CC BY 4.0** |
 | Evidence | `opendata.dwd.de/climate_environment/CDC/Terms_of_use.pdf` (Status: Mai 2024) and the dataset's own `DESCRIPTION_gridsgermany_annual_radiation_global_en.pdf`, both fetched and read 2026-09-18; `dwd.de/copyright` (redirects to `dwd.de/DE/service/rechtliche_hinweise/rechtliche_hinweise_node.html`) and the *Vorlagen für die Gestaltung des Quellenvermerks* page, read 2026-09-18 |
 
@@ -119,6 +145,58 @@ This closes the row that `0.2.1` recorded as outright **blocked** with its terms
 URLs that 404'd in August were the wrong ones, and the correct current terms are unambiguous. The
 ±6 % figure is a real, citable number for the `criterion_value.confidence` column rather than an
 invented one — the first such number this project has.
+
+**Every specification above was re-verified against the delivered files on 2026-09-19**, not only
+against the description PDF. Unzipping the annual grids confirms, in the files' own header block:
+`Datensatz_Version=V003`, `Werte_Dimension=kWh/m2`, `Werte_keineDaten=-999`,
+`Koordinatensystem=Gauss-Krueger 3. Meridianstreifen Potsdam-Datum` (EPSG:31467),
+`NCOLS 654`, `NROWS 866`, `CELLSIZE 1000`, `XLLCORNER 3280500`, `YLLCORNER 5237500`. The grid
+origin, extent and cell size are **byte-identical across every year sampled** (1991, 2000, 2010,
+2020, 2024, 2025), so a multi-year aggregate is a cell-wise arithmetic operation with no
+resampling — which matters for §5.2.
+
+**Two ingest hazards found in the delivered files, neither of them documented upstream:**
+
+1. **The 22-line DWD preamble precedes the Esri header.** The file begins `[header]` and reaches
+   `NCOLS` only on line 23, after a `[ASCII-Raster-Format]` marker. It is therefore *not* a bare
+   Esri ASCII grid, and cannot be handed to `ingest/02_reproject.sh` as-is — a strip step has to
+   run first. (That the file is shaped this way is verified; that GDAL's AAIGrid driver rejects it
+   in this exact form has **not** been re-tested here, because the GDAL container is not available
+   in the environment that fetched the data. Confirm before relying on the workaround.)
+2. **`Titel_2` is wrong in the four most recent files.** 1991–2021 carry `Titel_2=Jahressumme`;
+   **2022, 2023, 2024 and 2025 carry `Titel_2=Monatssumme`** — "monthly sum" — in a dataset whose
+   every file is an annual sum. The values prove the label wrong, not the data: 2025 ranges
+   1 092–1 307 kWh/m², which is an annual total for Germany and roughly an order of magnitude above
+   any monthly one. **Nothing in the ingest path may read `Titel_2` to determine units or
+   accumulation period.** Recorded because the mislabelling is silent and would produce a plausible
+   wrong answer rather than an error.
+
+### 2.5 BKG Verwaltungsgebiete 1:25 000 (VG25) — the pilot region boundary
+
+| | |
+|---|---|
+| Publisher | Bundesamt für Kartographie und Geodäsie (BKG), Geodatenzentrum |
+| Use in sela | The pilot-region boundary that `04_generate_grid.sql` clips the hex grid to (ADR-0001). Not a scoring input — it defines *where*, not *what*. |
+| Version / vintage | **Produktstand 31.12.2025** (`aktualitaet.txt` in the archive); terms document dated 08.07.2026 |
+| Coverage / geometry | Federal, vector, layered by administrative level — `vg25_krs` (*Kreise*) is the one sela reads |
+| Retrieved artefact | `https://daten.gdz.bkg.bund.de/produkte/vg/vg25_ebenen/aktuell/vg25.utm32s.gpkg.zip` — **fetched 2026-09-19**, 325 132 397 bytes, `Last-Modified: Fri, 10 Jul 2026 10:18:54 GMT`, sha256 in `data/raw/bkg-vg25/fetch-provenance.json` |
+| Projection | **EPSG:25832** — confirmed from the GeoPackage's own `srs_id`, not from the filename. Already ADR-0002's storage CRS; **no reprojection.** |
+| Licence | **CC BY 4.0** — *not* `dl-de/by-2-0` |
+| Evidence | `nutzungsbedingungen_vg25.pdf`, shipped **inside the archive**, read in full 2026-09-19 |
+
+**Derived outputs — confirmed permitted.** The terms document is one page and unambiguous: the data
+is provided free of charge under the *Creative Commons Namensnennung 4.0 International* licence,
+and data under CC BY 4.0 may be shared, reproduced and adapted with attribution. No share-alike.
+
+**A caution worth carrying:** this row is the reason `CLAUDE.md` §5 is written the way it is. VG25
+sits on the same host, under the same publisher, one directory across from CLC5 — and it is a
+**different licence**. The manifest entry for `bkg-vg25` was first written as `dl-de/by-2-0` by
+analogy with §2.2 and corrected only after the in-archive terms document was read. Per-product
+verification is not ceremony.
+
+**What was extracted.** Landkreis Uckermark, AGS `12073` — see `ingest/pilot/README.md` for the
+region, its measured extent, and why that region. Only one polygon out of the federal coverage is
+used; the rest of the archive is fetched but not ingested.
 
 ### 2.4 OpenStreetMap via Geofabrik — basemap, settlement geometry
 
@@ -146,7 +224,8 @@ licence verified and then not attributed is worse than one never used.
 | Source | Required notice | Notes |
 |---|---|---|
 | BfN | `Bundesamt für Naturschutz (BfN) <Jahr>` plus the GeoNutzV reference (`https://sg.geodatenzentrum.de/web_public/gdz/lizenz/geonutzv.pdf`) | GeoNutzV §3: must be "erkennbar und in optischem Zusammenhang" with the data, and carry a *Veränderungshinweis* for any alteration. Template is from BfN's own metadata records; re-read the live capabilities document before ingest (§2.1). |
-| BKG | `© GeoBasis-DE / BKG (<Jahr des letzten Datenbezugs>) dl-de/by-2-0` | BKG requires that, **on a web page**, "BKG" is hyperlinked to `https://www.bkg.bund.de` and "dl-de/by-2-0" to `https://www.govdata.de/dl-de/by-2-0`, that the notice is clearly visible on any public display, distribution, presentation or external use, and that a change notice accompanies any edited or transformed use. |
+| BKG | **`© GeoBasis-DE / BKG <Jahr des letzten Datenbezugs> (Daten verändert)`** — the *(Daten verändert)* form, not the plain one | Taken from `quellenvermerk_datenlizenz_deutschland.txt`, which ships **inside the CLC5 archive itself** (read 2026-09-19) — the publisher's own instruction rather than a web page. It gives exactly two forms, unchanged and *"(Daten verändert)"*, and **sela must always use the second**: a `criterion_value` derived from CLC5 polygons is by definition an alteration. It requires the notice to be placed "erkennbar und in optischem Zusammenhang" with the data and, on a web page, the *Quellenvermerk* hyperlinked to `http://www.bkg.bund.de`. Note a **discrepancy to resolve before rendering**: this file's form does **not** include the `dl-de/by-2-0` label, while BKG's GDI-DE metadata record for CLC5 gives `© GeoBasis-DE / BKG (Jahr des Datenbezugs) dl-de/by-2-0`. Carrying both the licence label (linked to `https://www.govdata.de/dl-de/by-2-0`) and the change notice satisfies both readings and is the safe choice. |
+| BKG — **VG25 only** | **`© BKG <Jahr des letzten Datenbezugs> CC BY 4.0, Datenquellen: https://sgx.geodatenzentrum.de/web_public/gdz/datenquellen/datenquellen_vg25.pdf`** | From `nutzungsbedingungen_vg25.pdf` inside the VG25 archive (read 2026-09-19). **Do not reuse the CLC5 notice for this** — VG25 is CC BY 4.0 and its *Quellenvermerk* is `© BKG`, without the `GeoBasis-DE /` prefix. On a web page "BKG" links to `https://www.bkg.bund.de` and "CC BY 4.0" to `https://creativecommons.org/licenses/by/4.0`. A *Veränderungshinweis* is required for any edited or transformed use, which clipping a grid to this boundary is. |
 | DWD | `Quelle: Deutscher Wetterdienst` (text form; the DWD logo is an accepted alternative) | Per §7 DWD-Gesetz. To be placed **immediately at the DWD information used**. For substantial modification DWD expects at minimum to be named in a central source list or the Impressum, together with a change notice — DWD's own examples include *"Datenbasis: Deutscher Wetterdienst, Einzelwerte gemittelt"*, which is precisely what sampling a 1 km grid onto hex cells is. The dataset additionally carries its own required citation: `DWD Climate Data Center (CDC): Gridded annual sum of incoming shortwave radiation (global radiation) on the horizontal plain for Germany based on ground and satellite measurements, Version V003, <current year>.` |
 | OSM | `© OpenStreetMap contributors` with the data made clear to be available under the Open Database License — linking to `https://www.openstreetmap.org/copyright` satisfies the latter for a browsable map; printed works must carry the full URL | ADR-0003 already records this as a standing duty on **every screen and every export**. Distributing OSM in data form requires naming and linking the licence directly. |
 
@@ -224,9 +303,125 @@ This document does not choose. It records that **choosing (a) or (b) is a precon
 `wind_settlement_setback` entering ingestion**, and that the basemap path is unaffected by the
 choice.
 
+### 4.1 Non-ODbL alternatives — researched 2026-09-19
+
+Option (b) above was recorded on 2026-09-18 with the caveat "No such dataset has been identified
+yet — this option has research attached, not just a decision." That research was commissioned on
+2026-09-19 and is done. **Both of sela's OSM dependencies turn out to have a non-ODbL substitute,
+and each substitute costs something specific.** This does not choose between (a), (b) and (c); it
+prices them.
+
+Every licence below was read in the publisher's own ISO 19139 metadata record (the
+`gmd:otherConstraints` field) via the GDI-DE catalogue, and every content statement comes from
+BKG's own product documentation, cited per row. Nothing here is inferred from the fact that a file
+sits on an open-data server — that inference is precisely what `CLAUDE.md` §5 ("no invented facts")
+forbids, and this section contains one dataset where it would have produced the wrong answer.
+
+#### The settlement-geometry question
+
+| Candidate | Licence (verified) | What it contains | Why it is not OSM |
+|---|---|---|---|
+| **BKG CLC5**, CLC classes **111** *Durchgängig städtische Prägung* and **112** *Nicht durchgängig städtische Prägung* | **`dl-de/by-2-0`** — BKG's own record for both *CORINE Land Cover 2018 – 5 ha* and *2021 – 5 ha* | Urban-fabric polygons, federal coverage | **5 ha minimum mapping unit.** Anything smaller than 5 ha — an isolated farmstead, a small hamlet — is not represented at all. Class 112 also encloses the gardens, yards and roads inside a settlement, so its outline sits *outside* the built edge by an unquantified margin. Class **121** is *Industrie- und Gewerbeflächen* and must be **excluded**: a setback to *Wohnbebauung* is not a setback to an industrial estate. |
+| **BKG DLM250**, layer **SIE01_F** (ATKIS object class **52001 `AX_Ortslage`**) | **GeoNutzV** (`geoNutz/20130319`) — the same regime sela has already cleared for BfN (§2.1) | Generalized *Ortslage* (settlement) polygons, federal coverage | **Generalized for 1:250 000.** BKG's own documentation (Stand 28.05.2026) further records that a settlement is modelled **as a point** where it is "eine selbstständige Gemeinde ohne eigene Ortslage (Sammelgemeinde)" — so the layer is not uniformly polygonal, which a distance computation has to handle rather than assume away. |
+
+**Ruled out, with the reason recorded so it is not re-researched:**
+
+- **BKG LBM-DE2021** — the 1 ha land-cover model CLC5 is generalized *from*, and therefore the
+  obvious way to get finer settlement outlines under the same licence family. Its GDI-DE records
+  do **not** carry `dl-de/by-2-0`. They carry: *"Es gelten Zugriffsbeschränkungen. Für den Erwerb
+  von Nutzungsrechten wenden Sie sich deshalb bitte an die Zentrale Stelle Geotopographie der AdV
+  (ZSGT) / Dienstleistungszentrum (DLZ) des Bundesamtes für Kartographie und Geodäsie"* — access
+  restrictions, rights to be acquired on request. The `lbm-de2021.utm32s.gpkg.zip` artefact is
+  nonetheless reachable on `daten.gdz.bkg.bund.de`, which is exactly the trap: **reachable on the
+  open-data host is not the same as openly licensed.**
+- **BKG DLM250, layer SIE05 (`31001 AX_Gebaeude`)** — a building layer does exist in DLM250, and it
+  is not a building stock. BKG's capture criteria list it as a *selection*: youth hostels; huts
+  with more than 19 beds; buildings of the supreme federal authorities; parliaments; supreme
+  federal courts; planetaria; significant theatres, concert halls and museums; churches selected
+  partly by height. A *Wohnbebauung* setback cannot be computed from it.
+- **BKG Hausumringe (HU-DE)** — building outlines would be the ideal input. HU-DE does not appear
+  under any category on `daten.gdz.bkg.bund.de/produkte/`, so it is not part of BKG's open-data
+  offering and no open licence could be verified for it.
+
+**What this means for option (b):** its settlement leg is **available but coarser**, and the
+cheaper of the two candidates costs nothing new — CLC5 is already Confirmed, already pinned,
+already fetched (§2.2), and already in sela for `pv_land_cover`. Using classes 111/112 from it adds
+no dataset, no licence, and no new attribution obligation. What it adds is **error**: a setback
+measured from a 5 ha-generalized land-cover polygon is a different quantity from a setback measured
+from OSM building geometry, and `CLAUDE.md` §4.5 requires that difference to be visible in the
+interface as confidence, not hidden. The honest framing is that option (b) trades a licensing
+constraint for a documented accuracy cost — it does not avoid a cost.
+
+#### The basemap question — two options that are not OSM-self-hosted
+
+
+§4 records that the basemap leg is "unaffected by the choice", because a self-contained OSM tile
+archive can carry its own ODbL notice in isolation. That remains true. But it is now also true that
+**the basemap does not have to be OSM at all.**
+
+BKG publishes **basemap.de Web Vektor** — an official German vector basemap, shipped as vector
+tiles in EPSG:3857 with its own styles, fonts and sprites, at
+`daten.gdz.bkg.bund.de/produkte/basiskarten/basemapde_web_vektor/aktuell/`. Its terms of use
+(*Nutzungsbedingungen und Quellenvermerk basemap.de*, read in full 2026-09-19) state that the data
+is provided free of charge under **Creative Commons Namensnennung 4.0 International (CC BY 4.0)**,
+with `dl-de/by-2-0` offered as an alternative where CC BY 4.0 cannot be used. The scope clause
+names basemap.de Web Raster, Web Raster Schummerung, **Web Vektor** and P10 explicitly. **No
+share-alike.**
+
+This is a lead, not a recommendation, and three things about it are **not** yet verified:
+
+1. ADR-0003 chose **PMTiles built with Planetiler**. basemap.de ships pre-built vector tiles in a
+   tar archive (`bm_web_de_3857.tar.gz`, 6 872 125 529 bytes as of `Last-Modified: Tue, 18 Aug 2026
+   11:24:32 GMT`); whether and how that converts to a single PMTiles archive has not been tested.
+2. EPSG:**3857**, where sela's basemap tiles would otherwise be built from a source of its own
+   choosing. Serving CRS is fine; the point is that the tiling is fixed by the publisher.
+3. Restyling latitude. sela's design language (`docs/product/design-language.md`) constrains the
+   basemap's appearance; a pre-built vector tile set is restylable in principle, but its layer
+   schema is BKG's, not Planetiler's, so `ingest/basemap/` would be rewritten, not reconfigured.
+
+**A third option, from sela's own prior art.** `richardkfm/alpha` — the earlier project — used
+**hosted raster tiles from CARTO** (`basemaps.cartocdn.com`, styles `dark_all`, `dark_nolabels`,
+`light_nolabels`), attributed as *"© OpenStreetMap © CARTO"*. Inspected 2026-09-19. Its properties
+are the opposite of ADR-0003's choice in every respect: no build pipeline, no archive, no storage —
+and no control. It is a third-party service with its own terms and usage limits, it is raster where
+sela's design language wants restylable vector, and ADR-0003 rejected exactly this dependency shape
+("a container that fetches fonts from a CDN is not self-contained"). **It does not change §4 at
+all:** it is still OSM-derived, so ODbL attribution follows it, but a hosted basemap never puts OSM
+data into `criterion_value` — and that, not the map background, is the leg §4 turns on. Its honest
+role is as a stopgap that would put a real map on screen while the basemap question is decided.
+
+**Tested 2026-09-19, and the result reordered the options.** Both remote basemaps were rendered in
+a real browser against the pilot region:
+
+- **CARTO watermarks every unauthenticated tile.** All 49 tiles returned HTTP 200 and drew
+  correctly — with *"API KEY REQUIRED — carto.com/basemaps/apikey"* stamped diagonally across each
+  one. `richardkfm/alpha`'s configuration therefore no longer produces a clean map; whatever it
+  looked like when that code was written, an account is needed now. Unusable as a stopgap without
+  one.
+- **basemap.de works with no account.** Its WMTS at
+  `sgx.geodatenzentrum.de/wmts_basemapde` publishes a `GLOBAL_WEBMERCATOR` matrix set, which is
+  plain XYZ as far as MapLibre is concerned — no WMS plumbing, no key, 49/49 tiles clean. Two
+  styles, `de_basemapde_web_raster_grau` and `_farbe`; the grey one is the match for
+  `design-language.md` §4.1's desaturated requirement. Note the path order is WMTS's
+  `{TileMatrix}/{TileRow}/{TileCol}` — **z/y/x**, not MapLibre's usual z/x/y.
+
+So the development fallback wired up on 2026-09-19 is **basemap.de**, with CARTO kept selectable
+behind `SELA_BASEMAP=carto` for anyone who has a key. One caveat against §4.1's earlier framing:
+these raster tiles carry **baked-in labels**, where the PMTiles style deliberately carries none
+until a self-hosted glyph pipeline exists. That is a visible difference, not a neutral swap.
+
+**Switching the basemap *permanently* is an ADR-0003 change and therefore §3-gated.** What was
+taken on 2026-09-19 is a reversible development default, switchable by one environment variable;
+ADR-0003's self-hosted archive is still what has to exist before anything public ships. What it changes about §4 is the shape of option (b): if both legs move off OSM, ODbL leaves
+sela's stack entirely and §4.6's machine-readable-access duty never attaches to anything — which is
+a materially different proposition from the 2026-09-18 framing, where option (b) still left an ODbL
+obligation sitting on the basemap archive.
+
 ---
 
-## 5. Open item — "Nicht für Planungszwecke geeignet"
+## 5. Open items
+
+### 5.1 "Nicht für Planungszwecke geeignet"
 
 Every BfN record inspected carries the use limitation *"Nicht für Planungszwecke geeignet"* (not
 suitable for planning purposes). `0.2.1` noted this from the WFS capabilities document; it is now
@@ -242,12 +437,98 @@ status is doing the work of an ADR-0004 exclusion, is the honest reading of `CLA
 **This is U6 (disclaimer posture), and it is user-visible behaviour — §3-gated.** Recorded here so
 the decision has this input when it is taken.
 
+### 5.2 Which years feed `pv_irradiation_annual`
+
+Fetching the DWD series raised a question that pinning a version does not answer: a single annual
+radiation grid is a **weather observation**, not a site property. Germany's annual totals swing by
+roughly 20 % between years in this very series — 909 kWh/m² minimum in 2000 against 1 319 kWh/m²
+maximum in 2020, across the sampled files. Scoring a parcel's solar potential from one year makes
+the verdict a function of which year was chosen.
+
+The realistic options are a single recent year, a rolling mean over the last N years, or the WMO
+climate normal period 1991–2020. They produce different numbers for the same land.
+
+**This is a scoring decision — `CLAUDE.md` §3 (criteria, normalization, how a score is presented) —
+and it is not taken here.** What has been done instead is to keep it open: `ingest/01_fetch.sh`
+fetches the **entire** published series rather than one year, so whichever window is chosen later
+needs no second fetch, and the choice is not silently pre-empted by what happens to be on disk.
+
+Note also that the aggregate's uncertainty is not the single-grid ±6 % of §2.3. Averaging reduces
+the year-to-year sampling term and leaves the method term; what the combined figure is has **not**
+been derived, and `criterion_value.confidence` must not carry ±6 % for a multi-year mean without
+that work being done.
+
 ---
 
 ## 6. Verification log
 
 Entries record what was actually fetched and read, so a later session does not repeat a dead end or
 mistake an attempt for a confirmation.
+
+### 2026-09-19 (later), pilot region chosen
+
+The project owner delegated the choice of pilot *Landkreis*. Picking one needs a boundary, so this
+added a fifth dataset.
+
+- `daten.gdz.bkg.bund.de/produkte/vg/vg25_ebenen/aktuell/vg25.utm32s.gpkg.zip` — **fetched**
+  (325 132 397 bytes). Chosen over VG250 because 1:25 000 is the precision a 100 m grid deserves,
+  and over the GK3/shape variants because the UTM32S GeoPackage is already EPSG:25832.
+- `nutzungsbedingungen_vg25.pdf` (inside the archive) — read in full. **VG25 is CC BY 4.0**, and the
+  manifest entry written before reading it said `dl-de/by-2-0` by analogy with CLC5. Corrected. The
+  *Quellenvermerk* is `© BKG …`, without CLC5's `GeoBasis-DE /` prefix.
+- **All 14 Brandenburg *Landkreise* measured from the geometry itself**, not from a reference
+  work: Uckermark 3 082.4 km² (largest), Potsdam-Mittelmark 2 593.9, Ostprignitz-Ruppin 2 528.2,
+  Dahme-Spreewald 2 278.8, Oder-Spree 2 262.0, Märkisch-Oderland 2 163.3, Prignitz 2 138.9,
+  Teltow-Fläming 2 107.0, Elbe-Elster 1 902.1, Oberhavel 1 810.3, Havelland 1 728.5,
+  Spree-Neiße 1 661.4, Barnim 1 482.0, Oberspreewald-Lausitz 1 226.0.
+- **`richardkfm/alpha` inspected** for the basemap it used, at the owner's prompting: hosted raster
+  tiles from `basemaps.cartocdn.com` (`dark_all`, `dark_nolabels`, `light_nolabels`), attributed to
+  OpenStreetMap + CARTO. Recorded in §4.1 as a third basemap option — it is OSM-derived and so does
+  not avoid ODbL attribution, but it never puts OSM data into sela's database, which is the leg §4
+  is actually about.
+
+**Caveat on how the boundary was cut.** GDAL is not installed in this environment, so the
+GeoPackage was parsed directly and `ingest/02b_extract_pilot_boundary.sh` — the reproducible
+`ogr2ogr` path — **has not been run**. Diff its output against the committed file before trusting
+either.
+
+### 2026-09-19, first real fetch + alternatives research
+
+The first session in which sela retrieved real data. Two things happened: the §3 decision to flip
+`bkg-clc5` and `dwd-cdc-radiation` to `confirmed` was taken by the project owner, and the option-(b)
+research §4 had left outstanding was carried out.
+
+- **`ingest/01_fetch.sh` gained real fetch implementations** for the two confirmed sources, and was
+  run for both. Every artefact's byte count, upstream `Last-Modified` and sha256 is written to
+  `data/raw/<source_id>/fetch-provenance.json`. The gate was re-tested against
+  `bfn-schutzgebiete` first and correctly refused before making any network call.
+- `daten.gdz.bkg.bund.de/…/clc5_2018.utm32s.shape.zip` — **fetched in full.** The `HEAD` pin
+  recorded on 2026-09-18 still holds exactly: 1 361 366 128 bytes, `Last-Modified: Fri, 25 Mar 2022
+  13:15:09 GMT`. `01_fetch.sh` now verifies both against the manifest and aborts on drift rather
+  than ingesting a silently re-issued file.
+- `opendata.dwd.de/…/radiation_global/` — **35 annual grids plus both description PDFs fetched**
+  (37 artefacts, 7 021 079 bytes). Contents verified against §2.3's claims; two upstream defects
+  found and recorded there.
+- `gdk.gdi-de.org/gdi-de/srv/ger/csw` — used again, this time for BKG's own records. *CORINE Land
+  Cover 2018 – 5 ha* and *2021 – 5 ha* both carry
+  `{"id":"dl-by-de/2.0", …, "quelle":"© GeoBasis-DE / BKG (Jahr des Datenbezugs)"}`, independently
+  re-confirming the CLC5 licence from a second source. *Landbedeckungsmodell für Deutschland*
+  records carry **access restrictions instead** (§4.1). ATKIS DLM250 records carry
+  `geoNutz/20130319`.
+- `sgx.geodatenzentrum.de/web_public/gdz/dokumentation/deu/{clc5_2021,lbm-de2021,dlm250}.pdf` —
+  fetched and read. Source of the CLC class list, the DLM250 layer-to-object-class table and the
+  DLM250 capture criteria quoted in §4.1. Note these documentation PDFs contain **no** licence
+  statement; the licence had to come from the metadata records.
+- `sgx.geodatenzentrum.de/web_public/gdz/lizenz/deu/nutzungsbedingungen_basemapde.pdf` — fetched
+  and read in full. Source of the CC BY 4.0 finding in §4.1. The URL named in the basemap.de
+  service metadata (`…/lizenz/deu/basemapde_web_dienste_lizenz.pdf`) **404s**; the file above is
+  the one that exists.
+- **`CLC5-2021` exists and sela is pinned to 2018.** `daten.gdz.bkg.bund.de/produkte/dlm/clc5_2021/`
+  carries `clc5_2021.utm32s.gpkg.zip` (1 562 531 359 bytes, `Last-Modified: Thu, 23 Apr 2026
+  10:02:17 GMT`), derived from LBM-DE2021, documented Stand 07.04.2026, same `dl-de/by-2-0`
+  licence. Moving to it would cut the data-currency gap in §2.2 by three years. It is a **change of
+  source version and therefore §3-gated**; recorded, not taken. Note it is GeoPackage only — no
+  shapefile variant is published for 2021.
 
 ### 2026-09-18, U7 licence-gate session
 
@@ -329,14 +610,22 @@ Unchanged as a standard; §1 records how far each row has got against it.
    it is not the same question as "is the raw data open." — **Met for BfN, BKG and DWD. For OSM the
    answer is "yes, with share-alike attached", which is why §4 is a decision and not a status.**
 3. The retrieval date and exact version/extract used for the pilot region are recorded here,
-   replacing the "vintage not yet pinned" placeholders. — **Met for BKG and DWD. Not met for BfN
-   (403) or OSM (Geofabrik unreachable).**
+   replacing the "vintage not yet pinned" placeholders. — **Met for BKG and DWD, and as of
+   2026-09-19 no longer only on paper: both have been fetched, and every artefact's sha256 and
+   upstream `Last-Modified` is recorded in `data/raw/<source_id>/fetch-provenance.json`. Not met
+   for BfN (403) or OSM (Geofabrik unreachable).**
 
 A fourth condition is added by §3 of this document, because it was not previously written down and
 is what turns a cleared licence into a lawful deployment:
 
 4. The source's required attribution string is implemented in the interface and in every export
-   before the data reaches a public screen — not added later.
+   before the data reaches a public screen — not added later. — **Not met for any row, and this is
+   now the binding condition.** A dataset being fetched is not a dataset being publishable: BKG and
+   DWD data sit in `data/raw/` and may not reach a public screen until §3's *Quellenvermerk* for
+   each is rendered. Note that BKG's metadata gives the CLC5-2018 *Quellenvermerk* as
+   `© GeoBasis-DE / BKG (Jahr des Datenbezugs)` where §3 of this document records the generic
+   `(Jahr des letzten Datenbezugs)` wording; the 2021 record uses the latter. Use the wording from
+   the record for the version actually ingested.
 
 ---
 
@@ -348,5 +637,13 @@ not yet been identified. These are not silently assumed available — they remai
 against U2 and U4, and will be added as rows once a candidate source is found and its licence
 checked, not before.
 
-§4(b) adds one to the list: **a non-ODbL settlement-geometry dataset**, needed only if the decision
-in §4 goes that way.
+§4(b) added one to the list on 2026-09-18: **a non-ODbL settlement-geometry dataset**. That item is
+**closed as research** by §4.1 — two candidates exist (`BKG CLC5` classes 111/112 under
+`dl-de/by-2-0`, and `BKG DLM250` layer `SIE01_F` under GeoNutzV) and their limitations are
+documented. Neither becomes a row here until §4 is decided, because neither is needed unless it is.
+
+§4.1 adds two further candidates, both recorded rather than adopted:
+
+- **basemap.de Web Vektor** (BKG, **CC BY 4.0**) — a possible non-OSM basemap. ADR-0003 change, §3-gated.
+- **CLC5-2021** (BKG, `dl-de/by-2-0`) — a three-year-newer version of a dataset sela already uses.
+  Source-version change, §3-gated. See §6.

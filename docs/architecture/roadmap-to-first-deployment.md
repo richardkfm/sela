@@ -1,6 +1,6 @@
 # Roadmap — from planning documents to a deployable web app
 
-**Version band:** `0.2.x` → `0.3.0` · **Status:** agreed · **Last updated:** 2026-09-18
+**Version band:** `0.2.x` → `0.3.0` · **Status:** agreed · **Last updated:** 2026-09-19
 
 This document plans the route from the `0.1.0` planning artefacts to a sela that runs with
 `docker compose up` and serves real land in a real German pilot region. It refines
@@ -56,11 +56,51 @@ Database rather than a Produced Work under the licence's own definitions. "Verif
 is therefore not a single bar — it is per-source, and one of the sources changes what sela may do
 with everything stored beside it. `docs/data/sources.md` §4 states the decision and its options.
 
-### 2.3 Stated assumption — the pilot region
+**Status note (2026-09-19):** the gate has been **opened for two of the four sources** — BKG
+CLC5-2018 and DWD CDC — by an explicit `CLAUDE.md` §3 decision, and both have been fetched. That
+makes a point this section assumed away: the gate is not one switch. A partially-confirmed manifest
+is a normal state, and `ingest/run.sh` now treats a gated source as skipped rather than fatal, so
+the confirmed sources are usable while the others are still being argued about. Two consequences
+worth carrying forward: the binding condition for those two rows is no longer the licence but
+**condition 4** — the *Quellenvermerk* must be rendered before the data reaches a public screen
+(`docs/data/sources.md` §7) — and the alternatives research in §4.1 has established that non-ODbL
+substitutes exist for **both** of sela's OSM dependencies, which changes what §4's option (b) costs
+without deciding it.
+
+### 2.3 The pilot region — decided 2026-09-19
 
 The pilot is one *Landkreis* in Brandenburg: high real PV and wind pressure, good state open
 data. The region is a single config value plus a boundary polygon; changing it is a re-run of
-ingestion, not a code change. Confirm or substitute at the start of Phase 2.
+ingestion, not a code change.
+
+**Decided: Landkreis Uckermark** (AGS `12073`, NUTS `DE40I`), delegated to this session by the
+project owner and chosen on these grounds:
+
+- **All four scenarios have content there.** The pilot has to exercise `develop_pv`,
+  `develop_wind`, `preserve` and `restore` — a region strong on renewables but empty of
+  conservation value would make `preserve` a blank column, and sela's product is the comparison,
+  not the suitability score (`CLAUDE.md` §4.2). The Uckermark is the Brandenburg district where
+  large-scale agriculture, heavy wind build-out, major protected areas and active peatland
+  rewetting coexist, so the trade-off sela exists to show is real there rather than hypothetical.
+- **It is the largest Landkreis in Brandenburg** — 3 082.4 km², measured from the VG25 boundary
+  itself. That is the one real cost: ≈ 118 600 hex cells at `ST_HexagonGrid(100, …)`, against
+  ≈ 47 000 for the smallest (Oberspreewald-Lausitz). Still small for PostGIS, and a bigger canvas
+  is worth more than faster iteration for a pilot meant to be shown to a municipality.
+- **Its boundary is simple** — one polygon, one ring, no exclaves and no holes, so no edge case in
+  grid clipping is hiding in the pilot itself.
+
+The boundary lives in `ingest/pilot/uckermark-12073.geojson` (BKG VG25, CC BY 4.0, Produktstand
+31.12.2025); see `ingest/pilot/README.md` and `docs/data/sources.md` §2.5.
+
+**Not yet verified — stated as the reason for the choice, not as fact.** The claims about wind
+build-out, protected-area coverage and peatland extent in the Uckermark are the *rationale*, and
+none of them has been measured against a dataset: BfN's protection-area service returns 403 from
+this environment (`docs/data/sources.md` §6), and no wind-turbine register is in the inventory at
+all. `CLAUDE.md` §5 forbids asserting them as findings, and nothing downstream may cite this
+paragraph as evidence. Confirm them against real data at the start of Phase 2 — and if they do not
+hold, substituting the region costs one argument to
+`ingest/02b_extract_pilot_boundary.sh` plus one config value, which is exactly why it was built
+that way. Changing it is a **scope decision** under `CLAUDE.md` §3.
 
 ---
 
@@ -271,6 +311,6 @@ Open questions that stay open, and are not resolved by assumption:
 | U4 | Constraints as filters or penalties | Closed — ADR-0004 |
 | U5 | Anonymous vs. account-gated | Open |
 | U6 | Disclaimer posture | Open — but the advisory disclaimer appears on the comparison screen and on every export from Phase 3 onward, rather than being added before launch |
-| U7 | Per-source licensing | **Narrowed, not closed (2026-09-18).** All four datasets' licence terms are now read at a primary source (`docs/data/sources.md` §6): BfN (GeoNutzV), BKG (`dl-de/by-2-0`) and DWD (CC BY 4.0) explicitly permit publishing derived, aggregated outputs with attribution and a change notice, and BKG's and DWD's exact versions are pinned. What remains is **one decision and two access problems**: ODbL share-alike may attach to sela's own database wherever OSM-derived rows enter `criterion_value` (`docs/data/sources.md` §4 — a `CLAUDE.md` §3 decision, stated with options, not taken); `geodienste.bfn.de` returns 403 and `download.geofabrik.de` is unreachable from the current environment, so neither extract can be pinned yet |
+| U7 | Per-source licensing | **Half closed (2026-09-19).** All four datasets' licence terms are read at a primary source (`docs/data/sources.md` §6). **BKG CLC5-2018 (`dl-de/by-2-0`) and DWD CDC (CC BY 4.0) are Confirmed, flipped in `ingest/sources.manifest.json` by an explicit `CLAUDE.md` §3 decision on 2026-09-19, and fetched** — pinned artefacts verified by byte count and `Last-Modified`, every file checksummed into `data/raw/<source_id>/fetch-provenance.json`. BfN's licence (GeoNutzV) is cleared but `geodienste.bfn.de` returns 403, so no extract can be pinned. OSM remains a **decision**, not an access problem: ODbL share-alike may attach to sela's own database wherever OSM-derived rows enter `criterion_value` (`docs/data/sources.md` §4). The alternatives research §4 left outstanding is done (§4.1) — non-ODbL substitutes exist for **both** OSM legs (CLC5 111/112 or DLM250 `AX_Ortslage` for settlement geometry; basemap.de Web Vektor, CC BY 4.0, for the basemap), each coarser or costlier in a documented way. U7 closes when §4 is decided and BfN is reachable |
 | U8 | Basemap provider | Closed — ADR-0003. Phase 3 additionally proved the self-hosted PMTiles path end to end against a real (non-pilot) OSM extract — see `ingest/basemap/README.md` |
 | U9 | Wordmark and public name | Open |
