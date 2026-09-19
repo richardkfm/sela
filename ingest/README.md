@@ -5,9 +5,12 @@ math live — `lib/scoring/` never touches either.
 
 ```
 ingest/
-  sources.manifest.json          machine-readable mirror of docs/data/sources.md's status column
+  sources.manifest.json          machine-readable mirror of docs/data/sources.md's status column,
+                                  plus the pinned artefact (URL, byte count, Last-Modified) per
+                                  confirmed source
   00_staging_schema.sql          idempotent staging schema (staging.raw_sample only — see its header)
-  01_fetch.sh <source_id>        fetch — gated on sources.manifest.json reading "confirmed"
+  01_fetch.sh <source_id>        fetch — gated on sources.manifest.json reading "confirmed";
+                                  writes data/raw/<source_id>/ + fetch-provenance.json
   02_reproject.sh <in> <out>     reproject to EPSG:25832 (ogr2ogr, falls back to gdalwarp)
   03_load.sh <file> <table>      load into staging.<table> via ogr2ogr -f PostgreSQL
   04_generate_grid.sql           ST_HexagonGrid, clipped to the pilot boundary (ADR-0001)
@@ -21,14 +24,42 @@ ingest/
   fixtures/                      synthetic data proving the pipeline works — see fixtures/README.md
 ```
 
-## Real ingestion is currently blocked
+## Real ingestion is partially open
 
-`./run.sh` (no flags) is the real pipeline. It stops at the first `01_fetch.sh` call: every
-candidate dataset in `docs/data/sources.md` is still `to_confirm` or `unconfirmed`, and
+`./run.sh` (no flags) is the real pipeline. As of 2026-09-19 it fetches two of the four candidate
+datasets and reports the other two as skipped:
+
+| Source id | Status | |
+|---|---|---|
+| `bkg-clc5` | `confirmed` | fetched — `dl-de/by-2-0`, no share-alike |
+| `dwd-cdc-radiation` | `confirmed` | fetched — CC BY 4.0, no share-alike |
+| `bfn-schutzgebiete` | `to_confirm` | licence cleared (GeoNutzV); `geodienste.bfn.de` returns 403 |
+| `osm-geofabrik` | `to_confirm` | ODbL share-alike decision open — `docs/data/sources.md` §4 |
+
 `docs/architecture/roadmap-to-first-deployment.md` §2.2 forbids ingesting a dataset whose
-redistributability is unverified. This is by design, not a bug — `01_fetch.sh` reads
-`sources.manifest.json` (kept in sync with `docs/data/sources.md` by hand) and refuses to make a
-network call for anything not `confirmed`.
+redistributability is unverified, so `01_fetch.sh` reads `sources.manifest.json` (kept in sync with
+`docs/data/sources.md` by hand) and refuses to make a network call for anything not `confirmed`.
+A gated source is **skipped, not fatal** — `run.sh` continues and prints a summary, so a
+partially-confirmed manifest is still a usable pipeline.
+
+`01_fetch.sh` exit codes, which `run.sh` distinguishes:
+
+| Code | Meaning | `run.sh` |
+|---|---|---|
+| 0 | fetched, or already present and verified | counted as fetched |
+| 1 | blocked by the licence gate | skipped |
+| 2 | unknown source id | aborts |
+| 3 | confirmed, but no fetch implemented yet | skipped |
+| 4 | the artefact returned does not match the pinned one | aborts |
+
+Exit 4 is the one that matters most: a publisher re-issuing a file under the same URL would
+otherwise change sela's inputs silently. `01_fetch.sh` compares byte count (and `Last-Modified`
+where pinned) against `sources.manifest.json` **before** writing anything, and every fetch records
+each artefact's sha256 in `data/raw/<source_id>/fetch-provenance.json`.
+
+Fetched data lands in `data/raw/`, which is git-ignored. **Being fetched is not being publishable**
+— `docs/data/sources.md` §7 condition 4 requires each source's *Quellenvermerk* to be rendered in
+the interface before its data reaches a public screen.
 
 To un-block a dataset:
 
@@ -36,8 +67,13 @@ To un-block a dataset:
    outputs may be published (`docs/data/sources.md`'s "What Confirmed requires" section).
 2. Update that dataset's row in `docs/data/sources.md` to `Confirmed`, and its entry in
    `sources.manifest.json` to `"status": "confirmed"`, in the same change.
-3. Write the dataset's real fetch command in `01_fetch.sh` (a WFS `GetFeature` request, a
-   Geofabrik download URL, ...) — confirming a licence is necessary but not sufficient.
+3. Give it a `fetch` block in `sources.manifest.json` pinning the exact artefact. Two shapes exist
+   so far — `single-file` (one URL, `pinnedBytes`, `pinnedLastModified`) and `annual-series` (a
+   filename template over a year range). A source that fits neither (a WFS `GetFeature` request,
+   for instance) needs a new `kind` handled in `01_fetch.sh`'s `case`; confirming a licence is
+   necessary but not sufficient.
+4. Pin deliberately. `pinnedBytes` is what makes exit 4 possible, and a source pinned to nothing
+   is a source that can change under you between runs without anyone noticing.
 
 ## Verifying the pipeline without real data
 
