@@ -8,11 +8,20 @@
 -- path — the original single-criterion, PV-only fixture could not.
 -- Weights match lib/scoring/illustrative-weights.ts's ILLUSTRATIVE_EQUAL_WEIGHT.
 
-INSERT INTO source (id, dataset, publisher, licence, redistributable, retrieved_at)
+-- attribution is NOT NULL (migration 0003). Fixtures get a notice that says
+-- what they are rather than a plausible-looking credit: these rows must never
+-- be mistaken for a citable source if a fixture render escapes into a
+-- screenshot. change_notice_required is false — there is no real data to have
+-- altered.
+INSERT INTO source (id, dataset, publisher, licence, redistributable, retrieved_at,
+                    attribution, attribution_url, change_notice_required)
 VALUES
-  ('fixture-land-cover', 'Synthetic fixture land cover', 'sela dev fixtures', 'n/a — not real data', true, now()),
-  ('fixture-wind-resource-map', 'Synthetic fixture wind resource map', 'sela dev fixtures', 'n/a — not real data', true, now()),
-  ('fixture-protection-registry', 'Synthetic fixture protection-area registry', 'sela dev fixtures', 'n/a — not real data', true, now())
+  ('fixture-land-cover', 'Synthetic fixture land cover', 'sela dev fixtures', 'n/a — not real data', true, now(),
+   'Synthetische Testdaten — keine reale Quelle', NULL, false),
+  ('fixture-wind-resource-map', 'Synthetic fixture wind resource map', 'sela dev fixtures', 'n/a — not real data', true, now(),
+   'Synthetische Testdaten — keine reale Quelle', NULL, false),
+  ('fixture-protection-registry', 'Synthetic fixture protection-area registry', 'sela dev fixtures', 'n/a — not real data', true, now(),
+   'Synthetische Testdaten — keine reale Quelle', NULL, false)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO criterion_definition (id, name_en, name_de, source_id, direction, weight, is_hard_constraint, applies_to, method_version)

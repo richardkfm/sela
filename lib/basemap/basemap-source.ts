@@ -5,22 +5,25 @@
 // every screen *and* every export, so a second hard-coded credit string is
 // a bug waiting to happen.
 //
-// ADR-0003 chose a self-hosted PMTiles archive and explicitly rejected
-// CDN-fetched map assets. The remote options below do not overturn that
-// decision: they are **temporary development fallbacks**, added 2026-09-19
-// at the project owner's request so the map shows real geography while
-// `ingest/basemap/build.sh` cannot run (download.geofabrik.de is blocked by
-// the current environment's egress policy — docs/data/sources.md §6).
-// Before anything public ships, either the PMTiles archive is built or
-// ADR-0003 is amended deliberately. See docs/data/sources.md §4.1.
+// **basemap.de is the basemap, per ADR-0005** (2026-09-19), which amends
+// ADR-0003. It is CC BY 4.0 with no share-alike, needs no account, and is
+// the official German basemap, so the pilot region is its home turf. The
+// reason it is the default is not convenience: ADR-0005 takes OpenStreetMap
+// out of sela's stack entirely so that ODbL's share-alike term cannot reach
+// sela's own scoring database. A basemap built from an OSM extract would put
+// it straight back.
 //
-// The default fallback is **basemap.de**, not CARTO, for three reasons:
-// it is CC BY 4.0 with no share-alike (verified — docs/data/sources.md
-// §4.1), it needs no account, and it is the official German basemap so the
-// pilot region is its home turf. CARTO — what `richardkfm/alpha` used — is
-// kept selectable but **watermarks every unauthenticated tile with "API KEY
-// REQUIRED"**, confirmed by rendering it on 2026-09-19. Set
-// SELA_CARTO_API_KEY to use it for real.
+// ADR-0003's self-hosted PMTiles archive is **retained, not removed** —
+// `SELA_BASEMAP=pmtiles` still serves it, and `ingest/basemap/build.sh` is
+// still the way to build one. ADR-0005 records what switching costs: a
+// third-party runtime dependency where ADR-0003 wanted self-containment,
+// and baked-in labels where the PMTiles style deliberately had none.
+//
+// CARTO — what `richardkfm/alpha` used — stays selectable but **watermarks
+// every unauthenticated tile with "API KEY REQUIRED"**, confirmed by
+// rendering it on 2026-09-19. Set SELA_CARTO_API_KEY to use it for real.
+// Note it is OSM-derived, so selecting it reintroduces an ODbL attribution
+// duty (not share-alike — a hosted basemap never enters criterion_value).
 
 import { getPmtilesReader } from "@/lib/basemap/pmtiles-reader";
 
@@ -46,11 +49,17 @@ function basemapDeAttribution(): string {
 
 /**
  * `SELA_BASEMAP` selects the source:
- *   auto (default) — the PMTiles archive if one is present, else basemap.de
- *   pmtiles        — the archive only; a flat background if it is absent
- *   basemapde      — force basemap.de even when an archive exists
- *   carto          — force CARTO (watermarked without SELA_CARTO_API_KEY)
+ *   auto (default) — basemap.de, per ADR-0005
+ *   pmtiles        — ADR-0003's self-hosted archive; flat background if absent
+ *   basemapde      — same as auto, stated explicitly
+ *   carto          — CARTO (watermarked without SELA_CARTO_API_KEY)
  *   none           — flat background, no basemap at all
+ *
+ * `auto` deliberately does **not** prefer a PMTiles archive just because one
+ * happens to be on disk. Under ADR-0005 that archive is OSM-derived, so
+ * silently preferring it would reintroduce the dependency the ADR removed —
+ * and it would do so invisibly, on whichever machines happen to have built
+ * one. Serving it is a choice that has to be made out loud.
  *
  * An unrecognised value falls back to `auto` with a warning rather than
  * throwing: a typo in an env var should not take the map down.
@@ -61,17 +70,16 @@ export function resolveBasemapKind(archivePresent: boolean): BasemapKind {
   switch (requested) {
     case "pmtiles":
       return archivePresent ? "pmtiles" : "none";
-    case "basemapde":
-      return "basemapde";
     case "carto":
       return "carto";
     case "none":
       return "none";
     case "auto":
-      return archivePresent ? "pmtiles" : "basemapde";
+    case "basemapde":
+      return "basemapde";
     default:
       console.warn(`unrecognised SELA_BASEMAP='${requested}' — falling back to 'auto'`);
-      return archivePresent ? "pmtiles" : "basemapde";
+      return "basemapde";
   }
 }
 

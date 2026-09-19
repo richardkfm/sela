@@ -27,6 +27,43 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **U7 is closed. `docs/architecture/adr-0005-osm-free-stack.md` takes OpenStreetMap out of sela.**
+  The ODbL question open since 2026-09-18 is decided as **option (b)**, taken further than option
+  (b) was originally written: basemap.de (CC BY 4.0) for the map, BKG CLC5 classes **111/112**
+  (`dl-de/by-2-0`) for settlement geometry, class 121 *Industrie- und Gewerbeflächen* explicitly
+  excluded because a setback to *Wohnbebauung* is not a setback to an industrial estate. No
+  share-alike term touches sela's scoring database and ODbL §4.6's machine-readable-access duty
+  never attaches — to the database or to the scenario cards derived from it. The reasoning, stated
+  in the ADR: a **perpetual, irreversible licence obligation on the whole database** is a larger
+  cost than a **documented accuracy limit on one criterion**, and `CLAUDE.md` §4.5 requires that
+  limit to be shown in the interface anyway. `osm-geofabrik` is **`withdrawn`** in the manifest —
+  not unconfirmed, deliberately unused — and re-confirming it means reopening the ADR.
+- **`pv_irradiation_annual` gets a decided year window: a 10-year trailing mean, 2016–2025**
+  (`docs/data/sources.md` §5.2, machine-readable in the manifest's `dwd-cdc-radiation.aggregation`).
+  Decided **against the data**, not by argument: every fetched grid was reduced to a Germany-wide
+  mean over 359 586 valid 1 km cells. Global radiation is trending **+3.35 kWh/m² per year** across
+  1991–2025, which makes the WMO 1991–2020 normal sit **5.4 % below** the last decade — a
+  systematic low bias as large as DWD's own ±6 % method uncertainty, applied to every parcel. A
+  single year is worse still: the record spans 995.9 (1998) to 1 227.4 (2022) kWh/m², so the choice
+  of year could move a solar verdict by 23 %. Ten years puts the sampling term at 1.5 % while still
+  tracking the trend. **And the confidence figure is now derived rather than copied:** √(6² + 1.5²)
+  ≈ 6.2 %, so the criterion carries ±6 % because the work was done.
+- **Attribution is structurally required — `docs/data/sources.md` §7 condition 4 is met.** Migration
+  `0003_source_attribution.sql` adds `source.attribution` as **`NOT NULL`** with a non-blank
+  `CHECK`, plus `attribution_url` and `change_notice_required`. Storing the licence *name* was never
+  enough: `dl-de/by-2-0`, GeoNutzV and CC BY 4.0 each demand specific wording, and BKG alone needs
+  `© GeoBasis-DE / BKG <Jahr>` for CLC5 and `© BKG <Jahr>` for VG25. Making the notice a schema
+  constraint means `design-language.md` §7's binding rule — *a card that cannot cite itself must not
+  render* — is enforced where a source is created rather than at render time on somebody's
+  screenshot.
+- **`lib/attribution.ts`, `components/SourceAttribution.tsx`, `ingest/seed_real_sources.sql`** and 8
+  tests. `<Jahr>` resolves from the source's own `retrieved_at`, **not** today's date — the licences
+  ask for the year of last data retrieval and a pinned artefact's does not change with the calendar.
+  The scenario-card export now returns **422 naming the offending source ids** rather than rendering
+  an uncited image; the criterion evidence view shows the *Quellenvermerk* as its own field beside
+  the licence name; and the map carries the pilot boundary's notice as well as the basemap's, which
+  are different sources under different licences.
+
 - **The map shows real geography.** At the project owner's request ("use the carto tiles for now so
   we can see something"), the explorer now renders a remote basemap and the real pilot-region
   outline instead of synthetic cells at null island. `lib/basemap/basemap-source.ts` is the single
@@ -252,6 +289,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   2026-04-23, derived from LBM-DE2021, same `dl-de/by-2-0`). Moving to it would cut the
   data-currency gap by three years and is a **§3-gated source-version change** — recorded in §6,
   not taken. It is published as GeoPackage only; no shapefile variant exists for 2021.
+- **What condition 4 still does not cover:** no `criterion_value` row derived from the fetched
+  sources exists yet, so nothing has been rendered *from real data*. The attribution plumbing is
+  verified; the pipeline that would use it is not built. Nor has migration `0003` been run against
+  a live database — no Docker daemon in the environment that wrote it, so no PostGIS.
 - **User-visible behaviour did change, on explicit instruction.** The map's default view and its
   basemap are both different: it opens on the Uckermark over a remote raster basemap rather than on
   synthetic cells over a flat ground colour. Two honest caveats. The raster tiles carry **baked-in

@@ -89,7 +89,10 @@ export async function GET(request: Request) {
         : { tiles: cartoTileUrls(), maxzoom: 20 };
     return NextResponse.json({
       version: 8,
-      name: `sela basemap (${basemap.kind} fallback — not ADR-0003's self-hosted archive)`,
+      name:
+        basemap.kind === "basemapde"
+          ? "sela basemap (basemap.de — ADR-0005)"
+          : "sela basemap (CARTO — not ADR-0005's basemap.de)",
       sources: {
         [SOURCE_ID]: {
           type: "raster",

@@ -24,6 +24,12 @@ export interface SourceRow {
   readonly licence: string;
   readonly redistributable: boolean;
   readonly url: string | null;
+  /** The publisher's exact Quellenvermerk, `<Jahr>` still a placeholder. */
+  readonly attribution: string;
+  /** Where the licence requires the notice hyperlinked; null means it does not. */
+  readonly attributionUrl: string | null;
+  /** Whether a Veränderungshinweis must accompany the notice. */
+  readonly changeNoticeRequired: boolean;
 }
 
 interface CriterionDefinitionSqlRow {
@@ -126,6 +132,9 @@ interface SourceSqlRow {
   licence: string;
   redistributable: boolean;
   url: string | null;
+  attribution: string;
+  attribution_url: string | null;
+  change_notice_required: boolean;
 }
 
 function toSource(row: SourceSqlRow): SourceRow {
@@ -138,12 +147,17 @@ function toSource(row: SourceSqlRow): SourceRow {
     licence: row.licence,
     redistributable: row.redistributable,
     url: row.url,
+    attribution: row.attribution,
+    attributionUrl: row.attribution_url,
+    changeNoticeRequired: row.change_notice_required,
   };
 }
 
 // retrieved_at::text avoids pg parsing DATE into a JS Date object here —
 // this module's SourceRow type is display-only and wants a plain string.
-const SOURCE_COLUMNS = "id, dataset, publisher, version, retrieved_at::text AS retrieved_at, licence, redistributable, url";
+const SOURCE_COLUMNS =
+  "id, dataset, publisher, version, retrieved_at::text AS retrieved_at, licence, redistributable, url, " +
+  "attribution, attribution_url, change_notice_required";
 
 export async function listSources(): Promise<SourceRow[]> {
   const rows = await query<SourceSqlRow>(`SELECT ${SOURCE_COLUMNS} FROM source ORDER BY id`);

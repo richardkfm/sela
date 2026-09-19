@@ -1,6 +1,13 @@
 # ADR-0003 — Basemap: self-hosted PMTiles from OSM, desaturated in-repo
 
-**Status:** Accepted · **Band:** `0.2.0` · **Date:** 2026-08-22 · **Closes:** U8 (`docs/product/mvp.md` §9, `docs/product/design-language.md` §11)
+**Status:** **Amended by [ADR-0005](adr-0005-osm-free-stack.md)** (2026-09-19) · **Band:** `0.2.0` · **Date:** 2026-08-22 · **Closes:** U8 (`docs/product/mvp.md` §9, `docs/product/design-language.md` §11)
+
+> **Amended, not withdrawn.** ADR-0005 replaces the OSM-derived basemap with BKG basemap.de, to
+> keep ODbL's share-alike term away from sela's scoring database. Everything below remains the
+> record of why self-hosting was chosen and therefore of what ADR-0005 gives up — a third-party
+> runtime dependency, and map typography the design language no longer controls. The self-hosted
+> path is retained and still selectable (`SELA_BASEMAP=pmtiles`); `ingest/basemap/build.sh` is its
+> implementation and is superseded rather than deleted.
 
 ---
 

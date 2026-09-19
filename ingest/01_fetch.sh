@@ -38,7 +38,7 @@ fi
 
 if [ "$STATUS" != "confirmed" ]; then
   echo "BLOCKED: source '$SOURCE_ID' is not confirmed (status: $STATUS)." >&2
-  BLOCKED_BY=$(q '.sources[$id].blockedBy // empty')
+  BLOCKED_BY=$(q '.sources[$id].blockedBy // .sources[$id].note // empty')
   [ -n "$BLOCKED_BY" ] && echo "  reason: $BLOCKED_BY" >&2
   echo "See docs/data/sources.md and ingest/sources.manifest.json. Ingestion" >&2
   echo "of this dataset may not start until its licence position reads" >&2

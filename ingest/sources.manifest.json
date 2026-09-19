@@ -19,9 +19,9 @@
       }
     },
     "osm-geofabrik": {
-      "status": "to_confirm",
+      "status": "withdrawn",
       "docRow": "OpenStreetMap via Geofabrik",
-      "blockedBy": "ODbL share-alike decision is open — docs/data/sources.md §4. Separately, download.geofabrik.de is unreachable from the current environment (egress policy, not the publisher)."
+      "note": "Withdrawn by ADR-0005 (2026-09-19), not merely unconfirmed. OSM's licence is fine; the ODbL share-alike term would attach to sela's own scoring database wherever OSM-derived rows enter criterion_value. Both uses now have licence-clean substitutes: basemap.de (CC BY 4.0) for the basemap, BKG CLC5 classes 111/112 (dl-de/by-2-0) for settlement geometry. Re-confirming this source means reopening ADR-0005."
     },
     "dwd-cdc-radiation": {
       "status": "confirmed",
@@ -38,6 +38,14 @@
           "BESCHREIBUNG_gridsgermany_annual_radiation_global_de.pdf"
         ],
         "$comment": "The full published series is fetched because *which* years feed pv_irradiation_annual (a single year, a rolling mean, the 1991-2020 normal) is an open scoring decision under CLAUDE.md §3 — see docs/data/sources.md §5.1. Fetching everything keeps that decision open instead of pre-empting it. lastYear is extended by DWD around February each year."
+      },
+      "aggregation": {
+        "criterion": "pv_irradiation_annual",
+        "kind": "trailing_mean",
+        "windowYears": 10,
+        "firstYear": 2016,
+        "lastYear": 2025,
+        "$comment": "Decided 2026-09-19 (docs/data/sources.md §5.2). A single annual grid is a weather observation, not a site property: interannual sd is 4.7% of the mean. The WMO 1991-2020 normal removes that noise but introduces a worse error — global radiation over Germany trends +3.35 kWh/m2/yr across this record, so the normal sits 5.4% BELOW the last decade, a bias as large as DWD's own +/-6% method uncertainty. A 10-year trailing mean keeps the sampling term at ~1.5% while tracking the trend. Roll the window forward when DWD publishes a new year; changing windowYears is a CLAUDE.md §3 scoring decision."
       }
     },
     "bkg-vg25": {

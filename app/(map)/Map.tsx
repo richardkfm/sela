@@ -138,7 +138,24 @@ export function Map({
           })
           .then((boundary: GeoJSONFeatureCollection & { bbox?: number[] }) => {
             if (!mapRef.current) return;
-            map.addSource(PILOT_SOURCE_ID, { type: "geojson", data: boundary });
+            // The boundary is BKG VG25 under CC BY 4.0 — a different source
+            // and a different licence from the basemap under it, so it owes
+            // its own notice (sources.md §3, §7 condition 4). MapLibre
+            // aggregates `attribution` across sources, so declaring it here
+            // puts it in the same control as the basemap's rather than
+            // needing separate chrome. Carried in the data rather than
+            // hard-coded, so regenerating the boundary cannot silently drop
+            // the credit.
+            const props = boundary.features[0]?.properties as
+              | { attribution?: string; retrieved?: string }
+              | undefined;
+            const year = props?.retrieved?.slice(0, 4) ?? String(new Date().getFullYear());
+            const boundaryAttribution = props?.attribution?.replaceAll("<Jahr>", year);
+            map.addSource(PILOT_SOURCE_ID, {
+              type: "geojson",
+              data: boundary,
+              ...(boundaryAttribution ? { attribution: `${boundaryAttribution} (Daten verändert)` } : {}),
+            });
             map.addLayer({
               id: PILOT_LAYER_ID,
               type: "line",

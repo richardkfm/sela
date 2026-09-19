@@ -7,6 +7,7 @@
 // missing lookup returns a JSON error instead of an image.
 
 import { ImageResponse } from "next/og";
+import { partitionByCitability, renderAttribution } from "@/lib/attribution";
 import { getActiveBasemap } from "@/lib/basemap/basemap-source";
 import { getCriterionDefinition, getSource, type SourceRow } from "@/lib/db/queries/criteria";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
@@ -72,6 +73,22 @@ export async function GET(
   }
 
   const sources: SourceRow[] = [source];
+
+  // design-language.md §7: "a card that cannot cite itself must not render."
+  // A source whose Quellenvermerk was never recorded is exactly that case, so
+  // it fails here with the ids named rather than rendering a card that quietly
+  // omits a legally required notice.
+  const { uncitable } = partitionByCitability(sources);
+  if (uncitable.length > 0) {
+    return Response.json(
+      {
+        error: "refusing to render: no attribution recorded for source(s)",
+        sources: uncitable.map((s) => s.id),
+        seeAlso: "docs/data/sources.md §7 condition 4",
+      },
+      { status: 422 },
+    );
+  }
   const basemapAttribution = getActiveBasemap().attribution;
   const tokenKey = technologyToTokenKey[headline.technology];
   const token = scenarioTokens[tokenKey];
@@ -114,8 +131,15 @@ export async function GET(
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 16, color: "#54524c", borderTop: "1px solid #d8d5cc", paddingTop: 16 }}>
           {sources.map((s) => (
-            <div key={s.id}>
-              {`${s.dataset} · ${s.publisher} · ${s.licence} · abgerufen ${s.retrievedAt ?? "unbekannt"}`}
+            <div key={s.id} style={{ display: "flex", flexDirection: "column" }}>
+              <div>
+                {`${s.dataset} · ${s.publisher} · ${s.licence} · abgerufen ${s.retrievedAt ?? "unbekannt"}`}
+              </div>
+              {/* The publisher's required notice, verbatim. Not a restatement
+                  of the line above: dl-de/by-2-0, GeoNutzV and CC BY 4.0 each
+                  demand specific wording, and a card is an "öffentliche
+                  Wiedergabe" that must carry it. */}
+              <div>{renderAttribution(s)}</div>
             </div>
           ))}
           {/* Whichever basemap is actually serving — never a second
