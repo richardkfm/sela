@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IllustrativeBanner } from "@/components/IllustrativeBanner";
 import { getCriterionDefinition, getSource } from "@/lib/db/queries/criteria";
+import { SourceAttribution } from "@/components/SourceAttribution";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
@@ -67,6 +68,13 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
 
             <dt style={{ color: "var(--text-secondary)" }}>Lizenz</dt>
             <dd style={{ margin: 0 }}>{source.licence}</dd>
+
+            {/* The notice the licence actually obliges sela to show, as
+                opposed to the licence's name. sources.md §7 condition 4. */}
+            <dt style={{ color: "var(--text-secondary)" }}>Quellenvermerk</dt>
+            <dd style={{ margin: 0 }}>
+              <SourceAttribution source={source} />
+            </dd>
 
             <dt style={{ color: "var(--text-secondary)" }}>Abgerufen am</dt>
             <dd className="tabular-nums" style={{ margin: 0 }}>{source.retrievedAt ?? "—"}</dd>

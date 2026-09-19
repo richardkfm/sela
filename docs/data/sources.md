@@ -19,7 +19,8 @@ read at the source cited. Where that has not happened, the row says so.
 | BKG CORINE Land Cover 5 ha (CLC5-2018) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed** — pinned artefact fetched and checksummed 2026-09-19 (§2.2, §6) |
 | DWD CDC annual global radiation grids | CC BY 4.0 | **Yes**, with attribution + change notice | **Confirmed** — full 1991–2025 series fetched and checksummed 2026-09-19 (§2.3, §6) |
 | BKG Verwaltungsgebiete 1:25 000 (VG25) | **CC BY 4.0** | **Yes**, with attribution + change notice | **Confirmed** — fetched and checksummed 2026-09-19; supplies the pilot boundary (§2.5) |
-| OpenStreetMap via Geofabrik | ODbL 1.0 | **Yes, but share-alike may attach to sela's own database** | **Open decision — §4.** Geofabrik also unreachable from this environment (§6) |
+| OpenStreetMap via Geofabrik | ODbL 1.0 | Yes, but share-alike would attach to sela's own database | **Withdrawn (ADR-0005, 2026-09-19).** Not unconfirmed — deliberately not used. §4 |
+| BKG basemap.de Web Raster | **CC BY 4.0** | **Yes**, with attribution + change notice | **In use** — the basemap, per ADR-0005 (§4.1) |
 
 **The machine gate now stands open for two rows and closed for two.** `ingest/sources.manifest.json`
 — which `ingest/01_fetch.sh` actually reads before touching a network — reads `confirmed` for
@@ -236,7 +237,26 @@ behaviour and therefore §3-gated; recorded here rather than silently designed.
 
 ---
 
-## 4. Open decision — ODbL share-alike and sela's own database
+## 4. Resolved decision — ODbL share-alike and sela's own database
+
+**Decided 2026-09-19: option (b), taken to its conclusion — OpenStreetMap leaves sela's stack
+entirely. See `docs/architecture/adr-0005-osm-free-stack.md`.** The analysis below is retained
+unchanged, because the reasoning is why the decision went the way it did and a later session
+reopening it needs the argument, not just the outcome.
+
+Why (b) over (a): a **perpetual, irreversible licence obligation on sela's entire scoring
+database** is a larger cost than a **documented accuracy limit on one criterion** — and
+`CLAUDE.md` §4.5 requires that accuracy limit to be shown in the interface anyway, so it is a cost
+sela was always going to pay in honesty rather than one it now incurs. Why not (c): legal advice
+remains available and nothing here forecloses (a), but §4.1's research removed the need to buy an
+answer before proceeding.
+
+What changed to make (b) cheap: when the options were written, (b) had unpriced research attached
+and still left an ODbL obligation on the basemap archive. §4.1 closed both gaps.
+
+---
+
+*The original analysis, as recorded 2026-09-18:*
 
 This is the substantive finding of the 2026-09-18 verification, and it is a `CLAUDE.md` §3
 decision (data sources and licensing, affecting whether derived outputs may be published). It is
@@ -299,9 +319,10 @@ Three ways forward, in the order the project's own principles suggest:
   derived from a Substantial part of a database is not a settled question, and sela is a
   public-facing platform whose credibility is the product.
 
-This document does not choose. It records that **choosing (a) or (b) is a precondition for
-`wind_settlement_setback` entering ingestion**, and that the basemap path is unaffected by the
-choice.
+This document did not choose when it was written. It recorded that **choosing (a) or (b) is a
+precondition for `wind_settlement_setback` entering ingestion**, and that the basemap path is
+unaffected by the choice. Option (b) was chosen on 2026-09-19; the basemap moved too, which the
+2026-09-18 framing did not anticipate as possible.
 
 ### 4.1 Non-ODbL alternatives — researched 2026-09-19
 
@@ -437,7 +458,7 @@ status is doing the work of an ADR-0004 exclusion, is the honest reading of `CLA
 **This is U6 (disclaimer posture), and it is user-visible behaviour — §3-gated.** Recorded here so
 the decision has this input when it is taken.
 
-### 5.2 Which years feed `pv_irradiation_annual`
+### 5.2 Which years feed `pv_irradiation_annual` — decided 2026-09-19
 
 Fetching the DWD series raised a question that pinning a version does not answer: a single annual
 radiation grid is a **weather observation**, not a site property. Germany's annual totals swing by
@@ -448,15 +469,45 @@ the verdict a function of which year was chosen.
 The realistic options are a single recent year, a rolling mean over the last N years, or the WMO
 climate normal period 1991–2020. They produce different numbers for the same land.
 
-**This is a scoring decision — `CLAUDE.md` §3 (criteria, normalization, how a score is presented) —
-and it is not taken here.** What has been done instead is to keep it open: `ingest/01_fetch.sh`
-fetches the **entire** published series rather than one year, so whichever window is chosen later
-needs no second fetch, and the choice is not silently pre-empted by what happens to be on disk.
+**Decided: a 10-year trailing mean, currently 2016–2025.** Recorded in
+`ingest/sources.manifest.json` under `dwd-cdc-radiation.aggregation`.
 
-Note also that the aggregate's uncertainty is not the single-grid ±6 % of §2.3. Averaging reduces
-the year-to-year sampling term and leaves the method term; what the combined figure is has **not**
-been derived, and `criterion_value.confidence` must not carry ±6 % for a multi-year mean without
-that work being done.
+The decision was made against the data rather than by argument. Every grid in the fetched series
+was read and reduced to a Germany-wide mean (359 586 valid 1 km cells per year, which is Germany's
+land area to within 0.6 %):
+
+| Window | Mean kWh/m² | Interannual sd | sd / mean |
+|---|---|---|---|
+| 1991–2020 (WMO normal) | 1 085.7 | 48.3 | 4.4 % |
+| 2006–2025 (last 20) | 1 117.9 | 49.0 | 4.4 % |
+| **2016–2025 (last 10)** | **1 144.7** | 53.3 | 4.7 % |
+| 2025 alone | 1 187.2 | — | — |
+
+Two facts decide it:
+
+1. **Global radiation over Germany is trending up**, by **+3.35 kWh/m² per year** across
+   1991–2025 — about +117 kWh/m², or +11 %, over the record. This is the well-documented European
+   "brightening"; sela does not need to explain it, only to not be wrong because of it.
+2. **That trend makes the WMO normal the worst option, not the safest.** 1991–2020 sits **5.4 %
+   below** the last decade — a systematic low bias as large as DWD's own ±6 % method uncertainty,
+   applied to every parcel. A climatology that is reliably wrong in one direction is worse for
+   sela's purpose than a noisier one that is not.
+
+A single year is also out: the record ranges 995.9 (1998) to 1 227.4 (2022) kWh/m², so the choice
+of year would move a parcel's solar verdict by up to 23 %.
+
+Ten years is the compromise: the sampling term falls to sd/√10 ≈ 16.9 kWh/m², **1.5 %** of the
+mean, while the window stays short enough to track the trend rather than average it away.
+
+**On confidence.** §2.3's ±6 % is DWD's method uncertainty, and the conservative reading is that it
+is systematic and does **not** average down. The sampling term a 10-year mean adds is 1.5 %, which
+in quadrature gives √(6² + 1.5²) ≈ 6.2 %. So `criterion_value.confidence` for this criterion
+carries **±6 %**, and it does so because the derivation was done, not because the single-grid figure
+was copied across.
+
+**Maintenance.** The window rolls forward when DWD publishes a new year — around February.
+Changing `windowYears` is a `CLAUDE.md` §3 scoring decision, not routine maintenance: it changes
+what the public is told about real land.
 
 ---
 
@@ -619,13 +670,32 @@ A fourth condition is added by §3 of this document, because it was not previous
 is what turns a cleared licence into a lawful deployment:
 
 4. The source's required attribution string is implemented in the interface and in every export
-   before the data reaches a public screen — not added later. — **Not met for any row, and this is
-   now the binding condition.** A dataset being fetched is not a dataset being publishable: BKG and
-   DWD data sit in `data/raw/` and may not reach a public screen until §3's *Quellenvermerk* for
-   each is rendered. Note that BKG's metadata gives the CLC5-2018 *Quellenvermerk* as
+   before the data reaches a public screen — not added later. — **Met, 2026-09-19.** The notice is
+   no longer something a renderer has to remember:
+
+   - `source.attribution` is a **`NOT NULL`** column with a non-blank `CHECK` (migration
+     `0003_source_attribution.sql`), alongside `attribution_url` and `change_notice_required`. A
+     source whose notice was never recorded cannot be inserted, so `design-language.md` §7's
+     binding rule — *a card that cannot cite itself must not render* — is enforced at the schema
+     rather than at render time on somebody's screenshot.
+   - The three fetched sources are seeded with their verified notices in
+     `ingest/seed_real_sources.sql`, each carrying `<Jahr>` as a placeholder resolved from
+     `retrieved_at` — not from today's date, because the licences ask for the year of last data
+     retrieval and a pinned artefact's does not change with the calendar.
+   - `lib/attribution.ts` renders them and refuses the uncitable; the scenario-card export returns
+     **422 naming the offending source ids** rather than producing an uncited image; the criterion
+     evidence view shows the *Quellenvermerk* as its own field beside the licence name; and the map
+     carries both the basemap's notice and the pilot boundary's, which are different sources under
+     different licences.
+
+   Note that BKG's metadata gives the CLC5-2018 *Quellenvermerk* as
    `© GeoBasis-DE / BKG (Jahr des Datenbezugs)` where §3 of this document records the generic
    `(Jahr des letzten Datenbezugs)` wording; the 2021 record uses the latter. Use the wording from
    the record for the version actually ingested.
+
+   **What this condition still does not cover:** no `criterion_value` row derived from these
+   sources exists yet, so nothing has been rendered *from real data*. The plumbing is verified, the
+   pipeline that would use it is not built.
 
 ---
 

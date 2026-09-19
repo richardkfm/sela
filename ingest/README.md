@@ -37,7 +37,7 @@ datasets and reports the other two as skipped:
 | `bkg-vg25` | `confirmed` | fetched — **CC BY 4.0** (not `dl-de/by-2-0`; same publisher, different licence), supplies the pilot boundary |
 | `dwd-cdc-radiation` | `confirmed` | fetched — CC BY 4.0, no share-alike |
 | `bfn-schutzgebiete` | `to_confirm` | licence cleared (GeoNutzV); `geodienste.bfn.de` returns 403 |
-| `osm-geofabrik` | `to_confirm` | ODbL share-alike decision open — `docs/data/sources.md` §4 |
+| `osm-geofabrik` | **`withdrawn`** | ADR-0005: OSM left the stack. Not unconfirmed — deliberately not used |
 
 `docs/architecture/roadmap-to-first-deployment.md` §2.2 forbids ingesting a dataset whose
 redistributability is unverified, so `01_fetch.sh` reads `sources.manifest.json` (kept in sync with

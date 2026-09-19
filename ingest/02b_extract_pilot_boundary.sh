@@ -42,7 +42,7 @@ mkdir -p "$(dirname "$OUT")"
 # RFC7946=NO is load-bearing — RFC7946=YES would silently reproject to WGS84,
 # which is exactly what this step must not do.
 ogr2ogr -f GeoJSON "$OUT" "$GPKG" \
-  -sql "SELECT AGS, ARS, GEN AS name, BEZ AS bez, NUTS, '$PILOT_REGION' AS pilot_region FROM vg25_krs WHERE AGS = '$AGS'" \
+  -sql "SELECT AGS, ARS, GEN AS name, BEZ AS bez, NUTS, '$PILOT_REGION' AS pilot_region, '© BKG <Jahr> CC BY 4.0' AS attribution, 'https://creativecommons.org/licenses/by/4.0' AS attribution_url FROM vg25_krs WHERE AGS = '$AGS'" \
   -lco RFC7946=NO -lco COORDINATE_PRECISION=2 \
   -overwrite
 
