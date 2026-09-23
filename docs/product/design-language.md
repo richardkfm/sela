@@ -1,6 +1,6 @@
 # sela design language
 
-**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-08-21
+**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-09-23 (§2a, §3 map surfaces)
 
 This document exists so that "it has to look good" is a standard someone can be held to, rather than a matter of taste re-argued in every session. Deviating from it triggers the confirmation gate in `CLAUDE.md` §3.
 
@@ -26,6 +26,22 @@ Named explicitly, because "modern" does not enforce itself and every implementer
 
 **Not decorative charting.** No dual axes, no rainbow ramps, no pie charts of more than two parts, no 3D bars, no chart junk. See §6.
 
+## 2a. The one exception: literal 3D in the parcel preview
+
+*Added 2026-09-23 with the project owner's confirmation — ADR-0006.*
+
+§2's ban on 3D marks stands everywhere except one screen, the **3D parcel preview**, and there only under all of these rules:
+
+- **Literal, never encoded.** 3D is allowed for things that physically stand at that height — terrain, a turbine, a module table. **No value sela computes is ever drawn as height**: no extruded scores, no columns, no "3D hex maps". Verdicts stay flat, coloured and patterned exactly as in 2D.
+- **True scale.** Terrain exaggeration 1. Models at the dimensions the panel names. If the reader cannot check a size against a number on screen, the model is wrong.
+- **Stated dimensions.** Every size that is an assumption is labelled *illustrativ* beside the view; every distance that is a rule carries its citation, its wording and its limits.
+- **An architect's model, not a render.** Matte, neutral, unpainted materials; soft even light; no reflections, bloom, glow, sky gradients or golden hour. The sky is the ground colour.
+- **Say what is missing.** Where a view could be read as more than it is — the eye-level view omits buildings and vegetation — the caveat sits next to the control, in words.
+- **Motion is optional.** A turning rotor is illustration only; it is off under `prefers-reduced-motion` and can be switched off.
+- **Never the entry point.** The preview is reached from a selected unit and its one accent action leads to the scenario comparison.
+
+The explorer remains a plan view: pitch is locked at 0 there.
+
 ## 3. Layout and restraint
 
 - **Map-first.** The map is the primary surface, not a widget inside a dashboard. Panels overlay or dock beside it; they do not surround it.
@@ -33,6 +49,7 @@ Named explicitly, because "modern" does not enforce itself and every implementer
 - **Data is the only thing allowed to be loud.** Saturation, weight, and contrast are budgeted for information. If a UI element is competing with a data mark for attention, the UI element is wrong.
 - **Generous whitespace, tight information.** Space between groups; no space wasted inside them. Density is fine where it is legible — sparse is not the same as shallow.
 - **One accent action per screen.** The primary action is obvious; everything else is secondary or tertiary.
+- **Map surfaces:** the map fills the screen; panels float over it, paper-white with a hairline edge and a short, soft shadow — enough to lift them off a busy basemap, never glass. On the explorer the basemap is further muted so the data leads; the legend doubles as the first table view (counts per class, one shared axis).
 
 ## 4. Colour
 
@@ -168,3 +185,4 @@ Both modes are defined from the same **semantic tokens** (`--scenario-preserve`,
 - [ ] Is low confidence visible where the number is, not only in the evidence view?
 - [ ] Is there a keyboard path and a table view?
 - [ ] Would a screenshot of this be publishable in an article without redesign?
+- [ ] If it is 3D: is it literal, at true scale, with every assumed dimension labelled and every rule cited (§2a)?

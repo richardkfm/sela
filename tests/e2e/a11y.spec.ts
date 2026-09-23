@@ -17,6 +17,22 @@ test("map explorer", async ({ page }) => {
   await assertNoViolations(page);
 });
 
+test("map explorer with a unit selected", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('nav[aria-label="Flächen in der Pilotregion"] button').first().click();
+  await page.getByRole("region", { name: /Fläche/ }).getByText(/geeignet|ausgeschlossen/).first().waitFor();
+  await assertNoViolations(page);
+});
+
+for (const technology of ["wind", "pv", "agripv", "status_quo"]) {
+  test(`3D preview (${technology})`, async ({ page, request, baseURL }) => {
+    const id = await getSampleUnitId(request, baseURL!);
+    await page.goto(`/unit/${id}/preview?technology=${technology}`);
+    await page.getByRole("heading", { name: /3D-Vorschau/ }).waitFor();
+    await assertNoViolations(page);
+  });
+}
+
 test("parcel detail", async ({ page, request, baseURL }) => {
   const id = await getSampleUnitId(request, baseURL!);
   await page.goto(`/unit/${id}`);
