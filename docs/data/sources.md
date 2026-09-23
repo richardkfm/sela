@@ -21,6 +21,8 @@ read at the source cited. Where that has not happened, the row says so.
 | BKG Verwaltungsgebiete 1:25 000 (VG25) | **CC BY 4.0** | **Yes**, with attribution + change notice | **Confirmed** — fetched and checksummed 2026-09-19; supplies the pilot boundary (§2.5) |
 | OpenStreetMap via Geofabrik | ODbL 1.0 | Yes, but share-alike would attach to sela's own database | **Withdrawn (ADR-0005, 2026-09-19).** Not unconfirmed — deliberately not used. §4 |
 | BKG basemap.de Web Raster | **CC BY 4.0** | **Yes**, with attribution + change notice | **In use** — the basemap, per ADR-0005 (§4.1) |
+| BKG basemap.de 3D Gelände (DGM5 terrain-RGB) | **basemap.de 3D-Beta Dienste** — *not* CC BY 4.0 | **Display only**, through the service, "zu Testzwecken"; no storage, no derived data | **In use, display only** — terrain in the 3D parcel preview (ADR-0006). **Blocks a public `1.0`** until the beta terms are replaced (U10, §2.6) |
+| BKG DGM200 | `dl-de/by-2-0` | **Yes**, with attribution | **Candidate, not fetched** — licence-clean terrain fallback (§2.6) |
 
 **The machine gate now stands open for two rows and closed for two.** `ingest/sources.manifest.json`
 — which `ingest/01_fetch.sh` actually reads before touching a network — reads `confirmed` for
@@ -199,6 +201,53 @@ verification is not ceremony.
 region, its measured extent, and why that region. Only one polygon out of the federal coverage is
 used; the rest of the archive is fetched but not ingested.
 
+### 2.6 BKG basemap.de 3D Gelände — terrain for the 3D parcel preview (display only)
+
+| | |
+|---|---|
+| Publisher | Bundesamt für Kartographie und Geodäsie (BKG), on behalf of the Länder |
+| Use in sela | **Display only.** The ground under the 3D parcel preview (ADR-0006). Never sampled, never stored, never a scoring input — `pv_slope`, `pv_aspect` and `wind_terrain_access` remain unsourced (`docs/domain/scoring-criteria.md`). |
+| Data basis | DGM5, production year 2021 (basemap.de 3D product page); updated "unregelmäßig in einem mehrjährigen Intervall" |
+| Service | TileJSON `https://sgx.geodatenzentrum.de/gdz_basemapde_3d_gelaende/dgm5_3857_rgb.json` → tiles `https://sg.geodatenzentrum.de/gdz_basemapde_3d_gelaende/dgm5_rgb_tiles/{z}/{x}/{y}.png` |
+| Licence | **basemap.de 3D-Beta Dienste** (`https://basemap.de/data/produkte/3d/lizenzen/lizenz_basemapde_3D-Beta.pdf`) — **not** basemap.de Web Raster's CC BY 4.0 |
+| Evidence | Licence PDF downloaded and read in full, 2026-09-23. Service probed live the same day (below). |
+
+**What the licence allows, in its own terms.** Usage rights are granted *for the beta version*
+(2.1) and *"zu Testzwecken"* (2.2): combining with other services, embedding in public and
+non-public applications, and making presentation outputs (analogue or non-georeferenced print
+files). Data may be used **only through the service and not stored**; download or reuse outside the
+service is not permitted; storing is allowed at runtime only (2.3). The notice
+**`© GeoBasis-DE/BKG <Jahr>`** must be clearly visible, and combinations with other services need a
+**change notice** (3.1, 3.2). Free of charge during the beta (5).
+
+**What sela does with it, and why that fits.** The preview requests tiles through the service at
+runtime, draws them, and keeps nothing: no tile is cached server-side, nothing is written to
+`criterion_value`. The notice renders in MapLibre's attribution control as
+`Gelände: © GeoBasis-DE/BKG <Jahr> (Daten verändert)` and again, in words, in the preview's source
+list. `<Jahr>` is the current year, the same reasoning `lib/basemap/basemap-source.ts` applies to
+the 2D basemap: for a live service the year of retrieval is now.
+
+**What it does not allow: a public launch on these terms.** "Zu Testzwecken" during a beta is not a
+licence to publish. sela is itself pre-release, and every screen that shows the preview also shows
+the *ILLUSTRATIV* marker — but before `1.0` either the beta terms must be replaced by final terms
+that permit public use, or the preview must switch to a licence-clean DEM. Recorded as **U10**
+(`docs/product/mvp.md` §9). `SELA_TERRAIN=none` turns the terrain off in one step.
+
+**Measured against the live service, 2026-09-23** — three of these differ from, or are missing in,
+the product documentation:
+
+- **Tiles are 512 px**, not the 256 px the product page states. Decoded with `sharp`.
+- **Encoding is Mapbox terrain-RGB** (`-10000 + (R·65536 + G·256 + B) · 0.1`): a z12 tile over the
+  Uckermark decoded to 17.8–80.6 m; the Terrarium formula gave values around −32 375 m.
+- **Tiles exist to z15**; z16+ and tiles outside Germany return 404.
+- **CORS is open** (`Access-Control-Allow-Origin` echoes the requesting origin).
+
+**The licence-clean fallback: BKG DGM200.** `dl-de/by-2-0`, derived from DGM5, grid spacing
+200 m, *Aktualitätsstand* 31.12.2019, notice `© GeoBasis-DE / BKG (<Jahr des letzten Datenbezugs>)
+dl-de/by-2-0` (BKG's own product page, read 2026-09-23). It would need to be fetched and turned into
+terrain-RGB tiles in the ingest container (GDAL), and at 200 m it is coarser than one 100 m hex cell
+— it would flatten precisely the relief a parcel-scale preview is for. Recorded, not fetched.
+
 ### 2.4 OpenStreetMap via Geofabrik — basemap, settlement geometry
 
 | | |
@@ -227,6 +276,7 @@ licence verified and then not attributed is worse than one never used.
 | BfN | `Bundesamt für Naturschutz (BfN) <Jahr>` plus the GeoNutzV reference (`https://sg.geodatenzentrum.de/web_public/gdz/lizenz/geonutzv.pdf`) | GeoNutzV §3: must be "erkennbar und in optischem Zusammenhang" with the data, and carry a *Veränderungshinweis* for any alteration. Template is from BfN's own metadata records; re-read the live capabilities document before ingest (§2.1). |
 | BKG | **`© GeoBasis-DE / BKG <Jahr des letzten Datenbezugs> (Daten verändert)`** — the *(Daten verändert)* form, not the plain one | Taken from `quellenvermerk_datenlizenz_deutschland.txt`, which ships **inside the CLC5 archive itself** (read 2026-09-19) — the publisher's own instruction rather than a web page. It gives exactly two forms, unchanged and *"(Daten verändert)"*, and **sela must always use the second**: a `criterion_value` derived from CLC5 polygons is by definition an alteration. It requires the notice to be placed "erkennbar und in optischem Zusammenhang" with the data and, on a web page, the *Quellenvermerk* hyperlinked to `http://www.bkg.bund.de`. Note a **discrepancy to resolve before rendering**: this file's form does **not** include the `dl-de/by-2-0` label, while BKG's GDI-DE metadata record for CLC5 gives `© GeoBasis-DE / BKG (Jahr des Datenbezugs) dl-de/by-2-0`. Carrying both the licence label (linked to `https://www.govdata.de/dl-de/by-2-0`) and the change notice satisfies both readings and is the safe choice. |
 | BKG — **VG25 only** | **`© BKG <Jahr des letzten Datenbezugs> CC BY 4.0, Datenquellen: https://sgx.geodatenzentrum.de/web_public/gdz/datenquellen/datenquellen_vg25.pdf`** | From `nutzungsbedingungen_vg25.pdf` inside the VG25 archive (read 2026-09-19). **Do not reuse the CLC5 notice for this** — VG25 is CC BY 4.0 and its *Quellenvermerk* is `© BKG`, without the `GeoBasis-DE /` prefix. On a web page "BKG" links to `https://www.bkg.bund.de` and "CC BY 4.0" to `https://creativecommons.org/licenses/by/4.0`. A *Veränderungshinweis* is required for any edited or transformed use, which clipping a grid to this boundary is. |
+| BKG — **basemap.de 3D Gelände only** | **`© GeoBasis-DE/BKG <Jahr>`**, with a change notice when combined with other services | From `lizenz_basemapde_3D-Beta.pdf` §3 (read 2026-09-23). The preview always combines it with other services, so it always renders as `© GeoBasis-DE/BKG <Jahr> (Daten verändert)`. |
 | DWD | `Quelle: Deutscher Wetterdienst` (text form; the DWD logo is an accepted alternative) | Per §7 DWD-Gesetz. To be placed **immediately at the DWD information used**. For substantial modification DWD expects at minimum to be named in a central source list or the Impressum, together with a change notice — DWD's own examples include *"Datenbasis: Deutscher Wetterdienst, Einzelwerte gemittelt"*, which is precisely what sampling a 1 km grid onto hex cells is. The dataset additionally carries its own required citation: `DWD Climate Data Center (CDC): Gridded annual sum of incoming shortwave radiation (global radiation) on the horizontal plain for Germany based on ground and satellite measurements, Version V003, <current year>.` |
 | OSM | `© OpenStreetMap contributors` with the data made clear to be available under the Open Database License — linking to `https://www.openstreetmap.org/copyright` satisfies the latter for a browsable map; printed works must carry the full URL | ADR-0003 already records this as a standing duty on **every screen and every export**. Distributing OSM in data form requires naming and linking the licence directly. |
 
@@ -515,6 +565,24 @@ what the public is told about real land.
 
 Entries record what was actually fetched and read, so a later session does not repeat a dead end or
 mistake an attempt for a confirmation.
+
+### 2026-09-23, 3D parcel preview (ADR-0006)
+
+- **basemap.de 3D Gelände** — licence PDF fetched from `basemap.de` and read in full; TileJSON and
+  tiles fetched through the agent proxy; a z12 tile over the Uckermark decoded locally (§2.6). The
+  3D product page's MIS record (`mis.bkg.bund.de`, docuuid `882FBE55-…`) returned *"Keine
+  Detailinformationen verfügbar"* and was not usable as evidence.
+- **BKG DGM200** — product page read (licence, notice, *Aktualitätsstand*); nothing downloaded.
+- **Legal texts behind the preview's rings** — not datasets, recorded here because they are cited
+  in the interface:
+  - **§ 249 Abs. 10 BauGB** — fetched from `gesetze-im-internet.de` and read verbatim (after one
+    503). Quoted in `lib/preview/reference-geometry.ts`.
+  - **§ 1 BbgWEAAbG** — `bravors.brandenburg.de` **failed TLS verification** from this environment
+    (self-signed certificate in chain, also with the proxy CA bundle). The wording was obtained
+    through a web-fetch tool's summary of the same page, which reported the law in force (version of
+    20.05.2022, amended 02.03.2023) and quoted the 1 000 m rule and its measuring point. **This is a
+    weaker verification than a direct read**, and the quote in `reference-geometry.ts` should be
+    re-checked against the official text before anything beyond the illustrative preview relies on it.
 
 ### 2026-09-19 (later), pilot region chosen
 

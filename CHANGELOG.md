@@ -27,6 +27,53 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **A proper map view, and a 3D parcel preview — `docs/architecture/adr-0006-3d-parcel-preview.md`.**
+  Asked for by the project owner ("make it look really good and innovative … geospatial map apps
+  that use 3D models on top of the map"). Because `design-language.md` §2 bans 3D marks, every
+  choice below went through the `CLAUDE.md` §3 gate first, in two rounds of questions on
+  2026-09-23: **the explorer stays a flat 2D map; selecting a unit opens a separate 3D preview;
+  it shows true-scale scenario models and cited setback rings; rendered with deck.gl over
+  MapLibre; terrain from researched open data, DEM only.** The owner explicitly declined
+  extruding units by score — so **no number sela computes is ever drawn as height.**
+- **The explorer, rebuilt map-first** (`app/(map)/Explorer.tsx`, `Legend.tsx`,
+  `SelectionPanel.tsx`, `components/TechnologySwitch.tsx`). Full-bleed map with one quiet panel:
+  masthead, the *ILLUSTRATIV* note, a technology switch whose buttons carry their own hatched
+  swatches, a legend that is also the first table view (count per class on one shared axis), and
+  the keyboard-reachable unit list. Selecting a unit — by click or from the list — frames it and
+  opens a card with **all three technologies side by side**, each with its limiting or excluding
+  criterion linked to the evidence view; the one accent action is *Szenarien vergleichen*. Hover
+  shows a tooltip; Escape clears the selection; focus moves to the card for keyboard and
+  screen-reader users.
+- **Patterns on the map itself** (`lib/map/patterns.ts`, `lib/map/verdict-style.ts`). Until now
+  only the legend-style swatches carried hatches; on the canvas, amber against grey carried the
+  verdict alone. Suitable units now carry their technology's hatch (45°, crosshatch, 135°) and
+  excluded units a horizontal hatch, drawn as MapLibre `fill-pattern` images generated from the
+  same encodings as the CSS classes. A new e2e test converts a real screenshot of the map to
+  greyscale and checks the hatch survives.
+- **`/unit/[id]/preview` — the 3D parcel preview.** Wind: a procedural reference turbine
+  (hub height and rotor diameter on sliders, default 160 m / 160 m, labelled *illustrativ*),
+  its total height, and two rings around the mast foot — **2 H per § 249 Abs. 10 BauGB** (dashed,
+  a *Regelvermutung*) and **1 000 m per § 1 BbgWEAAbG** — each with its quoted wording, measuring
+  point and limits. Views from eye height on either ring, from N/O/S/W, with the rotor turned to
+  face the viewer and the caveat beside the button that buildings and vegetation are missing:
+  *"Das ist keine Sichtbarkeitsanalyse."* PV and Agri-PV: module rows clipped to the unit with a
+  boundary inset, Agri-PV raised on supports at 4.5 m clearance. *Ist-Zustand* shows the unit
+  without an installation and points to the comparison for what preserve and restore mean there.
+- **Geometry for the preview stays in PostGIS** (`lib/db/queries/preview.ts`,
+  `/api/unit/[id]/preview`) — ADR-0002's "TypeScript never computes geometry" holds for display
+  geometry too: row layout in EPSG:25832, rings and viewpoints on `geography`. TypeScript builds
+  meshes in model space (`lib/preview/meshes.ts`) and reads ground height back from the displayed
+  terrain for placement only. `/api/unit/[id]/summary` feeds the selection card; unit features now
+  carry `bbox` and `areaHa` from PostGIS so the client can frame a unit without measuring it.
+- **Terrain: BKG basemap.de 3D Gelände (DGM5)** for the preview only (`lib/basemap/terrain-source.ts`,
+  `/api/tiles/style.json?terrain=1`, `SELA_TERRAIN`), at exaggeration 1. Verified against the live
+  service rather than its documentation: **512 px tiles** (the product page says 256), Mapbox
+  terrain-RGB encoding (decoded 17.8–80.6 m over the Uckermark), z ≤ 15, CORS open.
+- **Unit tests** for the preview's sizes and the map's encodings (12 new, 47 total) and **e2e
+  tests** for the new flows: keyboard selection → card → detail, the technology switch, the
+  preview's sliders and cited links, axe on the explorer with a selection and on the preview in
+  all four scenarios, and the map greyscale check (16 e2e total, all passing).
+
 - **U7 is closed. `docs/architecture/adr-0005-osm-free-stack.md` takes OpenStreetMap out of sela.**
   The ODbL question open since 2026-09-18 is decided as **option (b)**, taken further than option
   (b) was originally written: basemap.de (CC BY 4.0) for the map, BKG CLC5 classes **111/112**
@@ -187,6 +234,18 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Changed
 
+- **`design-language.md` §2a** — the one exception to the 3D ban, with its rules: literal and
+  never encoded, true scale, stated dimensions, an architect's-model register, say what is
+  missing, motion optional, never the entry point. §3 gains the map-surface panel treatment; §12
+  gains a 3D checklist item.
+- **The unit list selects instead of navigating.** It used to link straight to the detail page;
+  it now selects the unit on the map, and the selection card carries the links. The keyboard e2e
+  test was rewritten for the new path rather than deleted.
+- **MapLibre's attribution links are underlined** on map surfaces. axe flagged them
+  (`link-in-text-block`) once the explorer's panels changed the surrounding contrast; the
+  attribution is a legal duty (ADR-0005), so it must be recognisable as links.
+- `docs/product/mvp.md` §7 adds the preview to the screens; `.env.example` documents `SELA_TERRAIN`.
+
 - **The machine gate is open for two of four sources.** `ingest/sources.manifest.json` now reads
   `confirmed` for `bkg-clc5` and `dwd-cdc-radiation`. This is a `CLAUDE.md` §3 decision (data
   sources and licensing) and was taken by the project owner on 2026-09-19, on the basis that both
@@ -248,6 +307,12 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Fixed
 
+- **The explorer no longer throws a selection away.** The pilot boundary loads asynchronously and
+  framed the Uckermark when it arrived; a unit selected before that moment was framed and then
+  immediately un-framed. Found by the new map greyscale test, which first "passed" by measuring
+  basemap texture where the hatched unit should have been — the test now measures a plain unit as
+  a control and requires the sample to be a rendered unit, and was checked to fail with the map's
+  pattern layer switched off.
 - **`app/(map)/Map.tsx`** — the map explorer's GeoJSON fill layer never painted in any browser:
   MapLibre resolves its background worker script relative to `import.meta.url`, which doesn't
   survive Next.js's webpack bundling (it resolved to the page's own URL, so the worker loaded the
@@ -258,6 +323,28 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   can drift on upgrade).
 
 ### Notes
+
+**Open after the 3D parcel preview (ADR-0006), stated rather than left for a reader to find:**
+
+- **U10 — the terrain licence does not reach a public `1.0`.** basemap.de 3D Gelände is under the
+  *basemap.de 3D-Beta Dienste* terms, **not** CC BY 4.0: use *"zu Testzwecken"* during the beta,
+  through the service only, no storage, `© GeoBasis-DE/BKG <Jahr>` plus a change notice. Display-only
+  use in a pre-release product fits; publishing on it does not. Recorded in `docs/data/sources.md`
+  §2.6 and `docs/product/mvp.md` §9 with the licence-clean fallback (BKG DGM200, `dl-de/by-2-0`,
+  coarser than one cell).
+- **§ 1 BbgWEAAbG was verified second-hand.** `bravors.brandenburg.de` failed TLS verification from
+  this environment (also with the proxy CA bundle); the wording came through a fetch tool's summary.
+  The interface says so beside the quote, and `docs/data/sources.md` §6 asks for a re-check against
+  the official text. § 249 Abs. 10 BauGB was read verbatim.
+- **A shim for deck.gl 9.4 on MapLibre 6** (`exposeTransformForDeck` in the preview scene): deck.gl
+  still reads `map.transform`, which MapLibre 6 no longer exposes. Isolated in one function; remove
+  once deck.gl supports MapLibre 6.
+- **No real unit can be previewed yet.** Only the synthetic fixture at null island has units, so
+  every committed screenshot shows flat ground with no basemap. Terrain, basemap and rings were
+  verified over real Brandenburg ground with a throwaway local unit that was deleted afterwards and
+  appears in no screenshot — a fabricated unit at a real place is exactly what the fixture's
+  null-island rule exists to prevent.
+- Dark mode remains light-only on map surfaces, as before.
 
 - **The machine gate was untouched when the evidence was gathered, and opened separately once the
   §3 decision was taken.** `ingest/sources.manifest.json` said `to_confirm`/`unconfirmed` for every

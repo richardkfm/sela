@@ -77,3 +77,583 @@ body {
   background-image: radial-gradient(rgba(255, 255, 255, 0.65) 1px, transparent 1.5px);
   background-size: 6px 6px;
 }
+/* Exclusion has no scenario of its own; horizontal lines keep it apart from every technology hatch. */
+.pattern-hatch-0 {
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.6) 0 2px, transparent 2px 7px);
+}
+
+/*
+ * Map surfaces — the explorer (app/(map)/) and the 3D parcel preview
+ * (app/unit/[id]/preview/). design-language.md §3: the map is the surface,
+ * panels float over it and stay quiet; data is the only loud thing. Panels
+ * are paper-white with a hairline edge and a soft, short shadow — enough to
+ * lift them off a busy basemap, never glass, never glow (§2).
+ */
+:root {
+  --hairline: rgba(31, 30, 27, 0.12);
+  --panel-shadow: 0 1px 2px rgba(31, 30, 27, 0.08), 0 6px 20px rgba(31, 30, 27, 0.07);
+  --focus-ring: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--text-primary);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hairline: rgba(242, 241, 238, 0.14);
+    --panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.map-stage {
+  position: relative;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+}
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.panel {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  box-shadow: var(--panel-shadow);
+}
+
+.overline {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+/* Designed focus, never the suppressed browser default (design-language.md §9). */
+.map-stage :is(a, button, input, select, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 4px;
+}
+
+/* Segmented control — the technology switch. One accent: the pressed segment in ink. */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--ground);
+  border: 1px solid var(--hairline);
+}
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.segmented-2x2 {
+  grid-auto-flow: row;
+  grid-template-columns: 1fr 1fr;
+}
+.segmented button:hover {
+  background: var(--surface-1);
+}
+.segmented button[aria-pressed="true"],
+.segmented button[aria-checked="true"] {
+  background: var(--text-primary);
+  color: var(--ground);
+  font-weight: 600;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(31, 30, 27, 0.18);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 5px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover {
+  border-color: var(--text-secondary);
+}
+.btn-primary {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--ground);
+  font-weight: 600;
+}
+.btn-primary:hover {
+  border-color: var(--text-primary);
+  opacity: 0.9;
+}
+.btn-small {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+}
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  padding-inline: 0.4rem;
+}
+
+.unit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.unit-list button {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.25rem;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+.unit-list button:hover,
+.unit-list button[aria-current="true"] {
+  background: var(--ground);
+}
+.unit-list button[aria-current="true"] {
+  box-shadow: inset 3px 0 0 var(--text-primary);
+}
+
+/* Maplibre's own controls, brought into the same register as the panels. */
+.map-stage .maplibregl-ctrl-group {
+  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  box-shadow: var(--panel-shadow);
+}
+.map-stage .maplibregl-ctrl-scale {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.7rem;
+}
+
+.dl-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3rem 1rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+.dl-grid dt {
+  color: var(--text-secondary);
+}
+.dl-grid dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0 0.35rem;
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  vertical-align: 0.1em;
+}
+
+input[type="range"].slider {
+  width: 100%;
+  accent-color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-stage * {
+    transition: none !important;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.illustrative-note {
+  border-left: 3px solid var(--text-primary);
+  padding: 0.45rem 0.7rem;
+  background: var(--ground);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.illustrative-note strong {
+  color: var(--text-primary);
+}
+
+/* --- Map explorer ------------------------------------------------------- */
+
+.explorer-side {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  bottom: 1rem;
+  width: 22rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.1rem;
+  overflow-y: auto;
+  z-index: 2;
+}
+.explorer-masthead h1 {
+  font-size: 1.35rem;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0.1rem 0 0.25rem;
+}
+.explorer-masthead p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+/* Plain text, deliberately: the wordmark and logo are open question U9 (design-language.md §11). */
+.wordmark {
+  font-weight: 700;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.02em;
+}
+.explorer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.explorer-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.explorer-views {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.explorer-list {
+  border-top: 1px solid var(--hairline);
+  padding-top: 0.9rem;
+}
+
+.legend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.legend-table th {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 0.55rem;
+  text-align: left;
+  font-weight: 400;
+  padding: 0.2rem 0;
+}
+.legend-table th .swatch {
+  align-self: center;
+}
+.legend-label {
+  display: block;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.legend-explanation {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+.legend-table td {
+  padding: 0.2rem 0 0.2rem 0.6rem;
+  vertical-align: middle;
+}
+.legend-table td:nth-of-type(1) {
+  text-align: right;
+  font-weight: 600;
+}
+.legend-table td:nth-of-type(2) {
+  width: 4.5rem;
+}
+.legend-bar {
+  display: block;
+  height: 0.35rem;
+  background: var(--hairline);
+}
+.legend-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--text-primary);
+}
+
+.explorer-selection {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 22rem;
+  max-height: calc(100% - 7rem);
+  overflow-y: auto;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 2;
+}
+.selection-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.selection-head h2 {
+  margin: 0.1rem 0 0.15rem;
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+.selection-meta {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.verdict-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.verdict-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.verdict-list li .swatch {
+  margin-top: 0.2rem;
+}
+.verdict-list li[aria-current="true"] {
+  background: var(--ground);
+  box-shadow: inset 3px 0 0 var(--text-primary);
+}
+.verdict-line {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+.verdict-line span:first-child {
+  min-width: 4.5rem;
+}
+.verdict-line .muted {
+  margin-left: auto;
+}
+.verdict-reason {
+  font-size: 0.8rem;
+  margin-top: 0.15rem;
+}
+.selection-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.selection-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.map-tooltip {
+  position: absolute;
+  transform: translate(14px, 14px);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8rem;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+@media (max-width: 760px) {
+  .explorer-side {
+    top: auto;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: auto;
+    max-height: 45dvh;
+    overflow-y: auto;
+  }
+  .explorer-list {
+    flex: none;
+    overflow: visible;
+  }
+  .explorer-selection {
+    top: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-height: 50dvh;
+  }
+}
+
+/* --- 3D parcel preview ---------------------------------------------------- */
+
+.preview-caption {
+  position: absolute;
+  top: 1rem;
+  left: calc(24rem + (100% - 24rem) / 2);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  z-index: 2;
+}
+@media (max-width: 760px) {
+  .preview-caption {
+    left: 50%;
+  }
+}
+.preview-loading {
+  background: var(--ground);
+}
+.back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+  color: var(--text-primary);
+}
+.preview-side h1 {
+  font-size: 1.2rem;
+}
+.slider-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 0.5rem;
+  font-size: 0.85rem;
+}
+.slider-row input {
+  grid-column: 1 / -1;
+}
+.slider-row output {
+  font-weight: 600;
+}
+.toggle {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.45rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+}
+.toggle input {
+  accent-color: var(--text-primary);
+}
+.ring-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ring-list li {
+  border-top: 1px solid var(--hairline);
+  padding-top: 0.45rem;
+  font-size: 0.85rem;
+}
+.ring-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.ring-head a {
+  margin-left: auto;
+  color: var(--text-primary);
+}
+.ring-mark {
+  display: inline-block;
+  width: 1.4rem;
+  border-top: 2px solid var(--text-primary);
+}
+.ring-mark-dashed {
+  border-top-style: dashed;
+}
+.ring-list details {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.ring-list summary {
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.ring-list blockquote {
+  margin: 0.4rem 0;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--hairline);
+  font-style: italic;
+}
+.ring-list details p {
+  margin: 0;
+}
+.preview-provenance ul {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.preview-provenance strong {
+  color: var(--text-primary);
+}
+
+/* Attribution is a legal duty (ADR-0005), so its links must be recognisable as links (WCAG 1.4.1). */
+.map-stage .maplibregl-ctrl-attrib a {
+  color: var(--text-primary);
+  text-decoration: underline;
+}

@@ -93,6 +93,7 @@ Two rules that keep the comparison honest:
 | **Scenario comparison** | That four futures are being compared on identical dimensions — and where the real trade-off sits. The centrepiece screen. |
 | **Criterion / evidence view** | Where a number came from, how much it counts, and how confident it is. Reachable from any value. |
 | **Method page** | How sela scores, in public, with weights and sources listed. Static, citable, versioned alongside the scoring logic. |
+| **3D parcel preview** *(added 2026-09-23, ADR-0006)* | How big an installation would be *on this land*: a true-scale turbine or module rows on the real terrain, with the cited setback rings and a view from eye height. Every assumed dimension labelled, every rule cited, and what the view leaves out (buildings, vegetation) said beside it. Reached from a selected unit; leads on to the comparison. |
 
 ## 8. Core data and scoring concepts
 
@@ -149,6 +150,7 @@ Recorded rather than assumed. Each blocks or reshapes work in a later band.
 | U7 | Per-source licensing (dl-de/by-2-0, ODbL, restricted) and whether derived scores may be redistributed. | Whether the platform can be public at all |
 | U8 | Basemap provider and its attribution and licensing terms. | Visual register, legal attribution — see `design-language.md` |
 | U9 | Wordmark, logo, and final public name. | Public launch identity — see `design-language.md` |
+| U10 | Terrain for the 3D parcel preview at public launch. basemap.de 3D Gelände is licensed "zu Testzwecken" for its beta (`docs/data/sources.md` §2.6): usable while sela is pre-release, not a basis for `1.0`. Options: final basemap.de 3D terms, a self-built tile set from a `dl-de/by-2-0` DEM (DGM200 is licence-clean but coarser than one cell), or no terrain. | The preview's terrain at `1.0` — not the rest of the product; `SELA_TERRAIN=none` removes it in one step |
 
 ## 10. Success criteria
 

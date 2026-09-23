@@ -20,6 +20,7 @@ import {
   resolveBasemapKind,
 } from "@/lib/basemap/basemap-source";
 import { getPmtilesReader } from "@/lib/basemap/pmtiles-reader";
+import { describeTerrain, resolveTerrainKind } from "@/lib/basemap/terrain-source";
 import { surfaceTokens } from "@/lib/design/tokens";
 
 export const runtime = "nodejs";
@@ -61,7 +62,77 @@ function paletteLayers() {
   ] as const;
 }
 
+const TERRAIN_SOURCE_ID = "terrain";
+const HILLSHADE_SOURCE_ID = "terrain-hillshade";
+
+// `?terrain=1` — requested only by the 3D parcel preview (ADR-0006). Adds the
+// DEM as MapLibre terrain at exaggeration 1: relief is shown at its true
+// height, never stretched for drama (design-language.md §2a). A faint
+// hillshade from the same service makes the relief legible from above, in the
+// basemap's own greys. The sky is the ground colour, so the horizon reads as
+// the edge of a paper model rather than as a photographic sky.
+interface StyleJson {
+  sources: Record<string, unknown>;
+  layers: unknown[];
+  [key: string]: unknown;
+}
+
+function withTerrain(style: StyleJson): StyleJson {
+  const terrain = describeTerrain(resolveTerrainKind());
+  const sky = {
+    "sky-color": surfaceTokens.ground.light,
+    "horizon-color": surfaceTokens.ground.light,
+    "fog-color": surfaceTokens.ground.light,
+    "sky-horizon-blend": 0.6,
+    "horizon-fog-blend": 0.8,
+    "fog-ground-blend": 0.9,
+    "atmosphere-blend": 0,
+  };
+  if (!terrain) return { ...style, sky };
+  const demSource = {
+    type: "raster-dem",
+    tiles: terrain.tiles,
+    tileSize: terrain.tileSize,
+    maxzoom: terrain.maxzoom,
+    bounds: terrain.bounds,
+    encoding: "mapbox",
+    attribution: terrain.attributionHtml,
+  };
+  return {
+    ...style,
+    sources: {
+      ...style.sources,
+      [TERRAIN_SOURCE_ID]: demSource,
+      // A second source instance for the hillshade, as MapLibre recommends —
+      // sharing one between terrain and hillshade degrades both.
+      [HILLSHADE_SOURCE_ID]: { ...demSource, attribution: undefined },
+    },
+    layers: [
+      ...style.layers,
+      {
+        id: "hillshade",
+        type: "hillshade",
+        source: HILLSHADE_SOURCE_ID,
+        paint: {
+          "hillshade-exaggeration": 0.25,
+          "hillshade-shadow-color": surfaceTokens.textSecondary.light,
+          "hillshade-highlight-color": surfaceTokens.surface1.light,
+          "hillshade-accent-color": surfaceTokens.textSecondary.light,
+        },
+      },
+    ],
+    terrain: { source: TERRAIN_SOURCE_ID, exaggeration: 1 },
+    sky,
+  };
+}
+
 export async function GET(request: Request) {
+  const style = await baseStyle(request);
+  const wantsTerrain = new URL(request.url).searchParams.get("terrain") === "1";
+  return NextResponse.json(wantsTerrain ? withTerrain(style) : style);
+}
+
+async function baseStyle(request: Request): Promise<StyleJson> {
   const reader = getPmtilesReader();
   const basemap = describeBasemap(resolveBasemapKind(reader !== null));
   const backgroundLayer = {
@@ -71,12 +142,12 @@ export async function GET(request: Request) {
   };
 
   if (basemap.kind === "none") {
-    return NextResponse.json({
+    return {
       version: 8,
       name: "sela basemap (none)",
       sources: {},
       layers: [backgroundLayer],
-    });
+    };
   }
 
   // ADR-0003 puts a standing attribution duty on every screen carrying a
@@ -87,7 +158,7 @@ export async function GET(request: Request) {
       basemap.kind === "basemapde"
         ? { tiles: BASEMAPDE_TILE_URLS, maxzoom: 18 }
         : { tiles: cartoTileUrls(), maxzoom: 20 };
-    return NextResponse.json({
+    return {
       version: 8,
       name:
         basemap.kind === "basemapde"
@@ -110,13 +181,13 @@ export async function GET(request: Request) {
         backgroundLayer,
         { id: "basemap-raster", type: "raster", source: SOURCE_ID, paint: { "raster-opacity": 1 } },
       ],
-    });
+    };
   }
 
   const header = await reader!.getHeader();
   const origin = new URL(request.url).origin;
 
-  return NextResponse.json({
+  return {
     version: 8,
     name: "sela basemap",
     sources: {
@@ -129,5 +200,5 @@ export async function GET(request: Request) {
       },
     },
     layers: [backgroundLayer, ...paletteLayers()],
-  });
+  };
 }

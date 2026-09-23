@@ -8,19 +8,27 @@
 
 ## Screenshots
 
-The five MVP screens, rendered against the synthetic fixture dataset described above — illustrative only, not real pilot data or real scoring weights.
+Rendered against the synthetic fixture dataset described above — illustrative only, not real pilot data or real scoring weights. The fixture sits at 0° N 0° E on purpose, so the 3D preview shows flat ground without a basemap; over a real unit in Germany it draws on the DGM5 relief and basemap.de.
 
-| Map explorer (`develop` suitability) | Parcel detail |
+| Map explorer — pilot region | Map explorer — a unit selected |
 |---|---|
-| [![Map explorer](docs/product/screenshots/map-explorer.png)](docs/product/screenshots/map-explorer.png) | [![Parcel detail](docs/product/screenshots/parcel-detail.png)](docs/product/screenshots/parcel-detail.png) |
+| [![Map explorer](docs/product/screenshots/map-explorer.png)](docs/product/screenshots/map-explorer.png) | [![Map explorer with selection](docs/product/screenshots/map-explorer-selection.png)](docs/product/screenshots/map-explorer-selection.png) |
 
-| Scenario comparison | Evidence view |
+| 3D preview — reference turbine at true scale | 3D preview — cited setback rings |
 |---|---|
-| [![Scenario comparison](docs/product/screenshots/scenario-comparison.png)](docs/product/screenshots/scenario-comparison.png) | [![Evidence view](docs/product/screenshots/evidence-view.png)](docs/product/screenshots/evidence-view.png) |
+| [![3D preview, wind](docs/product/screenshots/preview-wind.png)](docs/product/screenshots/preview-wind.png) | [![3D preview, rings](docs/product/screenshots/preview-wind-rings.png)](docs/product/screenshots/preview-wind-rings.png) |
 
-| Method page |
-|---|
-| [![Method page](docs/product/screenshots/method.png)](docs/product/screenshots/method.png) |
+| 3D preview — from eye height, 1 000 m away | 3D preview — Agri-PV rows on supports |
+|---|---|
+| [![3D preview, eye level](docs/product/screenshots/preview-wind-eye-level.png)](docs/product/screenshots/preview-wind-eye-level.png) | [![3D preview, Agri-PV](docs/product/screenshots/preview-agripv.png)](docs/product/screenshots/preview-agripv.png) |
+
+| Parcel detail | Scenario comparison |
+|---|---|
+| [![Parcel detail](docs/product/screenshots/parcel-detail.png)](docs/product/screenshots/parcel-detail.png) | [![Scenario comparison](docs/product/screenshots/scenario-comparison.png)](docs/product/screenshots/scenario-comparison.png) |
+
+| Evidence view | Method page |
+|---|---|
+| [![Evidence view](docs/product/screenshots/evidence-view.png)](docs/product/screenshots/evidence-view.png) | [![Method page](docs/product/screenshots/method.png)](docs/product/screenshots/method.png) |
 
 ---
 
@@ -91,12 +99,14 @@ docs/architecture/               ADRs and system design
   adr-0002-geodata-stack.md      Next.js + PostGIS + MapLibre, and the TypeScript/GDAL boundary
   adr-0003-basemap.md            Self-hosted PMTiles from OSM — closes U8
   adr-0004-constraints-as-filters.md  Hard constraints exclude rather than penalize — closes U4
+  adr-0005-osm-free-stack.md     OpenStreetMap out of the stack; basemap.de — closes U7
+  adr-0006-3d-parcel-preview.md  2D explorer + a literal-3D parcel preview (deck.gl over MapLibre)
 docs/domain/glossary.md          DE/EN vocabulary
 docs/domain/scoring-criteria.md  Criteria catalogue per technology — weights deliberately left open
 docs/data/sources.md             Dataset inventory and verification log — the licence gate on real ingestion
 app/                             Next.js App Router — map explorer, parcel detail, scenario
-                                  comparison, evidence view, method page, PMTiles tile routes,
-                                  scenario-card export
+                                  comparison, evidence view, method page, 3D parcel preview,
+                                  tile/style routes, scenario-card export
 components/                      Shared UI: ScenarioBadge, IllustrativeBanner, ConfidenceMark,
                                   NotModelledBadge
 lib/design/tokens.ts             Semantic design tokens (design-language.md §4.2)
@@ -104,7 +114,9 @@ lib/db/                          Migration runner, SQL migrations (domain schema
                                   request-time query layer (lib/db/queries/)
 lib/scoring/                     Pure scoring engine — suitability, outcomes, deltas; unit-tested.
                                   illustrative-weights.ts is Phase 3 demo-only input, not real weights
-lib/basemap/                     PMTiles archive reader for the tile routes
+lib/basemap/                     Basemap and terrain sources (basemap.de, DGM5 terrain), PMTiles reader
+lib/map/                         Verdict colours + map patterns, shared by explorer, legend and preview
+lib/preview/                     3D preview: reference dimensions, cited rings, procedural meshes
 ingest/                          GDAL + SQL pipeline — real mechanics, gated on sources.md,
                                   fixture-proven; basemap/ builds the self-hosted PMTiles archive;
                                   07_materialize_scores.ts bridges criterion values to scored rows
