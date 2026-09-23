@@ -17,7 +17,7 @@ export default async function MethodPage() {
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <IllustrativeBanner />
+      <IllustrativeBanner kind={definitions.some((d) => !d.id.startsWith("fixture_")) ? "real" : "fixture"} />
       <div>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600 }}>Methode</h1>
         <p style={{ color: "var(--text-secondary)" }}>
@@ -25,7 +25,9 @@ export default async function MethodPage() {
           Bewertungs-Engine (<code>lib/scoring/</code>, Methodenversion{" "}
           <span className="tabular-nums">{CURRENT_METHOD_VERSION}</span>) tatsächlich liest — sie kann
           daher nicht vom aktiven Code abweichen. Die echte Kriterienkatalog-Gewichtung ist noch
-          offen; siehe <code>docs/domain/scoring-criteria.md</code>.
+          offen; siehe <code>docs/domain/scoring-criteria.md</code>. Kriterien mit dem Präfix{" "}
+          <code>fixture_</code> gehören zum synthetischen Beispieldatensatz, alle anderen lesen echte
+          Messwerte der Pilotregion Uckermark – mit derselben Platzhalter-Gewichtung.
         </p>
       </div>
 

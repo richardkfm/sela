@@ -3,10 +3,10 @@
 // explicitly for") and a table view reachable from every chart.
 
 import { expect, test } from "@playwright/test";
-import { getSampleUnitId } from "./helpers";
+import { FIXTURE_EXPLORER, getSampleUnitId } from "./helpers";
 
 test("select a unit from the list with the keyboard alone, then follow it to its detail page", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(FIXTURE_EXPLORER);
   const firstUnit = page.locator('nav[aria-label="Flächen in der Pilotregion"] button').first();
   await firstUnit.waitFor();
   await firstUnit.focus();
@@ -26,7 +26,7 @@ test("select a unit from the list with the keyboard alone, then follow it to its
   await page.waitForURL(/\/unit\/[^/]+$/);
 
   // Escape clears a selection without a mouse.
-  await page.goto("/");
+  await page.goto(FIXTURE_EXPLORER);
   await firstUnit.focus();
   await page.keyboard.press("Enter");
   await expect(card).toBeVisible();
@@ -35,7 +35,7 @@ test("select a unit from the list with the keyboard alone, then follow it to its
 });
 
 test("the technology switch is operable by keyboard and updates the legend", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(FIXTURE_EXPLORER);
   const wind = page.getByRole("group", { name: "Technologie" }).getByRole("button", { name: "Wind" });
   await wind.focus();
   await page.keyboard.press("Enter");

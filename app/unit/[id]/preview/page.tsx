@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { describeTerrain, resolveTerrainKind } from "@/lib/basemap/terrain-source";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
+import { pilotRegionInfo } from "@/lib/pilot-region";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import { TECHNOLOGIES } from "@/lib/scoring/types";
@@ -43,6 +44,7 @@ export default async function PreviewPage({
         initialTechnology={parseTechnology(query.technology)}
         verdicts={verdicts}
         terrainNotice={terrain?.notice ?? null}
+        regionKind={pilotRegionInfo(unit.pilotRegion).kind}
       />
     </main>
   );

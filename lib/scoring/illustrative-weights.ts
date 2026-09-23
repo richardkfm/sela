@@ -41,6 +41,43 @@ const ILLUSTRATIVE_BOUNDS: Record<string, { min: number; max: number }> = {
   fixture_land_cover_coverage: { min: 0, max: 1 },
   fixture_agripv_suitability: { min: 0, max: 1 },
   fixture_wind_resource: { min: 0, max: 1 },
+  // Real criteria, illustrative scales (ingest/real/seed_real_criteria.sql).
+  // Irradiation: chosen only to span the values DWD's German grids hold — the
+  // 2020 grid's own header reports 1042–1319 kWh/m². Not a judgement of what
+  // irradiation is "enough".
+  pv_irradiation_annual: { min: 1000, max: 1300 },
+  // Slope: 0° best, 10° and steeper worst. Arbitrary.
+  pv_slope: { min: 0, max: 10 },
+};
+
+/**
+ * Illustrative score per CLC class for `pv_land_cover` (non_monotonic: a
+ * class is not "more" or "less" of anything). Invented for the demo — arable
+ * land high, previously disturbed land (extraction, dumps) high, settlement,
+ * forest, wetland and water zero — and in no way a siting rule. Class codes
+ * and names: lib/scoring/clc-classes.ts. An unlisted class scores 0.
+ */
+export const ILLUSTRATIVE_LAND_COVER_SCORE: Readonly<Record<number, number>> = {
+  111: 0, 112: 0, 121: 0.6, 122: 0.2, 123: 0.3, 124: 0.3,
+  131: 0.9, 132: 0.9, 133: 0.6, 141: 0.1, 142: 0.2,
+  211: 1, 221: 0.3, 222: 0.3, 231: 0.7, 242: 0.7, 243: 0.5,
+  311: 0, 312: 0, 313: 0, 321: 0.3, 322: 0.1, 324: 0.1,
+  331: 0.2, 332: 0.1, 333: 0.3, 334: 0.2, 335: 0,
+  411: 0, 412: 0, 421: 0, 423: 0,
+  511: 0, 512: 0, 521: 0, 522: 0, 523: 0,
+};
+
+/**
+ * Raw value at or above which a hard constraint counts as violated. The
+ * fixture flag is 0/1; the real protection criteria are the *share* of a cell
+ * inside a Naturschutzgebiet or the Nationalpark (ingest/real/20_sample.sql),
+ * and "at least half the cell" is an arbitrary line, not a legal one — a
+ * protected area's ordinance applies to its whole area, not by share.
+ */
+const ILLUSTRATIVE_CONSTRAINT_THRESHOLD: Record<string, number> = {
+  fixture_protection_status: 1,
+  pv_protection_status: 0.5,
+  wind_protection_status: 0.5,
 };
 
 function clamp01(value: number): number {
@@ -49,12 +86,16 @@ function clamp01(value: number): number {
 
 /**
  * Caller-supplied `Normalize` for `computeSuitability` (lib/scoring/suitability.ts).
- * A hard constraint is treated as violated once its raw value reaches 1 —
- * matches how `fixture_protection_status` is seeded as a 0/1 flag.
+ * A hard constraint is violated once its raw value reaches its entry in
+ * ILLUSTRATIVE_CONSTRAINT_THRESHOLD (default 1, the fixture's 0/1 flag).
  */
 export const illustrativeNormalize: Normalize = (value, definition) => {
   if (definition.isHardConstraint) {
-    return { normalizedScore: 0, violatesConstraint: value.value >= 1 };
+    const threshold = ILLUSTRATIVE_CONSTRAINT_THRESHOLD[definition.id] ?? 1;
+    return { normalizedScore: 0, violatesConstraint: value.value >= threshold };
+  }
+  if (definition.id === "pv_land_cover") {
+    return { normalizedScore: ILLUSTRATIVE_LAND_COVER_SCORE[Math.round(value.value)] ?? 0, violatesConstraint: false };
   }
   const bounds = ILLUSTRATIVE_BOUNDS[definition.id] ?? { min: 0, max: 1 };
   const span = bounds.max - bounds.min;

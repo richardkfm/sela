@@ -5,7 +5,9 @@
 
 import { NextResponse } from "next/server";
 import { getCriterionDefinition } from "@/lib/db/queries/criteria";
+import { getPreviewUnit } from "@/lib/db/queries/preview";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
+import { pilotRegionInfo } from "@/lib/pilot-region";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 
@@ -16,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const unit = await getSpatialUnitById(id);
   if (!unit) return NextResponse.json({ error: "unit not found" }, { status: 404 });
 
-  const verdicts = await listVerdictsForUnit(id, CURRENT_METHOD_VERSION);
+  const [verdicts, measured] = await Promise.all([listVerdictsForUnit(id, CURRENT_METHOD_VERSION), getPreviewUnit(id)]);
   const withReasons = await Promise.all(
     verdicts.map(async (verdict) => {
       const reasonId = verdict.excludedByCriterionId ?? verdict.limitingCriterionId;
@@ -34,6 +36,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     id: unit.id,
     kind: unit.kind,
     pilotRegion: unit.pilotRegion,
+    regionKind: pilotRegionInfo(unit.pilotRegion).kind,
+    areaHa: measured?.areaHa ?? null,
+    bbox: measured?.bbox ?? null,
     methodVersion: CURRENT_METHOD_VERSION,
     verdicts: withReasons,
   });

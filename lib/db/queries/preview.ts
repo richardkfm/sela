@@ -22,6 +22,8 @@ export interface PreviewUnit {
   /** Extent of the unit along the projected grid's axes, in metres. */
   readonly widthM: number;
   readonly depthM: number;
+  /** West, south, east, north in EPSG:4326 — for framing the unit on a map. */
+  readonly bbox: readonly [number, number, number, number];
   readonly geometry: GeoJSONPolygon;
 }
 
@@ -52,6 +54,10 @@ interface UnitRow {
   area_ha: number;
   width_m: number;
   depth_m: number;
+  west: number;
+  south: number;
+  east: number;
+  north: number;
   geometry: string;
 }
 
@@ -63,6 +69,8 @@ export async function getPreviewUnit(id: string): Promise<PreviewUnit | null> {
             ST_Area(geom) / 10000.0 AS area_ha,
             ST_XMax(geom) - ST_XMin(geom) AS width_m,
             ST_YMax(geom) - ST_YMin(geom) AS depth_m,
+            ST_XMin(ST_Transform(geom, 4326)) AS west, ST_YMin(ST_Transform(geom, 4326)) AS south,
+            ST_XMax(ST_Transform(geom, 4326)) AS east, ST_YMax(ST_Transform(geom, 4326)) AS north,
             ST_AsGeoJSON(ST_Transform(geom, 4326)) AS geometry
      FROM spatial_unit
      WHERE id = $1`,
@@ -77,6 +85,7 @@ export async function getPreviewUnit(id: string): Promise<PreviewUnit | null> {
     areaHa: Number(row.area_ha),
     widthM: Number(row.width_m),
     depthM: Number(row.depth_m),
+    bbox: [Number(row.west), Number(row.south), Number(row.east), Number(row.north)],
     geometry: JSON.parse(row.geometry) as GeoJSONPolygon,
   };
 }

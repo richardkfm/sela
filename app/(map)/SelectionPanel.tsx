@@ -11,28 +11,43 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { TechnologySwatch } from "@/components/TechnologySwitch";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
-import type { SuitabilityVerdict, Technology } from "@/lib/scoring/types";
+import type { PilotRegionKind } from "@/lib/pilot-region";
+import { TECHNOLOGIES, type SuitabilityVerdict, type Technology } from "@/lib/scoring/types";
 
 interface Summary {
   id: string;
   kind: "hex_grid" | "flurstueck";
+  areaHa: number | null;
   methodVersion: string;
   verdicts: (SuitabilityVerdict & {
     reason: { id: string; nameDe: string; kind: "excluded_by" | "limited_by" } | null;
   })[];
 }
 
+type SummaryVerdict = Summary["verdicts"][number];
+
+/**
+ * Why a technology has no verdict on this unit. In a real region wind has no
+ * source for its resource, so it is only ever *excluded* — outside a protected
+ * area there is no row at all. Saying so keeps all three technologies in view
+ * (CLAUDE.md §4.2) instead of silently dropping one.
+ */
+function unscoredReason(technology: Technology, regionKind: PilotRegionKind): string {
+  if (regionKind === "real" && technology === "wind") return "Keine Quelle für die Windressource – nur Ausschlüsse geprüft";
+  return "Für diese Technologie liegt keine Bewertung vor";
+}
+
 const AREA_FORMAT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 
 export function SelectionPanel({
   id,
-  areaHa,
   technology,
+  regionKind,
   onClose,
 }: {
   id: string;
-  areaHa: number | undefined;
   technology: Technology;
+  regionKind: PilotRegionKind;
   onClose: () => void;
 }) {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -65,10 +80,10 @@ export function SelectionPanel({
           </h2>
           <p className="muted selection-meta">
             {summary?.kind === "flurstueck" ? "Flurstück" : "Rastereinheit"}
-            {areaHa !== undefined && (
+            {summary?.areaHa != null && (
               <>
                 {" · "}
-                <span className="tabular-nums">{AREA_FORMAT.format(areaHa)}&nbsp;ha</span>
+                <span className="tabular-nums">{AREA_FORMAT.format(summary.areaHa)}&nbsp;ha</span>
               </>
             )}
           </p>
@@ -83,26 +98,28 @@ export function SelectionPanel({
       {!summary && !failed && <p className="muted">Lädt …</p>}
       {summary && (
         <ul className="verdict-list">
-          {summary.verdicts.map((verdict) => (
-            <li key={verdict.technology} aria-current={verdict.technology === technology ? "true" : undefined}>
-              <TechnologySwatch technology={verdict.technology} />
-              <div>
-                <div className="verdict-line">
-                  <span>{TECHNOLOGY_LABEL_DE[verdict.technology]}</span>
-                  <strong>{VERDICT_LABEL_DE[verdict.verdict]}</strong>
-                  {verdict.score !== null && (
-                    <span className="muted tabular-nums">{verdict.score.toFixed(2)}</span>
-                  )}
-                </div>
-                {verdict.reason && (
-                  <div className="verdict-reason muted">
-                    {verdict.reason.kind === "excluded_by" ? "Ausgeschlossen durch " : "Begrenzt durch "}
-                    <Link href={`/criterion/${verdict.reason.id}`}>{verdict.reason.nameDe}</Link>
+          {TECHNOLOGIES.map((tech) => {
+            const verdict: SummaryVerdict | undefined = summary.verdicts.find((v) => v.technology === tech);
+            return (
+              <li key={tech} aria-current={tech === technology ? "true" : undefined}>
+                <TechnologySwatch technology={tech} />
+                <div>
+                  <div className="verdict-line">
+                    <span>{TECHNOLOGY_LABEL_DE[tech]}</span>
+                    <strong>{VERDICT_LABEL_DE[verdict?.verdict ?? "unscored"]}</strong>
+                    {verdict?.score != null && <span className="muted tabular-nums">{verdict.score.toFixed(2)}</span>}
                   </div>
-                )}
-              </div>
-            </li>
-          ))}
+                  {verdict?.reason && (
+                    <div className="verdict-reason muted">
+                      {verdict.reason.kind === "excluded_by" ? "Ausgeschlossen durch " : "Begrenzt durch "}
+                      <Link href={`/criterion/${verdict.reason.id}`}>{verdict.reason.nameDe}</Link>
+                    </div>
+                  )}
+                  {!verdict && <div className="verdict-reason muted">{unscoredReason(tech, regionKind)}</div>}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -121,8 +138,8 @@ export function SelectionPanel({
       </div>
       {summary && (
         <p className="explorer-note muted">
-          Methode <span className="tabular-nums">{summary.methodVersion}</span> · Beispiel-Gewichtung, keine Aussage
-          über eine Genehmigung.
+          Methode <span className="tabular-nums">{summary.methodVersion}</span> ·{" "}
+          {regionKind === "real" ? "echte Messwerte, " : ""}Beispiel-Gewichtung, keine Aussage über eine Genehmigung.
         </p>
       )}
     </section>

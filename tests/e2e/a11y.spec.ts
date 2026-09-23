@@ -3,7 +3,7 @@
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { getSampleUnitId, KNOWN_CRITERION_ID } from "./helpers";
+import { FIXTURE_EXPLORER, getSampleUnitId, KNOWN_CRITERION_ID } from "./helpers";
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag22aa"];
 
@@ -12,13 +12,19 @@ async function assertNoViolations(page: import("@playwright/test").Page) {
   expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
 }
 
-test("map explorer", async ({ page }) => {
+test("map explorer (default region)", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("heading", { name: "Flächen im Vergleich" }).waitFor();
+  await assertNoViolations(page);
+});
+
+test("map explorer (fixture)", async ({ page }) => {
+  await page.goto(FIXTURE_EXPLORER);
   await assertNoViolations(page);
 });
 
 test("map explorer with a unit selected", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(FIXTURE_EXPLORER);
   await page.locator('nav[aria-label="Flächen in der Pilotregion"] button').first().click();
   await page.getByRole("region", { name: /Fläche/ }).getByText(/geeignet|ausgeschlossen/).first().waitFor();
   await assertNoViolations(page);

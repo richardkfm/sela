@@ -14,6 +14,8 @@ set -eu
 #   2  unknown source id
 #   3  confirmed, but no fetch is implemented for it yet
 #   4  the artefact the server returned does not match the pinned one
+#   5  the transfer itself failed (connection reset, a WFS response cut off
+#      mid-transfer) after retries; whatever was on disk before is untouched
 #
 # Output goes to $DATA_DIR/<source_id>/ (default data/raw/, git-ignored).
 # Every run writes fetch-provenance.json next to the files: retrieval time,
@@ -65,7 +67,10 @@ trap 'rm -f "$RECORDS"' EXIT
 # provenance record. $3, if non-empty, is the byte count the manifest pins.
 fetch_one() {
   url="$1"; dest="$2"; pinned_bytes="${3:-}"
-  head_out=$(curl -fsSIL --retry 4 --retry-delay 2 --max-time 120 "$url")
+  # --retry-all-errors: a connection reset (curl 35) is the common failure
+  # through a proxy, and plain --retry does not retry it.
+  head_out=$(curl -fsSIL --retry 4 --retry-all-errors --retry-delay 2 --max-time 120 "$url") \
+    || { echo "HEAD $url failed; nothing written." >&2; exit 5; }
   remote_bytes=$(printf '%s\n' "$head_out" | awk 'tolower($1)=="content-length:"{v=$2} END{gsub(/\r/,"",v); print v}')
   remote_mtime=$(printf '%s\n' "$head_out" | sed -n 's/^[Ll]ast-[Mm]odified: //p' | tr -d '\r' | tail -1)
 
@@ -81,7 +86,8 @@ fetch_one() {
     echo "  present, size matches: $(basename "$dest")"
   else
     echo "  fetching $(basename "$dest") ($remote_bytes bytes)"
-    curl -fsSL --retry 4 --retry-delay 2 --max-time 1800 -o "$dest.part" "$url"
+    curl -fsSL --retry 4 --retry-all-errors --retry-delay 2 --max-time 1800 -o "$dest.part" "$url" \
+      || { rm -f "$dest.part"; echo "Download of $url failed; previous file left in place." >&2; exit 5; }
     mv "$dest.part" "$dest"
   fi
 
@@ -100,7 +106,19 @@ case "$KIND" in
     NAME=$(q '.sources[$id].fetch.filename')
     PINNED=$(q '.sources[$id].fetch.pinnedBytes // empty')
     PINNED_MTIME=$(q '.sources[$id].fetch.pinnedLastModified // empty')
+    PINNED_MD5=$(q '.sources[$id].fetch.publisherMd5 // empty')
     fetch_one "$URL" "$OUT_DIR/$NAME" "$PINNED"
+    # Some hosts answer from several backends whose Last-Modified differs for the
+    # same file (BKG's DGM200 alternates between two, 2026-09-23). Where the
+    # publisher ships a checksum, that is the stronger pin and replaces the date.
+    if [ -n "$PINNED_MD5" ]; then
+      GOT_MD5=$(md5sum "$OUT_DIR/$NAME" | cut -d' ' -f1)
+      if [ "$GOT_MD5" != "$PINNED_MD5" ]; then
+        echo "PIN MISMATCH: manifest pins publisher md5 '$PINNED_MD5', file has '$GOT_MD5'." >&2
+        exit 4
+      fi
+      echo "  publisher md5 matches"
+    fi
     if [ -n "$PINNED_MTIME" ]; then
       GOT_MTIME=$(jq -r '.upstreamLastModified' "$RECORDS" | tail -1)
       if [ "$GOT_MTIME" != "$PINNED_MTIME" ]; then
@@ -129,6 +147,53 @@ case "$KIND" in
       fetch_one "$BASE$extra" "$OUT_DIR/$extra" ""
     done < "$OUT_DIR/.extras.tmp"
     rm -f "$OUT_DIR/.extras.tmp"
+    ;;
+  wfs)
+    # A WFS is a service, not a file: there is no byte count to pin. What is
+    # pinned instead is *what was asked for* — endpoint, layer names and the
+    # bounding box, all in the manifest — and what came back is recorded per
+    # layer (feature count, sha256 of the written GeoPackage). A re-fetch that
+    # returns different data therefore shows up as a provenance diff rather
+    # than passing silently. Layers are fetched in the service's own CRS and
+    # reprojected later by 02_reproject.sh like any other vector source.
+    ENDPOINT=$(q '.sources[$id].fetch.endpoint')
+    BBOX=$(q '.sources[$id].fetch.bbox4326 | map(tostring) | join(" ")')
+    q '.sources[$id].fetch.layers[]' > "$OUT_DIR/.layers.tmp"
+    while IFS= read -r layer; do
+      [ -n "$layer" ] || continue
+      name=$(printf '%s' "$layer" | tr ':' '_')
+      dest="$OUT_DIR/$name.gpkg"
+      part="$OUT_DIR/.$name.part.gpkg"
+      echo "  fetching WFS layer $layer"
+      # Written to a temporary file and moved into place only once it opens:
+      # a GetFeature response cut off mid-transfer makes ogr2ogr stop with a
+      # half-written GeoPackage, and deleting the good copy first would leave
+      # the load step nothing but that (seen 2026-09-23 on app:ffh).
+      ok=0
+      for attempt in 1 2 3; do
+        rm -f "$part"
+        # shellcheck disable=SC2086
+        if ogr2ogr -f GPKG "$part" "WFS:$ENDPOINT" "$layer" -spat $BBOX -spat_srs EPSG:4326 -nlt PROMOTE_TO_MULTI -forceNullable \
+          && ogrinfo -ro -so "$part" >/dev/null 2>&1; then
+          ok=1
+          break
+        fi
+        echo "  $layer: attempt $attempt failed" >&2
+        sleep $((attempt * 4))
+      done
+      if [ "$ok" -ne 1 ]; then
+        rm -f "$part" "$RECORDS" "$OUT_DIR/.layers.tmp"
+        echo "WFS layer $layer could not be fetched after 3 attempts; previous files left in place." >&2
+        exit 5
+      fi
+      mv -f "$part" "$dest"
+      count=$(ogrinfo -ro -so -al "$dest" 2>/dev/null | sed -n 's/^Feature Count: //p' | awk '{s+=$1} END{print s+0}')
+      sha=$(sha256sum "$dest" | cut -d' ' -f1)
+      jq -n --arg f "$(basename "$dest")" --arg u "$ENDPOINT" --arg l "$layer" \
+            --argjson c "${count:-0}" --argjson b "$(wc -c < "$dest" | tr -d ' ')" --arg s "$sha" \
+            '{file:$f,url:$u,layer:$l,featureCount:$c,bytes:$b,sha256:$s}' >> "$RECORDS"
+    done < "$OUT_DIR/.layers.tmp"
+    rm -f "$OUT_DIR/.layers.tmp"
     ;;
   *)
     echo "Unsupported fetch kind '$KIND' for '$SOURCE_ID'." >&2

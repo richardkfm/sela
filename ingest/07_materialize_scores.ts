@@ -5,33 +5,47 @@
 // the GDAL ingest container (which has no Node runtime). See
 // ingest/README.md "Materializing scores (Phase 3, 0.3.0)".
 //
-// Usage: pnpm db:materialize -- --pilot-region=fixture-region
+// Usage: pnpm db:materialize -- --pilot-region=fixture-region [--outcomes=illustrative|none]
+//
+// Outcomes default to `illustrative` for the synthetic fixture and `none` for
+// every real pilot region. The illustrative outcome shapes invent energy,
+// climate and nature-capital figures from a "site quality" scalar; on the
+// fixture that exercises the comparison screen, on real land it would put
+// made-up MWh/a on real fields. With `none`, the comparison screen shows every
+// real unit's outcomes as "noch nicht modelliert" — the schema's own state
+// for exactly this (mvp.md §8.3).
 
 import { getPool } from "../lib/db/client";
 import { listCriterionDefinitions, listCriterionValuesForPilotRegion } from "../lib/db/queries/criteria";
 import { upsertOutcomeRow } from "../lib/db/queries/outcomes";
 import { listSpatialUnitIds } from "../lib/db/queries/spatial-units";
-import { upsertVerdict } from "../lib/db/queries/verdicts";
+import { replaceVerdictsForPilotRegion } from "../lib/db/queries/verdicts";
 import { CURRENT_METHOD_VERSION } from "../lib/scoring/method-version";
 import { computeOutcomeRow } from "../lib/scoring/outcomes";
 import { computeSuitability } from "../lib/scoring/suitability";
 import { OUTCOME_DIMENSIONS, SCENARIOS, SelaScoringError, TECHNOLOGIES } from "../lib/scoring/types";
-import type { CriterionValue } from "../lib/scoring/types";
+import type { CriterionValue, SuitabilityVerdict } from "../lib/scoring/types";
 import {
   ILLUSTRATIVE_SUITABILITY_THRESHOLD,
   illustrativeNormalize,
   illustrativeOutcomeAggregate,
 } from "../lib/scoring/illustrative-weights";
 
-function parseArgs(argv: readonly string[]): { pilotRegion: string } {
+function parseArgs(argv: readonly string[]): { pilotRegion: string; outcomes: "illustrative" | "none" } {
   const flag = argv.find((a) => a.startsWith("--pilot-region="));
-  return { pilotRegion: flag ? flag.slice("--pilot-region=".length) : "fixture-region" };
+  const pilotRegion = flag ? flag.slice("--pilot-region=".length) : "fixture-region";
+  const outcomesFlag = argv.find((a) => a.startsWith("--outcomes="))?.slice("--outcomes=".length);
+  if (outcomesFlag !== undefined && outcomesFlag !== "illustrative" && outcomesFlag !== "none") {
+    throw new Error(`--outcomes must be "illustrative" or "none", got "${outcomesFlag}"`);
+  }
+  return { pilotRegion, outcomes: outcomesFlag ?? (pilotRegion === "fixture-region" ? "illustrative" : "none") };
 }
 
 async function main() {
-  const { pilotRegion } = parseArgs(process.argv.slice(2));
+  const { pilotRegion, outcomes } = parseArgs(process.argv.slice(2));
   console.log(
-    `materializing scores for pilot_region "${pilotRegion}" using illustrative-weights.ts (method_version=${CURRENT_METHOD_VERSION})`,
+    `materializing scores for pilot_region "${pilotRegion}" using illustrative-weights.ts ` +
+      `(method_version=${CURRENT_METHOD_VERSION}, outcomes=${outcomes})`,
   );
 
   const [unitIds, definitions, allValues] = await Promise.all([
@@ -52,7 +66,7 @@ async function main() {
     valuesByUnit.set(value.spatialUnitId, list);
   }
 
-  let verdictCount = 0;
+  const verdicts: SuitabilityVerdict[] = [];
   let skippedVerdicts = 0;
   let outcomeCount = 0;
 
@@ -70,8 +84,7 @@ async function main() {
           suitabilityThreshold: ILLUSTRATIVE_SUITABILITY_THRESHOLD,
           methodVersion: CURRENT_METHOD_VERSION,
         });
-        await upsertVerdict(verdict);
-        verdictCount += 1;
+        verdicts.push(verdict);
       } catch (err) {
         if (err instanceof SelaScoringError) {
           // No scoreable criterion values for this unit/technology yet —
@@ -84,6 +97,7 @@ async function main() {
       }
     }
 
+    if (outcomes === "none") continue;
     for (const scenario of SCENARIOS) {
       for (const dimension of OUTCOME_DIMENSIONS) {
         const aggregated = illustrativeOutcomeAggregate(scenario, dimension, values);
@@ -100,6 +114,8 @@ async function main() {
     }
   }
 
+  await replaceVerdictsForPilotRegion(pilotRegion, CURRENT_METHOD_VERSION, verdicts);
+  const verdictCount = verdicts.length;
   console.log(
     `materialized ${verdictCount} verdicts (${skippedVerdicts} skipped — no scoreable criteria) ` +
       `and ${outcomeCount} outcome rows across ${unitIds.length} units`,

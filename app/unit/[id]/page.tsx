@@ -5,12 +5,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IllustrativeBanner } from "@/components/IllustrativeBanner";
-import { getCriterionDefinition } from "@/lib/db/queries/criteria";
+import { ConfidenceMark } from "@/components/ConfidenceMark";
+import { SourceAttribution } from "@/components/SourceAttribution";
+import { getCriterionDefinition, getSource, listCriterionValuesForUnit } from "@/lib/db/queries/criteria";
+import { pilotRegionInfo } from "@/lib/pilot-region";
+import { formatCriterionValue } from "@/lib/scoring/format-value";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
 import { scenarioTokens, scenarioTokenCssVar, technologyToTokenKey } from "@/lib/design/tokens";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
-import type { SuitabilityVerdict, Technology } from "@/lib/scoring/types";
+import { TECHNOLOGIES, type SuitabilityVerdict, type Technology } from "@/lib/scoring/types";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
@@ -81,18 +85,33 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
   const unit = await getSpatialUnitById(id);
   if (!unit) notFound();
 
-  const verdicts = await listVerdictsForUnit(id, CURRENT_METHOD_VERSION);
+  const [verdicts, values] = await Promise.all([
+    listVerdictsForUnit(id, CURRENT_METHOD_VERSION),
+    listCriterionValuesForUnit(id),
+  ]);
+  const region = pilotRegionInfo(unit.pilotRegion);
+  // Every value behind the verdicts, with its criterion, confidence and source
+  // — CLAUDE.md §4.1: a headline must decompose into named, sourced criteria
+  // on screen, not only in the database.
+  const measured = await Promise.all(
+    values.map(async (value) => ({
+      value,
+      definition: await getCriterionDefinition(value.criterionId),
+      source: await getSource(value.sourceId),
+    })),
+  );
+  measured.sort((a, b) => (a.definition?.nameDe ?? "").localeCompare(b.definition?.nameDe ?? "", "de"));
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <IllustrativeBanner />
+      <IllustrativeBanner kind={region.kind} />
       <div>
         <Link href="/">← Zur Karte</Link>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>
           Fläche <span className="tabular-nums">{id.slice(0, 8)}</span>
         </h1>
         <p style={{ color: "var(--text-secondary)", margin: 0 }}>
-          {unit.pilotRegion} · {unit.kind === "hex_grid" ? "Rastereinheit" : "Flurstück"}
+          {region.nameDe} · {unit.kind === "hex_grid" ? "Rastereinheit" : "Flurstück"}
         </p>
       </div>
 
@@ -102,7 +121,61 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
         ) : (
           verdicts.map((verdict) => <VerdictRow key={verdict.technology} verdict={verdict} />)
         )}
+        {verdicts.length > 0 &&
+          TECHNOLOGIES.filter((t) => !verdicts.some((v) => v.technology === t)).map((technology) => (
+            <p key={technology} style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+              {TECHNOLOGY_LABEL_DE[technology]}: nicht bewertet – für diese Technologie liegt hier kein
+              bewertbares Kriterium vor{technology === "wind" ? " (für die Windressource ist noch keine Quelle festgelegt)" : ""}.
+            </p>
+          ))}
       </div>
+
+      {measured.length > 0 && (
+        <section aria-labelledby="measured-heading" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <h2 id="measured-heading" style={{ fontSize: "1.05rem", fontWeight: 600, margin: "0.5rem 0 0" }}>
+            Messwerte dieser Fläche
+          </h2>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.9rem" }}>
+              <thead>
+                <tr>
+                  {["Kriterium", "Wert", "Konfidenz", "Quelle"].map((label) => (
+                    <th
+                      key={label}
+                      scope="col"
+                      style={{ textAlign: "left", padding: "0.4rem 0.6rem", borderBottom: "2px solid var(--text-secondary)" }}
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {measured.map(({ value, definition, source }) => (
+                  <tr key={value.criterionId}>
+                    <th scope="row" style={{ textAlign: "left", fontWeight: 400, padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>
+                      <Link href={`/criterion/${value.criterionId}`}>{definition?.nameDe ?? value.criterionId}</Link>
+                      <span style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                        {definition?.isHardConstraint ? "Ausschlusskriterium · " : ""}gilt für{" "}
+                        {(definition?.appliesTo ?? []).map((t) => TECHNOLOGY_LABEL_DE[t as Technology] ?? t).join(", ")}
+                      </span>
+                    </th>
+                    <td className="tabular-nums" style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>
+                      {formatCriterionValue(value.criterionId, value.value, value.unit)}
+                    </td>
+                    <td style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>
+                      <ConfidenceMark confidence={value.confidence} />
+                    </td>
+                    <td style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)", fontSize: "0.8rem" }}>
+                      {source ? <SourceAttribution source={source} /> : value.sourceId}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <Link
         href={`/unit/${id}/compare`}

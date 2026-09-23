@@ -60,6 +60,43 @@
         "pinnedLastModified": "Fri, 10 Jul 2026 10:18:54 GMT",
         "$comment": "Supplies the pilot region boundary (docs/architecture/roadmap-to-first-deployment.md §2.3). UTM32S matches the EPSG:25832 storage CRS, so no reprojection. Only layer vg25_krs, AGS 12073 (Landkreis Uckermark) is used; the rest of the federal coverage is fetched but not ingested. Licence read from nutzungsbedingungen_vg25.pdf inside the archive itself — it is CC BY 4.0, NOT dl-de/by-2-0 like BKG's CLC5."
       }
+    },
+    "bkg-dgm200": {
+      "status": "confirmed",
+      "docRow": "BKG Digitales Geländemodell Gitterweite 200 m (DGM200)",
+      "licence": "dl-de/by-2-0",
+      "fetch": {
+        "kind": "single-file",
+        "url": "https://daten.gdz.bkg.bund.de/produkte/dgm/dgm200/aktuell/dgm200.utm32s.geotiff.zip",
+        "filename": "dgm200.utm32s.geotiff.zip",
+        "pinnedBytes": 38135308,
+        "$comment": "Confirmed 2026-09-23 by the project owner's decision to ingest slope from DGM200 (docs/data/sources.md §2.7). Pinned by the publisher's own md5 (dgm200.utm32s.geotiff.zip.md5), not Last-Modified: the host answers with two different Last-Modified values for the same bytes. 200 m grid, coarser than one 100 m hex cell, so pv_slope carries confidence 'low'.",
+        "publisherMd5": "67521dd25099b24f3db6cef65ee79ea7"
+      }
+    },
+    "lfu-bb-schutzgebiete": {
+      "status": "confirmed",
+      "docRow": "LfU Brandenburg Schutzgebiete (WFS-LFU-SCHUTZG)",
+      "licence": "dl-de/by-2-0",
+      "fetch": {
+        "kind": "wfs",
+        "endpoint": "https://inspire.brandenburg.de/services/schutzg_wfs",
+        "layers": [
+          "app:nsg",
+          "app:natp",
+          "app:ffh",
+          "app:spa",
+          "app:lsg",
+          "app:br"
+        ],
+        "bbox4326": [
+          13.2,
+          52.8,
+          14.5,
+          53.6
+        ],
+        "$comment": "Substitute for BfN, which still returns 403 (2026-09-23). Licence read from the service's own GetCapabilities AccessConstraints: dl-de/by-2-0, provider credit '© Landesamt für Umwelt Brandenburg'. The service states its data is for overview only and not legally binding (digitised at 1:10 000). bbox covers Landkreis Uckermark with margin; features are clipped to the pilot boundary at load time."
+      }
     }
   }
 }
