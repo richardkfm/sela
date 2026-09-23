@@ -8,15 +8,19 @@
 
 ## Screenshots
 
-The first row shows the real Uckermark: real measured values, **illustrative weights** — the verdict colours are not a siting statement. The rows below it were rendered against the synthetic fixture, which sits at 0° N 0° E on purpose, so its 3D preview shows flat ground without a basemap.
+The first five screenshots show the real Uckermark: real measured values, **illustrative weights** — the verdict colours are not a siting statement. The rows below them were rendered against the synthetic fixture, which sits at 0° N 0° E on purpose, so its 3D preview shows flat ground without a basemap.
 
 | Uckermark — the whole Landkreis | Uckermark — a unit selected |
 |---|---|
 | [![Uckermark explorer](docs/product/screenshots/uckermark-explorer.png)](docs/product/screenshots/uckermark-explorer.png) | [![Uckermark, unit selected](docs/product/screenshots/uckermark-selection.png)](docs/product/screenshots/uckermark-selection.png) |
 
-| Uckermark — measured values of one unit | Uckermark — 3D preview on DGM5 relief |
+| Uckermark — measured values of one unit | Uckermark — the source behind a criterion |
 |---|---|
-| [![Uckermark unit detail](docs/product/screenshots/uckermark-unit.png)](docs/product/screenshots/uckermark-unit.png) | [![Uckermark 3D preview](docs/product/screenshots/uckermark-preview.png)](docs/product/screenshots/uckermark-preview.png) |
+| [![Uckermark unit detail](docs/product/screenshots/uckermark-unit.png)](docs/product/screenshots/uckermark-unit.png) | [![Uckermark evidence view](docs/product/screenshots/uckermark-evidence.png)](docs/product/screenshots/uckermark-evidence.png) |
+
+| Uckermark — 3D preview on the DGM5 relief, reference turbine at true scale |
+|---|
+| [![Uckermark 3D preview](docs/product/screenshots/uckermark-preview.png)](docs/product/screenshots/uckermark-preview.png) |
 
 | Map explorer — fixture | Map explorer — fixture, a unit selected |
 |---|---|
