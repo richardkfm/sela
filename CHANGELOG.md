@@ -27,6 +27,63 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **The real Uckermark ingest — the first map of real land.** Asked for by the project owner
+  ("do the real Uckermark ingest next") and scoped through the `CLAUDE.md` §3 gate on 2026-09-23:
+  **criteria land cover (CLC5), slope (DGM200) and irradiation (DWD); protection areas from a
+  researched Brandenburg source; vector tiles from PostGIS; and illustrative verdicts on the real
+  values** (the owner chose this over showing measured values only). `ingest/run.sh` now runs end
+  to end for `uckermark-12073`: 117 191 hex cells, `criterion_value` rows for all four criteria,
+  and verdicts for PV and Agri-PV (72 309 *geeignet*, 26 519 *nicht geeignet*, 18 363
+  *ausgeschlossen*).
+- **Two new sources, both `dl-de/by-2-0`** (`docs/data/sources.md` §2.7, §2.8):
+  **BKG DGM200** for `pv_slope`, pinned by the publisher's md5 because the host serves two
+  different `Last-Modified` values for the same bytes; and **LfU Brandenburg Schutzgebiete**
+  (`inspire.brandenburg.de/services/schutzg_wfs`) in place of BfN's service, which still returns
+  403. `01_fetch.sh` gained a `wfs` kind and an optional `publisherMd5` check.
+- **`ingest/real/`** — boundary, CLC5, DWD (ten annual grids, sampled in their native
+  Gauß-Krüger projection), DGM200 slope and protection areas into `staging`, then per-cell
+  sampling (≈ 75 s for the whole Landkreis) and `criterion_value` rows with a stated confidence
+  per criterion. `seed_real_criteria.sql` holds the `illustrative-real-v0` definitions.
+- **ADR-0007 — units reach the map as vector tiles cut by PostGIS**
+  (`/api/units/tiles/{z}/{x}/{y}`, `ST_AsMVT`, a generated `geom_3857` column in migration
+  `0004_tile_geometry.sql`). Tiles carry only verdict colours below z12 and ids and scores from
+  z12, where a cell is large enough to select; a z12 tile is ≈ 46 KB.
+- **Region-aware interface.** `/?region=` opens any ingested region; the default is the Uckermark,
+  falling back to the fixture. The *ILLUSTRATIV* banner has a second wording for real regions —
+  *real measurements, placeholder weighting* — on the explorer, unit, comparison, criterion, method
+  and 3D-preview pages. The unit page lists its **measured values** with unit, source, licence and
+  confidence (`lib/scoring/format-value.ts`; CLC classes by their documented German names,
+  `lib/scoring/clc-classes.ts`). The explorer's attribution credits every source whose values
+  reach the map, each with its change notice.
+- Unit tests for reading real values (`lib/scoring/__tests__/real-criteria.test.ts`); e2e tests
+  for the tile route (`tests/e2e/tiles.spec.ts`).
+
+### Changed
+
+- **The explorer lists the units in view, not the whole region** (117 191 units would not be a
+  usable keyboard list), capped at 40; below z12 it asks the reader to zoom in, and a click on the
+  map zooms in instead of selecting. Legend counts come from `/api/units/stats`.
+- **`07_materialize_scores.ts` writes verdicts in one transaction per region, in batches of
+  5 000**, and takes `--outcomes=illustrative|none` — `none` by default for real regions, so the
+  comparison shows *noch nicht modelliert* rather than invented outcomes for real land.
+- **`04_generate_grid.sql` takes a per-region advisory lock.** Two concurrent runs had written the
+  grid twice (234 382 duplicate cells, removed).
+- `ConfidenceMark` fades only its glyph; the text stays at full contrast (axe colour-contrast).
+- `.env.example`: `SELA_PILOT_REGION` replaces the unused `NEXT_PUBLIC_MAP_VIEW`.
+
+### Open — awaiting the owner's confirmation (`docs/domain/scoring-criteria.md` §6)
+
+- Only **Naturschutzgebiete and the Nationalpark** exclude; FFH and SPA would exclude 53 % of the
+  Landkreis although Natura 2000 requires an assessment, not a ban.
+- A cell counts as excluded when **at least half** of it is protected.
+- The **land-cover score table** and the **irradiation bounds** (1 000–1 300 kWh/m²·a, against
+  1 100–1 137 measured in the region — so irradiation is "limiting" almost everywhere).
+- The Docker ingest image (`docker/Dockerfile.ingest`) gained `unzip`, `curl` and
+  `postgis` (for `raster2pgsql`) but has **not been built** — there is no Docker daemon in the
+  environment this was written in. The pipeline was run with the same tools installed locally.
+
+### Added — 3D parcel preview and explorer polish (PR #9)
+
 - **A proper map view, and a 3D parcel preview — `docs/architecture/adr-0006-3d-parcel-preview.md`.**
   Asked for by the project owner ("make it look really good and innovative … geospatial map apps
   that use 3D models on top of the map"). Because `design-language.md` §2 bans 3D marks, every

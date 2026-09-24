@@ -11,7 +11,7 @@ import {
   listPreviewRings,
   listPreviewRows,
 } from "@/lib/db/queries/preview";
-import { PILOT_REGION_JURISDICTIONS } from "@/lib/pilot-region";
+import { pilotRegionInfo } from "@/lib/pilot-region";
 import {
   AGRIPV_LAYOUT,
   PV_LAYOUT,
@@ -64,10 +64,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const unit = await getPreviewUnit(id);
   if (!unit) return NextResponse.json({ error: "unit not found" }, { status: 404 });
 
-  const region = PILOT_REGION_JURISDICTIONS[unit.pilotRegion];
+  const region = pilotRegionInfo(unit.pilotRegion);
   const applicableRings =
     technology === "wind"
-      ? SETBACK_RINGS.filter((ring) => region?.jurisdictions.includes(ring.jurisdiction))
+      ? SETBACK_RINGS.filter((ring) => region.jurisdictions.includes(ring.jurisdiction))
       : [];
 
   const layout = technology === "agripv" ? AGRIPV_LAYOUT : PV_LAYOUT;
@@ -99,6 +99,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       const geometry = ringGeometry.find((g) => Math.abs(g.radiusM - radiusM) < 1e-6);
       return { id: ring.id, radiusM, ...geometry };
     }),
-    jurisdiction: region ? { asIfIn: region.asIfIn ?? null } : null,
+    jurisdiction: region.jurisdictions.length > 0 ? { asIfIn: region.asIfIn ?? null } : null,
   });
 }

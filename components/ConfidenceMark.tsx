@@ -10,11 +10,13 @@ const OPACITY: Record<Confidence, number> = { high: 1, medium: 0.75, low: 0.5 };
 
 export function ConfidenceMark({ confidence }: { confidence: Confidence }) {
   return (
-    <span
-      style={{ opacity: OPACITY[confidence], fontSize: "0.85rem", color: "var(--text-secondary)" }}
-      title={`Konfidenz: ${LABEL_DE[confidence]}`}
-    >
-      <span aria-hidden>{GLYPH[confidence]}</span> Konfidenz: {LABEL_DE[confidence]}
+    <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }} title={`Konfidenz: ${LABEL_DE[confidence]}`}>
+      {/* Only the glyph fades with confidence; the words stay at full contrast
+          (WCAG 1.4.3 — faded text failed axe once this mark sat on real values). */}
+      <span aria-hidden style={{ opacity: OPACITY[confidence] }}>
+        {GLYPH[confidence]}
+      </span>{" "}
+      Konfidenz: {LABEL_DE[confidence]}
     </span>
   );
 }

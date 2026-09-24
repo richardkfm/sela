@@ -15,13 +15,16 @@ import {
 import type { Technology } from "@/lib/scoring/types";
 import Link from "next/link";
 
+const COUNT = new Intl.NumberFormat("de-DE");
+
 export function Legend({
   technology,
   counts,
   total,
 }: {
   technology: Technology;
-  counts: Record<MapVerdict, number>;
+  /** Undefined while this technology's counts are loading. */
+  counts: Record<MapVerdict, number> | undefined;
   total: number;
 }) {
   return (
@@ -43,7 +46,7 @@ export function Legend({
         <tbody>
           {MAP_VERDICTS.map((verdict) => {
             const appearance = verdictAppearance(verdict, technology);
-            const count = counts[verdict];
+            const count = counts?.[verdict];
             return (
               <tr key={verdict}>
                 <th scope="row">
@@ -57,12 +60,14 @@ export function Legend({
                     <span className="legend-explanation muted">{VERDICT_EXPLANATION_DE[verdict]}</span>
                   </span>
                 </th>
-                <td className="tabular-nums">{count}</td>
+                <td className="tabular-nums">{count === undefined ? "…" : COUNT.format(count)}</td>
                 <td>
                   <span className="legend-bar" aria-hidden>
-                    <span style={{ width: total ? `${(count / total) * 100}%` : 0 }} />
+                    <span style={{ width: total && count !== undefined ? `${(count / total) * 100}%` : 0 }} />
                   </span>
-                  <span className="visually-hidden">{total ? Math.round((count / total) * 100) : 0} %</span>
+                  <span className="visually-hidden">
+                    {total && count !== undefined ? Math.round((count / total) * 100) : 0} %
+                  </span>
                 </td>
               </tr>
             );

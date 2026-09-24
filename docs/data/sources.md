@@ -1,6 +1,6 @@
 # Data source inventory
 
-**Version band:** `0.3.x` · **Status:** BKG and DWD **Confirmed and fetched**; BfN and OSM still gated — see §1 · **Last updated:** 2026-09-19
+**Version band:** `0.3.x` · **Status:** BKG, DWD and LfU Brandenburg **Confirmed, fetched and ingested** for the Uckermark; BfN and OSM still gated — see §1 · **Last updated:** 2026-09-23
 
 This is the gate `docs/architecture/roadmap-to-first-deployment.md` §2.2 and §3.1 requires before
 any dataset enters ingestion: `CLAUDE.md` §5 forbids asserting a licence that has not been
@@ -15,19 +15,22 @@ read at the source cited. Where that has not happened, the row says so.
 
 | Dataset | Licence | Derived outputs publishable? | Ingest gate |
 |---|---|---|---|
-| BfN Schutzgebiete | GeoNutzV | **Yes**, with attribution + change notice | **Licence cleared; access blocked** — `geodienste.bfn.de` returns 403 to this environment (§6) |
+| BfN Schutzgebiete | GeoNutzV | **Yes**, with attribution + change notice | **Licence cleared; access blocked** — `geodienste.bfn.de` returns 403 to this environment (§6). **Substituted for the Brandenburg pilot** by the LfU service below (§2.8) |
 | BKG CORINE Land Cover 5 ha (CLC5-2018) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed** — pinned artefact fetched and checksummed 2026-09-19 (§2.2, §6) |
 | DWD CDC annual global radiation grids | CC BY 4.0 | **Yes**, with attribution + change notice | **Confirmed** — full 1991–2025 series fetched and checksummed 2026-09-19 (§2.3, §6) |
 | BKG Verwaltungsgebiete 1:25 000 (VG25) | **CC BY 4.0** | **Yes**, with attribution + change notice | **Confirmed** — fetched and checksummed 2026-09-19; supplies the pilot boundary (§2.5) |
 | OpenStreetMap via Geofabrik | ODbL 1.0 | Yes, but share-alike would attach to sela's own database | **Withdrawn (ADR-0005, 2026-09-19).** Not unconfirmed — deliberately not used. §4 |
 | BKG basemap.de Web Raster | **CC BY 4.0** | **Yes**, with attribution + change notice | **In use** — the basemap, per ADR-0005 (§4.1) |
 | BKG basemap.de 3D Gelände (DGM5 terrain-RGB) | **basemap.de 3D-Beta Dienste** — *not* CC BY 4.0 | **Display only**, through the service, "zu Testzwecken"; no storage, no derived data | **In use, display only** — terrain in the 3D parcel preview (ADR-0006). **Blocks a public `1.0`** until the beta terms are replaced (U10, §2.6) |
-| BKG DGM200 | `dl-de/by-2-0` | **Yes**, with attribution | **Candidate, not fetched** — licence-clean terrain fallback (§2.6) |
+| BKG DGM200 | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-23 — source of `pv_slope` (§2.7). Still not used as preview terrain (§2.6) |
+| LfU Brandenburg Schutzgebiete (WFS-LFU-SCHUTZG) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-23 — source of both protection exclusions for the Uckermark (§2.8). *Nicht rechtsverbindlich* |
 
-**The machine gate now stands open for two rows and closed for two.** `ingest/sources.manifest.json`
+**The machine gate stands open for five rows and closed for two.** `ingest/sources.manifest.json`
 — which `ingest/01_fetch.sh` actually reads before touching a network — reads `confirmed` for
-`bkg-clc5` and `dwd-cdc-radiation` as of 2026-09-19, and still reads `to_confirm` for
-`bfn-schutzgebiete` and `osm-geofabrik`.
+`bkg-clc5` and `dwd-cdc-radiation` (2026-09-19), `bkg-vg25` (2026-09-19), and `bkg-dgm200` and
+`lfu-bb-schutzgebiete` (2026-09-23); it still reads `to_confirm` for `bfn-schutzgebiete` and
+`osm-geofabrik`. The two 2026-09-23 rows were confirmed by the project owner's decision to run the
+real Uckermark ingest with slope and a Brandenburg protection source (§2.7, §2.8).
 
 That flip was **not** made by the session that gathered the evidence. It was taken as a
 `CLAUDE.md` §3 decision (data sources and licensing) by the project owner on 2026-09-19, on the
@@ -246,7 +249,67 @@ the product documentation:
 200 m, *Aktualitätsstand* 31.12.2019, notice `© GeoBasis-DE / BKG (<Jahr des letzten Datenbezugs>)
 dl-de/by-2-0` (BKG's own product page, read 2026-09-23). It would need to be fetched and turned into
 terrain-RGB tiles in the ingest container (GDAL), and at 200 m it is coarser than one 100 m hex cell
-— it would flatten precisely the relief a parcel-scale preview is for. Recorded, not fetched.
+— it would flatten precisely the relief a parcel-scale preview is for. **Fetched since, but for a
+different job:** it is the source of `pv_slope` (§2.7). It is still not the preview's terrain.
+
+### 2.7 BKG DGM200 — terrain slope → `pv_slope`
+
+| | |
+|---|---|
+| Publisher | Bundesamt für Kartographie und Geodäsie (BKG) |
+| Use in sela | `pv_slope` — slope in degrees, derived with `gdaldem slope` and sampled at each hex cell's centre (`ingest/real/13_dgm200.sh`, `20_sample.sql`) |
+| Retrieved artefact | `https://daten.gdz.bkg.bund.de/produkte/dgm/dgm200/aktuell/dgm200.utm32s.geotiff.zip` — **fetched 2026-09-23**, 38 135 308 bytes, publisher md5 `67521dd25099b24f3db6cef65ee79ea7` verified; sha256 in `data/raw/bkg-dgm200/fetch-provenance.json` |
+| Grid / projection | 200 m, EPSG:25832 (UTM32S GeoTIFF variant — no reprojection) |
+| Currency | *Aktualitätsstand* 31.12.2019; for Brandenburg the underlying DGM5 source data date from **2009–2017** (`aktualitaet.txt` inside the archive) |
+| Licence | **`dl-de/by-2-0`** |
+| Evidence | `dokumentation/dgm200.pdf` inside the archive (Stand 17.03.2021), section *Nutzungsbestimmungen und Quellenvermerk*, read 2026-09-23; BKG product page read the same day (§2.6) |
+
+**A discrepancy inside the archive, resolved in favour of the dated document.** The archive also
+ships `geonutzv.pdf` and `geonutzv_eng.pdf`, both dated 2017-11-29 — older than the product
+documentation, which names `dl-de/by-2-0`. The documentation and the product page agree, so
+`dl-de/by-2-0` is recorded. Both licences permit derived, published outputs with attribution and a
+change notice, so the discrepancy does not change what sela may do — only which licence name it
+cites.
+
+**Pinned by md5, not `Last-Modified`.** The host answered two consecutive requests for the same
+bytes with two different `Last-Modified` values (`07:26:46` and `07:12:48 GMT`, both 17 Jul 2024)
+— different backends behind one name. A `Last-Modified` pin would fail at random, so the manifest
+pins the publisher's own `.md5` file instead (`publisherMd5`, checked by `01_fetch.sh`).
+
+**Why confidence is `low` for every cell.** The grid is twice as coarse as a hex cell, so one
+DEM value spans several cells and the slope of a single cell is not resolved. The Uckermark
+samples 0–7.2°; the relief a parcel-scale decision turns on (a kettle hole, an embankment) is
+below this resolution. A finer DEM (DGM1/DGM5 from the LGB, or the BKG DGM25) would lift this; none
+is licensed or fetched.
+
+### 2.8 LfU Brandenburg Schutzgebiete (WFS-LFU-SCHUTZG) → protection exclusions
+
+**Why this row exists.** BfN's federal service (§2.1) is licence-cleared but returns 403 to this
+environment. The project owner chose on 2026-09-23 to use the Land's own service for the
+Brandenburg pilot instead of waiting.
+
+| | |
+|---|---|
+| Publisher | Landesamt für Umwelt Brandenburg (LfU); service operated by the Landesvermessung und Geobasisinformation Brandenburg (LGB) |
+| Use in sela | `pv_protection_status`, `wind_protection_status` — ADR-0004 exclusions, **Uckermark only** |
+| Service | `https://inspire.brandenburg.de/services/schutzg_wfs`, WFS 2.0.0, native **EPSG:25833** (reprojected to 25832 on load) |
+| Layers fetched | `app:nsg` (Naturschutzgebiete), `app:natp` (Nationalpark), `app:ffh` (FFH-Gebiete), `app:spa` (Vogelschutzgebiete), `app:lsg` (Landschaftsschutzgebiete), `app:br` (Biosphärenreservat) — bbox 13.2–14.5° E, 52.8–53.6° N; feature counts per layer in `fetch-provenance.json` (e.g. 114 NSG, 1 Nationalpark) |
+| Licence | **`dl-de/by-2-0`**, from the service's own `AccessConstraints`: *"Als Bezeichnung des Bereitstellers ist „© Landesamt für Umwelt Brandenburg" anzugeben."* |
+| Use limitation | Digitised at **1:10 000**; the service describes the data as for information only and **not legally binding** (*nicht rechtsverbindlich*) |
+| Evidence | GetCapabilities read 2026-09-23 (`AccessConstraints`, feature-type list); the 1:10 000 scale and the not-legally-binding note from the service description in MetaVer, read the same day through a web-fetch summary rather than directly — re-read before `1.0` |
+
+**What is ingested versus what is used.** All six categories are loaded into
+`staging.protection`. Only **NSG and Nationalpark** feed the exclusion (`ingest/real/20_sample.sql`),
+because including FFH and SPA excluded **53 %** of the Landkreis — a map that says "not buildable"
+over half a county where Natura 2000 designation is in law a requirement for an impact assessment
+(*Verträglichkeitsprüfung*), not a ban. That would be a false statement on a public map. NSG and
+Nationalpark cover 15.7 %. The narrower rule is itself an illustrative scoring choice
+(`docs/domain/scoring-criteria.md` §6) and §3-gated like any other.
+
+**"Nicht rechtsverbindlich" belongs in the interface**, for the same reason as BfN's *"Nicht für
+Planungszwecke geeignet"* (§5.1). It is recorded in `source.version` but **not yet rendered** — no
+screen shows a source's version today. How it is shown is user-visible behaviour and part of U6;
+recorded here as an input to that decision.
 
 ### 2.4 OpenStreetMap via Geofabrik — basemap, settlement geometry
 
@@ -277,6 +340,8 @@ licence verified and then not attributed is worse than one never used.
 | BKG | **`© GeoBasis-DE / BKG <Jahr des letzten Datenbezugs> (Daten verändert)`** — the *(Daten verändert)* form, not the plain one | Taken from `quellenvermerk_datenlizenz_deutschland.txt`, which ships **inside the CLC5 archive itself** (read 2026-09-19) — the publisher's own instruction rather than a web page. It gives exactly two forms, unchanged and *"(Daten verändert)"*, and **sela must always use the second**: a `criterion_value` derived from CLC5 polygons is by definition an alteration. It requires the notice to be placed "erkennbar und in optischem Zusammenhang" with the data and, on a web page, the *Quellenvermerk* hyperlinked to `http://www.bkg.bund.de`. Note a **discrepancy to resolve before rendering**: this file's form does **not** include the `dl-de/by-2-0` label, while BKG's GDI-DE metadata record for CLC5 gives `© GeoBasis-DE / BKG (Jahr des Datenbezugs) dl-de/by-2-0`. Carrying both the licence label (linked to `https://www.govdata.de/dl-de/by-2-0`) and the change notice satisfies both readings and is the safe choice. |
 | BKG — **VG25 only** | **`© BKG <Jahr des letzten Datenbezugs> CC BY 4.0, Datenquellen: https://sgx.geodatenzentrum.de/web_public/gdz/datenquellen/datenquellen_vg25.pdf`** | From `nutzungsbedingungen_vg25.pdf` inside the VG25 archive (read 2026-09-19). **Do not reuse the CLC5 notice for this** — VG25 is CC BY 4.0 and its *Quellenvermerk* is `© BKG`, without the `GeoBasis-DE /` prefix. On a web page "BKG" links to `https://www.bkg.bund.de` and "CC BY 4.0" to `https://creativecommons.org/licenses/by/4.0`. A *Veränderungshinweis* is required for any edited or transformed use, which clipping a grid to this boundary is. |
 | BKG — **basemap.de 3D Gelände only** | **`© GeoBasis-DE/BKG <Jahr>`**, with a change notice when combined with other services | From `lizenz_basemapde_3D-Beta.pdf` §3 (read 2026-09-23). The preview always combines it with other services, so it always renders as `© GeoBasis-DE/BKG <Jahr> (Daten verändert)`. |
+| BKG — **DGM200 only** | **`© GeoBasis-DE / BKG <Jahr> dl-de/by-2-0 (Daten verändert)`** | From `dgm200.pdf` inside the archive (read 2026-09-23). A slope derived from the DEM is an alteration, so the change notice always applies; `lib/attribution.ts` appends it. |
+| LfU Brandenburg | **`© Landesamt für Umwelt Brandenburg dl-de/by-2-0 (Daten verändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The *Bereitsteller* wording is the service's own `AccessConstraints` (read 2026-09-23). A per-cell covered share is an alteration. |
 | DWD | `Quelle: Deutscher Wetterdienst` (text form; the DWD logo is an accepted alternative) | Per §7 DWD-Gesetz. To be placed **immediately at the DWD information used**. For substantial modification DWD expects at minimum to be named in a central source list or the Impressum, together with a change notice — DWD's own examples include *"Datenbasis: Deutscher Wetterdienst, Einzelwerte gemittelt"*, which is precisely what sampling a 1 km grid onto hex cells is. The dataset additionally carries its own required citation: `DWD Climate Data Center (CDC): Gridded annual sum of incoming shortwave radiation (global radiation) on the horizontal plain for Germany based on ground and satellite measurements, Version V003, <current year>.` |
 | OSM | `© OpenStreetMap contributors` with the data made clear to be available under the Open Database License — linking to `https://www.openstreetmap.org/copyright` satisfies the latter for a browsable map; printed works must carry the full URL | ADR-0003 already records this as a standing duty on **every screen and every export**. Distributing OSM in data form requires naming and linking the licence directly. |
 
@@ -566,6 +631,28 @@ what the public is told about real land.
 Entries record what was actually fetched and read, so a later session does not repeat a dead end or
 mistake an attempt for a confirmation.
 
+### 2026-09-23 (later), real Uckermark ingest
+
+- **BKG DGM200** — fetched; md5 checked against the publisher's `.md5`; `dgm200.pdf` and
+  `aktualitaet.txt` read (§2.7). Two `Last-Modified` values observed for the same bytes.
+- **LfU Brandenburg WFS** — GetCapabilities read; six layers fetched with `ogr2ogr` into one
+  GeoPackage each (§2.8).
+- **The whole pipeline ran end to end** (`ingest/run.sh`, `ingest/real/`): 117 191 hex cells;
+  irradiation for 117 140 of them (the rest lie on the Oder, outside DWD's grid), 1 100–1 137
+  kWh/m²; slope 0–7.2°; dominant land cover led by class 211; NSG/Nationalpark share per cell.
+- **Incident: duplicated grid.** Two grid runs started concurrently wrote 234 382 duplicate cells.
+  Removed (kept the lower id of each `ST_Equals` pair) and prevented: `04_generate_grid.sql` now
+  runs in one transaction under a per-region advisory lock.
+- **Incident: truncated WFS response.** A later full run got a `GetFeature` response for `app:ffh`
+  cut off mid-transfer (*"XML parsing of GML file failed: no element found"*). `01_fetch.sh` had
+  already deleted the good GeoPackage and exited 1, which `run.sh` reads as "licence gate", so
+  the run continued until the load step failed. Fixed: each layer is fetched to a temporary file,
+  retried up to three times, and moved into place only once it opens; failure exits with the new
+  code 5, which aborts the run. A re-fetch returned the same feature counts per layer.
+- **Observation, not a finding:** irradiation varies by only 3 % across the Landkreis, so under the
+  illustrative bounds it is the "limiting" criterion almost everywhere. That is an artefact of the
+  placeholder normalisation, and is why the bounds are listed as open (`scoring-criteria.md` §6).
+
 ### 2026-09-23, 3D parcel preview (ADR-0006)
 
 - **basemap.de 3D Gelände** — licence PDF fetched from `basemap.de` and read in full; TileJSON and
@@ -761,9 +848,10 @@ is what turns a cleared licence into a lawful deployment:
    `(Jahr des letzten Datenbezugs)` wording; the 2021 record uses the latter. Use the wording from
    the record for the version actually ingested.
 
-   **What this condition still does not cover:** no `criterion_value` row derived from these
-   sources exists yet, so nothing has been rendered *from real data*. The plumbing is verified, the
-   pipeline that would use it is not built.
+   **As of 2026-09-23 it covers real data.** The Uckermark's `criterion_value` rows are derived
+   from CLC5, DWD, DGM200 and LfU Brandenburg, and the explorer's attribution control credits every
+   source whose values reach the map, each with its change notice (`app/(map)/page.tsx`). Exports
+   of real-region scenario cards are untested: the real region has no outcome rows yet.
 
 ---
 

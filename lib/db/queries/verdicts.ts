@@ -40,7 +40,7 @@ export async function listVerdictsForUnit(
   const rows = await query<SuitabilityVerdictSqlRow>(
     `SELECT ${VERDICT_COLUMNS} FROM suitability_verdict
      WHERE spatial_unit_id = $1 AND method_version = $2
-     ORDER BY technology`,
+     ORDER BY array_position(ARRAY['pv', 'agripv', 'wind'], technology)`, // TECHNOLOGIES order, as every screen shows it
     [spatialUnitId, methodVersion],
   );
   return rows.map(toVerdict);
@@ -91,3 +91,51 @@ export async function upsertVerdict(verdict: SuitabilityVerdict): Promise<void> 
     ],
   );
 }
+
+/**
+ * Replaces every verdict for one pilot region and method version in one
+ * transaction, writing in batches. The region-scale counterpart of
+ * upsertVerdict: at ~117 000 units × 3 technologies, one statement per row is
+ * minutes of round trips. Deleting first means a unit whose verdict can no
+ * longer be computed loses its stale row instead of keeping an outdated one.
+ */
+export async function replaceVerdictsForPilotRegion(
+  pilotRegion: string,
+  methodVersion: string,
+  verdicts: readonly SuitabilityVerdict[],
+  batchSize = 5000,
+): Promise<void> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `DELETE FROM suitability_verdict sv USING spatial_unit su
+       WHERE su.id = sv.spatial_unit_id AND su.pilot_region = $1 AND sv.method_version = $2`,
+      [pilotRegion, methodVersion],
+    );
+    for (let i = 0; i < verdicts.length; i += batchSize) {
+      const batch = verdicts.slice(i, i + batchSize);
+      await client.query(
+        `INSERT INTO suitability_verdict
+           (spatial_unit_id, technology, verdict, score, limiting_criterion_id, excluded_by_criterion_id, method_version)
+         SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::numeric[], $5::text[], $6::text[], $7::text[])`,
+        [
+          batch.map((v) => v.spatialUnitId),
+          batch.map((v) => v.technology),
+          batch.map((v) => v.verdict),
+          batch.map((v) => v.score),
+          batch.map((v) => v.limitingCriterionId),
+          batch.map((v) => v.excludedByCriterionId),
+          batch.map((v) => v.methodVersion),
+        ],
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+

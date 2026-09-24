@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx lib/db/migrate.ts",
     "db:materialize": "tsx ingest/07_materialize_scores.ts",
-    "test": "node --import tsx --test lib/scoring/__tests__/suitability.test.ts lib/scoring/__tests__/outcomes.test.ts lib/scoring/__tests__/pipeline.test.ts lib/scoring/__tests__/illustrative-weights.test.ts lib/__tests__/attribution.test.ts lib/preview/__tests__/preview.test.ts lib/map/__tests__/verdict-style.test.ts",
+    "test": "node --import tsx --test lib/scoring/__tests__/suitability.test.ts lib/scoring/__tests__/outcomes.test.ts lib/scoring/__tests__/pipeline.test.ts lib/scoring/__tests__/illustrative-weights.test.ts lib/__tests__/attribution.test.ts lib/preview/__tests__/preview.test.ts lib/map/__tests__/verdict-style.test.ts lib/scoring/__tests__/real-criteria.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

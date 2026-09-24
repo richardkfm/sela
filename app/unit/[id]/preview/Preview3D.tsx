@@ -23,6 +23,7 @@ import {
   type ReferenceDimension,
   type RowLayout,
 } from "@/lib/preview/reference-geometry";
+import type { PilotRegionKind } from "@/lib/pilot-region";
 import type { SuitabilityVerdict, Technology } from "@/lib/scoring/types";
 import type { PreviewData, SceneTechnology, ViewRequest } from "./Scene";
 
@@ -61,11 +62,13 @@ export function Preview3D({
   initialTechnology,
   verdicts,
   terrainNotice,
+  regionKind,
 }: {
   unitId: string;
   initialTechnology: SceneTechnology;
   verdicts: SuitabilityVerdict[];
   terrainNotice: string | null;
+  regionKind: PilotRegionKind;
 }) {
   const [technology, setTechnology] = useState<SceneTechnology>(initialTechnology);
   const [hub, setHub] = useState<number>(REFERENCE_TURBINE.hubHeight.value);
@@ -147,7 +150,7 @@ export function Preview3D({
           <p className="muted">Wie groß wäre eine Anlage hier – im wahren Maßstab, auf dem Gelände.</p>
         </header>
 
-        <IllustrativeBanner compact />
+        <IllustrativeBanner compact kind={regionKind} />
 
         <section className="explorer-section" aria-labelledby="scenario-heading">
           <h2 id="scenario-heading" className="overline">
@@ -159,6 +162,12 @@ export function Preview3D({
               Eignung für {TECHNOLOGY_LABEL_DE[verdict.technology]}: <strong>{VERDICT_LABEL_DE[verdict.verdict]}</strong>
               {verdict.score !== null && <span className="tabular-nums muted"> · {verdict.score.toFixed(2)}</span>}{" "}
               <span className="muted">(illustrativ)</span> · <Link href={`/unit/${unitId}`}>Begründung</Link>
+            </p>
+          )}
+          {technology !== "status_quo" && !verdict && (
+            <p className="explorer-note muted">
+              Für {TECHNOLOGY_LABEL_DE[technology]} liegt für diese Fläche keine Bewertung vor. Die Vorschau zeigt nur
+              die Größe einer Anlage.
             </p>
           )}
           {technology === "status_quo" && (

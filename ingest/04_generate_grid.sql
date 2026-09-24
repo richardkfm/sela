@@ -8,6 +8,14 @@
 -- edge cell would not be a hexagon and spatial_unit.geom is typed
 -- geometry(Polygon, 25832); this is a stated v1 simplification, not a bug.
 
+-- The NOT EXISTS check alone is not safe under concurrency: two runs started
+-- together each see an empty region and both insert — this happened on
+-- 2026-09-23 and doubled the Uckermark grid. A transaction-scoped advisory
+-- lock per pilot region serialises runs; the second then finds every cell
+-- present and inserts nothing.
+BEGIN;
+SELECT pg_advisory_xact_lock(hashtext('04_generate_grid:' || :'pilot_region'));
+
 INSERT INTO spatial_unit (kind, pilot_region, geom)
 SELECT 'hex_grid', :'pilot_region', hex.geom
 FROM staging.pilot_boundary boundary
@@ -20,3 +28,5 @@ WHERE boundary.pilot_region = :'pilot_region'
       AND su.kind = 'hex_grid'
       AND ST_Equals(su.geom, hex.geom)
   );
+
+COMMIT;

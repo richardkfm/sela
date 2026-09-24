@@ -9,6 +9,7 @@ import { IllustrativeBanner } from "@/components/IllustrativeBanner";
 import { NotModelledBadge } from "@/components/NotModelledBadge";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
 import { listOutcomesForUnit } from "@/lib/db/queries/outcomes";
+import { pilotRegionInfo } from "@/lib/pilot-region";
 import { scenarioTokenCssVar, scenarioTokens } from "@/lib/design/tokens";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import { OUTCOME_DIMENSIONS, SCENARIOS, type OutcomeDimension, type Scenario } from "@/lib/scoring/types";
@@ -52,7 +53,7 @@ export default async function CompareScenariosPage({ params }: { params: Promise
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "64rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <IllustrativeBanner />
+      <IllustrativeBanner kind={pilotRegionInfo(unit.pilotRegion).kind} />
       <div>
         <Link href={`/unit/${id}`}>← Zur Fläche</Link>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>

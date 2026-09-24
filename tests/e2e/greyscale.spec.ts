@@ -8,7 +8,7 @@
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
 import { scenarioTokens } from "../../lib/design/tokens";
-import { getSampleUnitId } from "./helpers";
+import { FIXTURE_EXPLORER, getSampleUnitId } from "./helpers";
 
 function localVariance(data: Buffer, width: number, x0: number, y0: number, size: number): number {
   const values: number[] = [];
@@ -85,14 +85,14 @@ async function sampleSelectedUnit(page: import("@playwright/test").Page): Promis
 }
 
 async function selectUnit(page: import("@playwright/test").Page, unitId: string): Promise<void> {
-  await page.goto("/");
+  await page.goto(FIXTURE_EXPLORER);
   await page.locator('nav[aria-label="Flächen in der Pilotregion"] button', { hasText: unitId.slice(0, 8) }).click();
   await page.getByRole("region", { name: new RegExp(unitId.slice(0, 8)) }).waitFor();
 }
 
 test("a suitable unit on the map keeps its hatch after a real greyscale conversion", async ({ page, request, baseURL }) => {
   const verdicts: { spatialUnitId: string; verdict: string }[] = await (
-    await request.get(`${baseURL}/api/units/verdicts?technology=pv`)
+    await request.get(`${baseURL}/api/units/verdicts?technology=pv&pilotRegion=fixture-region`)
   ).json();
   const suitable = verdicts.find((v) => v.verdict === "suitable");
   const plain = verdicts.find((v) => v.verdict === "unsuitable");

@@ -1,4 +1,4 @@
--- The three real datasets sela has actually fetched, with the exact
+-- The real datasets sela has actually fetched, with the exact
 -- Quellenvermerk each publisher demands (docs/data/sources.md §3).
 --
 -- Idempotent: re-running updates the rows rather than failing, because a
@@ -11,8 +11,9 @@
 -- does not change because the calendar did.
 --
 -- NOTE none of these rows makes anything publishable on its own. They satisfy
--- docs/data/sources.md §7 condition 4 (the notice exists and renders); the
--- criterion_value rows that would cite them are not written yet.
+-- docs/data/sources.md §7 condition 4 (the notice exists and renders). Since
+-- 2026-09-23 the Uckermark ingest (ingest/real/) writes criterion_value rows
+-- that cite them.
 
 INSERT INTO source (
   id, dataset, publisher, version, retrieved_at, licence, redistributable, url,
@@ -63,6 +64,39 @@ INSERT INTO source (
     -- 4.0 rather than dl-de/by-2-0. Same agency, same host, different notice.
     '© BKG <Jahr> CC BY 4.0, Datenquellen: https://sgx.geodatenzentrum.de/web_public/gdz/datenquellen/datenquellen_vg25.pdf',
     'https://creativecommons.org/licenses/by/4.0',
+    true
+  ),
+  (
+    'bkg-dgm200',
+    'Digitales Geländemodell Gitterweite 200 m (DGM200), Stand 31.12.2019',
+    'Bundesamt für Kartographie und Geodäsie (BKG)',
+    'DGM200, abgeleitet aus DGM5; Brandenburg: Ausgangsdaten 2009–2017',
+    DATE '2026-09-23',
+    'dl-de/by-2-0',
+    true,
+    'https://daten.gdz.bkg.bund.de/produkte/dgm/dgm200/aktuell/dgm200.utm32s.geotiff.zip',
+    -- From dgm200.pdf §"Nutzungsbestimmungen und Quellenvermerk" inside the
+    -- archive (Stand 17.03.2021), which names dl-de/by-2-0 — the archive also
+    -- ships an older geonutzv.pdf (2017); the dated documentation governs.
+    -- A slope derived from the DEM is an alteration; lib/attribution.ts appends
+    -- the change notice (change_notice_required = true).
+    '© GeoBasis-DE / BKG <Jahr> dl-de/by-2-0',
+    'https://www.bkg.bund.de',
+    true
+  ),
+  (
+    'lfu-bb-schutzgebiete',
+    'Schutzgebiete in Brandenburg (WFS-LFU-SCHUTZG): NSG, Nationalpark, FFH, SPA, LSG, Biosphärenreservat',
+    'Landesamt für Umwelt Brandenburg (LfU); Dienst: LGB',
+    'WFS 2.0.0, abgerufen 2026-09-23; Digitalisierung 1:10 000, nicht rechtsverbindlich',
+    DATE '2026-09-23',
+    'dl-de/by-2-0',
+    true,
+    'https://inspire.brandenburg.de/services/schutzg_wfs',
+    -- The service's own AccessConstraints: dl-de/by-2-0, "Als Bezeichnung des
+    -- Bereitstellers ist „© Landesamt für Umwelt Brandenburg" anzugeben."
+    '© Landesamt für Umwelt Brandenburg dl-de/by-2-0',
+    'https://www.govdata.de/dl-de/by-2-0',
     true
   )
 ON CONFLICT (id) DO UPDATE SET

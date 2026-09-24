@@ -652,6 +652,14 @@ input[type="range"].slider {
   color: var(--text-primary);
 }
 
+/* Attribution is a legal duty (ADR-0005, sources.md §3), so it must never slide under the side
+   panel: with every data source credited it is long enough to reach it on a wide screen. */
+@media (min-width: 761px) {
+  .map-stage .maplibregl-ctrl-bottom-right {
+    max-width: calc(100% - 24.5rem);
+  }
+}
+
 /* Attribution is a legal duty (ADR-0005), so its links must be recognisable as links (WCAG 1.4.1). */
 .map-stage .maplibregl-ctrl-attrib a {
   color: var(--text-primary);

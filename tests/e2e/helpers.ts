@@ -17,3 +17,10 @@ export async function getSampleUnitId(request: APIRequestContext, baseURL: strin
   }
   return id;
 }
+
+/**
+ * The explorer pinned to the synthetic fixture. The default explorer shows the
+ * real Uckermark when it is ingested (ADR-0007), which CI does not do — tests
+ * that select specific fixture units ask for the fixture explicitly.
+ */
+export const FIXTURE_EXPLORER = "/?region=fixture-region";

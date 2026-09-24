@@ -27,7 +27,7 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "40rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <IllustrativeBanner />
+      <IllustrativeBanner kind={criterion.id.startsWith("fixture_") ? "fixture" : "real"} />
       <div>
         <Link href="/method">← Zur Methodenseite</Link>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>{criterion.nameDe}</h1>

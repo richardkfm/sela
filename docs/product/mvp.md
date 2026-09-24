@@ -169,6 +169,12 @@ Each stated as something demonstrable, not as a feeling.
 - The four scenarios are specified precisely enough to be implemented without further product input.
 
 ### v0.3 — it works end to end on real land
+
+> **Progress, 2026-09-23:** a real unit in the Uckermark can be selected, and its *develop*
+> suitability traced to real, cited values — but under **illustrative weights**, and its
+> *preserve* and *restore* outcomes are not modelled (U2), so the first criterion below is only
+> half met. See `docs/domain/scoring-criteria.md` §6.
+
 - A real parcel in a pilot *Landkreis* can be selected and compared across all four scenarios, with real data.
 - From any displayed number, a user can reach its criterion record with source, licence, weight, and confidence — flow F4 works everywhere, with no dead ends.
 - The method page is published and matches the scoring code in effect.
