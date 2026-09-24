@@ -27,6 +27,27 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Nature capital, phase 1: the method is written down, not yet run (U2 partly closed).** Asked
+  for by the project owner as the next step after the real Uckermark ingest, and scoped through the
+  `CLAUDE.md` §3 gate on 2026-09-24 in two rounds of questions. Decided: **climate and water**
+  first; `preserve` shows the **carbon stock that stays in the ground**; a third outcome state,
+  ***trifft nicht zu***; outcomes carry their provenance; habitat shown as **categories, no points
+  scale**; climate as **two measures in every scenario** (stock and annual balance); water under
+  `restore` as a labelled **approximation**; **IPCC 2013 Tier 1** factors; grassland on peat as a
+  **range** between shallow- and deep-drained.
+  - `docs/domain/scoring-criteria.md` §4 — the methods `peat-climate-ipcc2013-v1` and
+    `water-arcegmo-v1`, every factor with its table and page, the decisions D1–D9, the proposals
+    still open to review, and six verification items (V1–V6) owed before any number is computed.
+  - **ADR-0008** — `outcome.metric`, a value range, the `not_applicable` status, and
+    `outcome_method` / `outcome_input` so every outcome reaches its criterion values and sources.
+  - `docs/data/sources.md` §2.9–§2.11 — **LBGR *Moorbodenkarte*** (WFS, `dl-de/by-2-0`) and **LfU
+    ArcEGMO water balance 1991–2020** (`dl-de/by-2-0`), both **Confirmed, not yet fetched**, with
+    their attribution strings; the IPCC Wetlands Supplement as the cited method. Biotope sources,
+    BGR and BKompV recorded in §8 as considered and not adopted.
+  - `ingest/sources.manifest.json` — the two sources as `confirmed`, with fetch blocks. `run.sh`
+    does not fetch them yet; that comes with the ingest steps.
+  - Glossary terms for the new states and measures; U2 status in `mvp.md` and the roadmap.
+
 - **The real Uckermark ingest — the first map of real land.** Asked for by the project owner
   ("do the real Uckermark ingest next") and scoped through the `CLAUDE.md` §3 gate on 2026-09-23:
   **criteria land cover (CLC5), slope (DGM200) and irradiation (DWD); protection areas from a

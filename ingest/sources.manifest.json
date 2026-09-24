@@ -97,6 +97,39 @@
         ],
         "$comment": "Substitute for BfN, which still returns 403 (2026-09-23). Licence read from the service's own GetCapabilities AccessConstraints: dl-de/by-2-0, provider credit '© Landesamt für Umwelt Brandenburg'. The service states its data is for overview only and not legally binding (digitised at 1:10 000). bbox covers Landkreis Uckermark with margin; features are clipped to the pilot boundary at load time."
       }
+    },
+    "lbgr-bb-moorbodenkarte": {
+      "status": "confirmed",
+      "docRow": "LBGR Brandenburg Moorbodenkarte (WFS-MBK)",
+      "licence": "dl-de/by-2-0",
+      "fetch": {
+        "kind": "wfs",
+        "endpoint": "https://inspire.brandenburg.de/services/moorkarte_wfs",
+        "layers": [
+          "app:bodentyp_2021",
+          "app:kohlenstoff_2021"
+        ],
+        "bbox4326": [
+          13.2,
+          52.8,
+          14.5,
+          53.6
+        ],
+        "$comment": "Confirmed 2026-09-24 by the project owner's decision to model peat climate (docs/domain/scoring-criteria.md §4.1). Licence read from the service's own GetCapabilities AccessConstraints: dl-de/by-2-0, provider credit '© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg'. Native EPSG:25833. The 2021 layers are a modelled state derived from a 10 m grid (docs/data/sources.md §2.9). Same bbox as lfu-bb-schutzgebiete; clipped to the pilot boundary at load time."
+      }
+    },
+    "lfu-bb-wasserhaushalt": {
+      "status": "confirmed",
+      "docRow": "LfU Brandenburg Wasserhaushalt 1991–2020 (ArcEGMO)",
+      "licence": "dl-de/by-2-0",
+      "fetch": {
+        "kind": "single-file",
+        "url": "https://data.geobasis-bb.de/geofachdaten/Wasser/Wasserhaushalt/arcegmo_wh_91-20.zip",
+        "filename": "arcegmo_wh_91-20.zip",
+        "pinnedBytes": 355883698,
+        "pinnedLastModified": "Thu, 24 Jul 2025 11:37:19 GMT",
+        "$comment": "Confirmed 2026-09-24 by the project owner's decision to model water balance (docs/domain/scoring-criteria.md §4.2). Pinned from a HEAD request on 2026-09-24; not yet fetched. Licence from the metadata record and the archive's own documentation (dok/doku_efl20_pscn.pdf §5): dl-de/by-2-0, 'Präsentation: mit Erlaubnisvermerk sowie Quelle und Stand der Daten'. Shapefile wh_efl20_pscn, EPSG:25833, 1 157 871 Elementarflächen statewide."
+      }
     }
   }
 }
