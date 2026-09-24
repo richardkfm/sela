@@ -307,7 +307,7 @@ Open questions that stay open, and are not resolved by assumption:
 | # | Question | Status after Phase 3 |
 |---|---|---|
 | U1 | Spatial unit | Closed — ADR-0001 |
-| U2 | Nature-capital indicators | **Still open.** Phase 3 exercises the `not_modelled` path for real (`restore` × `local_benefit`), but only against `lib/scoring/illustrative-weights.ts`'s explicitly arbitrary aggregation — no real, method-citable indicator has shipped |
+| U2 | Nature-capital indicators | **Partly closed (2026-09-24) — methods decided, not yet shipped.** Climate (peat, IPCC 2013 Tier 1) and water (LfU ArcEGMO) for the Uckermark, habitat as categories; outcome provenance in ADR-0008. See `docs/domain/scoring-criteria.md` §4 |
 | U3 | Grid-connection capacity in scope | Open |
 | U4 | Constraints as filters or penalties | Closed — ADR-0004 |
 | U5 | Anonymous vs. account-gated | Open |

@@ -1,6 +1,6 @@
 # Glossary
 
-**Version band:** `0.2.x` · **Status:** first draft · **Last updated:** 2026-08-22
+**Version band:** `0.2.x`–`0.3.x` · **Status:** first draft · **Last updated:** 2026-09-24
 
 Shared vocabulary for sela's domain. English is the working language of documentation and code;
 German terms are kept where they are the precise legal or technical term, per `CLAUDE.md` §5.
@@ -49,7 +49,15 @@ meet in schema, code, or UI — not just a definition.
 | **Outcome dimension** (`outcome.dimension`) | One of the six shared axes scenarios are compared on: energy, climate, nature capital, soil and water, land use, local benefit (`docs/product/mvp.md` §8.3). |
 | **Confidence** (`confidence`) | A per-criterion and per-outcome quality/applicability signal, always visible where the value is shown, never only on an evidence screen (`docs/product/design-language.md` §8). |
 | **Not yet modelled** (`status = 'not_modelled'`) | The explicit, first-class state for an outcome dimension sela cannot yet quantify for a given scenario. Never rendered as zero, never silently omitted (`docs/product/mvp.md` §8.3). |
-| **Biotopwertverfahren** | An established German method for scoring habitat/biotope value. Candidate citation basis for the nature-capital outcome dimension (U2) — only used if actually adopted and cited, never approximated. |
+| **Does not apply** / ***trifft nicht zu*** (`status = 'not_applicable'`) | The method covers this cell and finds nothing to measure, e.g. no peat soil for a peat-emission metric. Distinct from *not yet modelled*, which means the method does not cover the cell. Never rendered as zero (ADR-0008). |
+| **Metric** (`outcome.metric`) | One measure within an outcome dimension, with one unit in every scenario, e.g. `peat_carbon_stock` (t C/ha) and `peat_ghg_balance` (t CO₂-Äq./ha·a) within climate. Deltas are computed per metric, never across metrics (ADR-0008). |
+| **Outcome method** (`outcome_method`) | The named, versioned, cited method that turns criterion values into outcomes, with every factor it uses (ADR-0008). |
+| **Moorboden** | Peat soil. In sela, a soil class of the LBGR *Moorbodenkarte* that carries a peat body (`docs/domain/scoring-criteria.md` §4.1). *Moorgleye* and *Anmoorgleye* are organic-rich mineral soils, not modelled as peat in v1. |
+| **Wiedervernässung** | Rewetting — raising the water table of a drained peat soil. sela's only modelled `restore` option in v1. It depends on the water regime of a whole area, never of one cell, and sela does not suggest that one cell can be rewetted on its own. |
+| **CO₂-Äquivalent** (CO₂-Äq.) | Greenhouse gases weighted by their 100-year global warming potential (IPCC AR5) and expressed as the mass of CO₂ with the same effect. |
+| **Versickerung** (percolation) | Water that drains below the root zone, per the LfU water-balance model. Not the same as *Grundwasserneubildung* (groundwater recharge), and sela does not call it that. |
+| **Tier 1** | The IPCC's default-factor level of method: one published factor per land-use category and climate zone, not a site measurement. Why sela's peat emissions carry `low` confidence. |
+| **Biotopwertverfahren** | A points method for habitat/biotope value, such as the federal BKompV Anlage 2 (0–24). **Not adopted** (2026-09-24): the BKompV scale is not Brandenburg law, and Brandenburg assesses verbally. Nature capital is shown as categories instead (`docs/domain/scoring-criteria.md` §4.3). |
 | **Umweltverträglichkeitsprüfung** (UVP) | Statutory environmental impact assessment. sela produces pre-assessment signals only and is never a substitute for one (`docs/product/mvp.md` §3, non-goals). |
 
 ## Provenance and licensing

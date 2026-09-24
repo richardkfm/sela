@@ -1,6 +1,6 @@
 # Scoring criteria catalogue
 
-**Version band:** `0.2.x`–`0.3.x` · **Status:** weights open; four criteria run with **illustrative** weights on real Uckermark data (§6) · **Last updated:** 2026-09-23
+**Version band:** `0.2.x`–`0.3.x` · **Status:** weights open; four criteria run with **illustrative** weights on real Uckermark data (§6); first real `preserve`/`restore` methods decided — climate and water (§4) · **Last updated:** 2026-09-24
 
 This is the document `docs/product/mvp.md` §4 names as the place nothing about technology
 suitability is settled until it is cited here, and the document `lib/db/migrations/0002_domain_schema.sql`'s
@@ -84,12 +84,163 @@ Criteria named in `docs/product/mvp.md` §4.3.
 `status_quo`, `preserve`, and `restore` are not scored for *suitability* (`suitability_verdict`
 only applies to `develop_*`) — they produce `outcome` rows directly, across the six shared
 dimensions (`mvp.md` §8.3). Which criteria feed each outcome dimension for these three scenarios
-is **U2** (nature-capital indicators) and is intentionally not catalogued here yet: `mvp.md` §8.3
-rule 2 requires these to be quantified, not residual, and per `CLAUDE.md` §5 no indicator is
-listed until it is citable to an established method (e.g. *Biotopwertverfahren*, if adopted). Until
-then, every `preserve`/`restore` outcome row a real pipeline would produce is `status =
-'not_modelled'` — the schema's first-class state for exactly this situation, not a gap this
-document should paper over with an invented weight.
+is **U2** (nature-capital indicators): `mvp.md` §5 rule 2 requires them to be quantified, not
+residual, and per `CLAUDE.md` §5 no indicator is listed until it is citable to an established
+method. Every dimension without such a method stays `status = 'not_modelled'`.
+
+**U2 is partly closed (2026-09-24).** The project owner decided, through the `CLAUDE.md` §3 gate,
+to model **climate** (peat soils) and **soil and water** (water balance) for the Uckermark, and to
+show **nature capital only as categories** for now (§4.3). The decisions, in the owner's words
+where they were choices between options:
+
+| # | Decision | Chosen |
+|---|---|---|
+| D1 | Scope of the first step | Climate and water |
+| D2 | What `preserve` means on drained peat | The carbon stock that stays in the ground |
+| D3 | Cells without peat | A third state, ***trifft nicht zu***, distinct from *noch nicht modelliert* |
+| D4 | Schema | Outcomes carry their inputs and method — ADR-0008 |
+| D5 | Habitat value | Categories only; no points scale until an expert reviews a crosswalk |
+| D6 | How climate is measured | **Two measures in every scenario**: soil carbon stock *and* annual greenhouse-gas balance |
+| D7 | Water under `restore` | An **approximation** from the same water-balance model, labelled as such |
+| D8 | Emission factors | **IPCC 2013 Wetlands Supplement, Tier 1**; the German inventory as a later cross-check |
+| D9 | Grassland on peat, drainage depth unknown | **Show the range** between shallow- and deep-drained |
+
+Everything below that is not one of D1–D9 is this document's proposal for implementing them, and
+is listed at the end of each subsection as reviewable.
+
+### 4.1 Climate — `peat-climate-ipcc2013-v1`
+
+**Where it applies.** Only to peat soils as mapped by the LBGR *Moorbodenkarte* 2021
+(`docs/data/sources.md` §2.9). A cell's **peat share** is the part of its area covered by a
+`bodentyp_2021` polygon of a class that carries a peat body:
+
+- `KV1`–`KV3` *Erd- und Mulmniedermoore* and `HN1`–`HN3` *ungenutzte Moore*;
+- the covered classes whose lower layer is `KV*` (`YK,GG\KV*`, `YK,GG/KV*`, `GM\KV*`, `GM/KV*`).
+
+*Moorgleye* (`GH`) and *Anmoorgleye* (`GM`), alone or under a mineral cover, are **not modelled**
+in v1: whether IPCC's organic-soil factors apply to them has not been checked. A cell with no peat
+share and no carbon polygon is **not applicable** (*trifft nicht zu — kein Moorboden laut
+LBGR-Moorbodenkarte*).
+
+**Two metrics, in every scenario (D6).**
+
+| Metric | Unit | What it says |
+|---|---|---|
+| `peat_carbon_stock` | t C/ha (averaged over the whole cell) | How much organic carbon the cell's peat holds, per LBGR `kohlenstoff_2021` (kg C/m² × 10), area-weighted |
+| `peat_ghg_balance` | t CO₂-Äq./ha·a (averaged over the whole cell) | The annual greenhouse-gas emission from the peat share under the scenario's water regime; positive = emission |
+
+**Per scenario.**
+
+| Scenario | `peat_carbon_stock` | `peat_ghg_balance` |
+|---|---|---|
+| `status_quo` | The stock | Drained factors for the current use |
+| `preserve` (D2) | The stock, **shown as what is protected** from conversion | **The same drained factors** — preserving drained peat does not stop it emitting, and the screen says so: *"Schutz allein stoppt die Emissionen entwässerter Moore nicht."* |
+| `restore` | The stock | Rewetted factors (*Wiedervernässung*) |
+| `develop_*` | `not_modelled` | `not_modelled` — construction on peat is a later gate (ADR-0008) |
+
+The stock is the same number in three scenarios on purpose. Its role is to show what is at stake;
+the balance shows whether it is being kept. Tier 1 factors describe a steady state, not the years
+of transition after rewetting, so **time-to-effect is shown as not modelled**, not as instant.
+
+**Current use** comes from the dominant CLC5 class already read for `pv_land_cover`
+(`docs/data/sources.md` §2.2):
+
+| CLC5 | IPCC Tier 1 row (Wetlands Supplement, Ch. 2) | Range (D9) |
+|---|---|---|
+| 211 *Nicht bewässertes Ackerland* | *Cropland, drained* (Boreal and Temperate) | the 95 % intervals of the factors used |
+| 231 *Wiesen und Weiden* | *Grassland, nutrient-rich*, **shallow- to deep-drained** (Temperate) | shallow-drained central value to deep-drained central value; the stored `value` is their midpoint, which exists for sorting and deltas and is **never shown alone** (ADR-0008 §2) |
+| anything else | — | `not_modelled` for `peat_ghg_balance`; the stock is still shown |
+
+"Anything else" includes forest, *Sümpfe* and *Torfmoore* on peat. Their Tier 1 rows exist but
+have not been read, or (for wet classes) whether they are drained at all is unknown.
+
+**The factors** (all read at the primary source, `docs/data/sources.md` §2.11; printed page numbers):
+
+| Factor | Cropland, drained | Grassland shallow-drained | Grassland deep-drained | Rewetted, nutrient-rich, Temperate |
+|---|---|---|---|---|
+| CO₂ on site, t CO₂-C/ha·a | 7.9 (6.5–9.4) — T 2.1, p. 2.12 | 3.6 (1.8–5.4) — T 2.1, p. 2.14 | 6.1 (5.0–7.3) — T 2.1, p. 2.13 | 0.50 (−0.71–1.71) — T 3.1, p. 3.12 |
+| DOC, t C/ha·a | 0.31 (0.19–0.46), Temperate — T 2.2, p. 2.20 | same | same | 0.24 (0.14–0.36) — T 3.2, p. 3.14 |
+| CH₄ from the land, kg CH₄/ha·a | 0 (−2.8–2.8) — T 2.3, p. 2.25 | 39 (−2.9–81) — T 2.3, p. 2.26 | 16 (2.4–29) — T 2.3, p. 2.26 | **216 kg CH₄-C** (0–856) — T 3.3, p. 3.18 |
+| CH₄ from ditches, kg CH₄/ha·a, with Frac_ditch | 1165 (335–1995), 0.05 — T 2.4, p. 2.30 | 527 (285–769), 0.05 | 1165 (335–1995), 0.05 | not read — see V3 |
+| N₂O, kg N₂O-N/ha·a | 13 (8.2–18) — T 2.5, p. 2.33 | 1.6 (0.56–2.7) — T 2.5, p. 2.34 | 8.2 (4.9–11) — T 2.5, p. 2.34 | negligible under Tier 1 — p. 3.19 |
+
+Conversion to CO₂ equivalents: C → CO₂ × 44/12; CH₄-C → CH₄ × 16/12; N₂O-N → N₂O × 44/28;
+CH₄ and N₂O weighted by their **100-year GWP from IPCC AR5**, the basis the German inventory
+uses (NIR 2025, Tabelle 386, labelled *"t CO2-Eq. IPCC AR5"*). DOC uses the Supplement's default
+drained factor; its footnote allowing a lower value for fens is recorded but not taken.
+
+**Verification still owed before implementation** (`CLAUDE.md` §5 — nothing is computed on an
+unread number):
+
+- **V1.** The AR5 GWP values themselves: read at AR5 WG1 Ch. 8, not assumed.
+- **V2.** The Supplement's equation combining `EF_CH4_ditch` and `Frac_ditch` (Eq. 2.4 area):
+  the tables were read, the equation was not.
+- **V3.** Whether Chapter 3 applies a ditch term to rewetted soils.
+- **V4.** The depth basis of the LBGR carbon stock. The layer describes it as the *"potentiell zu
+  erwartenden Vorrat … auf Grundlage der abgeleiteten Moormächtigkeit des Jahres 2021"*; no method
+  document has been read. Until it is, the stock's confidence is capped at `medium`.
+
+**Confidence.** `peat_carbon_stock`: `medium` (a modelled 2021 potential, not a measurement).
+`peat_ghg_balance`: `low` everywhere — a Tier 1 default applied to a cell, with land use from
+2018 and drainage state unknown.
+
+**Proposals in this subsection, reviewable:** which LBGR classes count as peat; CLC 211 → cropland
+and 231 → grassland; the default DOC factor; combining 95 % intervals by adding their bounds (which
+overstates the spread, and is chosen because understating it is the worse error for a public
+screen); scaling both metrics by peat share so a cell's value is per hectare of cell.
+
+### 4.2 Soil and water — `water-arcegmo-v1`
+
+**Source.** LfU Brandenburg, *Wasserhaushaltsgrößen auf Elementarflächenbasis, Reihe 1991–2020*
+(ArcEGMO-PSCN; `docs/data/sources.md` §2.10). Complete coverage of Brandenburg, 1 157 871
+*Elementarflächen*, usable at 1:10 000 or smaller.
+
+| Metric | Field | Unit |
+|---|---|---|
+| `percolation` | `GWN_91_20` — *mittlere Jahressumme der Versickerungsmenge* | mm/a |
+| `root_zone_soil_moisture` | `NFK_91_20` — *mittlere relative Bodenfeuchte in der Wurzelzone bis 150 cm* | %nFK |
+
+Both are **area-weighted** over the *Elementarflächen* a cell overlaps.
+
+`percolation` is **not** groundwater recharge in the strict sense, and the screen does not call it
+that (`docs/data/sources.md` §2.10).
+
+| Scenario | Value |
+|---|---|
+| `status_quo` | The model's 1991–2020 means for today's land use |
+| `preserve` | **The same values.** Leaving the land as it is does not change its water balance, and the screen says so rather than inventing a difference |
+| `restore` (D7) | **Approximation**, only where §4.1 finds peat: the area-weighted mean of *Elementarflächen* in the pilot region whose land-use class is a wet peatland, on the same hydrotope class (`HYD_NAME`). Range: the interquartile range of those areas. Everywhere else, `not_modelled` |
+| `develop_*` | `not_modelled` |
+
+The restore value is **not a model run**. It answers "what does a wet peatland on similar ground
+in this region look like in the same model", and the screen labels it *Näherung*. Confidence:
+`medium` for status quo and preserve, `low` for the approximation.
+
+**Direction is not stated.** Neither more percolation nor more root-zone moisture is "better" in
+general. On rewetted peat, more water held at the surface can mean *less* percolation. Deltas are
+therefore shown **without gain/loss colouring**. This is this document's proposal, following
+`CLAUDE.md` §4.5.
+
+**Verification still owed:**
+
+- **V5.** Which `LANDNUTZ` codes mean a wet peatland. `1110` *feuchte Moore* is the candidate;
+  `1310` *Moor* and `1112` *Feuchtgrünland* need Tab. 2 of the documentation, read in full.
+- **V6.** A minimum number of reference areas per hydrotope class before the approximation is
+  shown. The proposal is 30, falling back to the pilot-region mean with confidence stated as such.
+
+### 4.3 Nature capital — categories, no score (D5)
+
+No points scale. The *Bundeskompensationsverordnung* (BKompV) Anlage 2 has one (0–24), but it
+applies only where federal authorities administer the *Eingriffsregelung* (§ 1 Abs. 1 BKompV).
+Brandenburg's own guidance (HVE, 2009) uses a *verbal-argumentative* method with no points, and
+no crosswalk from Brandenburg biotope codes to BKompV values has been found. Building one would be
+sela's own invention.
+
+What can be shown instead, when a later change adds the source: whether the cell contains a
+*gesetzlich geschütztes Biotop*, an FFH habitat type (*Lebensraumtyp*) and its recorded
+conservation status, from the LfU *Biotopkataster* (`docs/data/sources.md` §8). These are facts
+about the land, not a score. **Not part of this change**, and the dimension stays `not_modelled`
+until then.
 
 ## 5. What closes this document
 

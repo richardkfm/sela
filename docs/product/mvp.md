@@ -142,7 +142,7 @@ Recorded rather than assumed. Each blocks or reshapes work in a later band.
 | # | Question | Blocks |
 |---|---|---|
 | U1 | Spatial unit: ALKIS *Flurstück* vs. generated grid (e.g. 100 m hex)? ALKIS is per-*Bundesland* and often fee-based. | Data model, licensing budget, `0.2.x` architecture |
-| U2 | Which nature-capital indicators are defensible for v0.1 — soil carbon, biotope value points, habitat connectivity, groundwater recharge? Must be citable, never invented. | `preserve` and `restore` scenarios |
+| U2 | Which nature-capital indicators are defensible for v0.1 — soil carbon, biotope value points, habitat connectivity, groundwater recharge? Must be citable, never invented. **Partly closed 2026-09-24:** peat carbon and greenhouse-gas balance (IPCC 2013 Tier 1) and water balance (LfU ArcEGMO) for the Uckermark; habitat as categories, no points scale — `docs/domain/scoring-criteria.md` §4. Habitat connectivity and other *Länder* remain open. | `preserve` and `restore` scenarios |
 | U3 | Is grid-connection capacity (*Netzverknüpfungspunkte*) in MVP scope? Strongest real-world suitability driver; hardest public data to obtain. | PV and wind suitability credibility |
 | U4 | Hard regulatory constraints as filters or as scored penalties? | Interface design, legal exposure |
 | U5 | How much of the public interface is anonymous vs. account-gated? | Transparency positioning, infrastructure cost |
