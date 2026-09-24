@@ -31,7 +31,8 @@ if [ "$MODE" = "real" ]; then
   echo "== real ingest run: $PILOT_REGION =="
   FETCHED=""
   SKIPPED=""
-  for source_id in bkg-vg25 bkg-clc5 dwd-cdc-radiation bkg-dgm200 lfu-bb-schutzgebiete bfn-schutzgebiete osm-geofabrik; do
+  for source_id in bkg-vg25 bkg-clc5 dwd-cdc-radiation bkg-dgm200 lfu-bb-schutzgebiete lbgr-bb-moorbodenkarte \
+      lfu-bb-wasserhaushalt bfn-schutzgebiete osm-geofabrik; do
     # `set -e` must not kill the run on a gated source: a blocked licence (1)
     # or a confirmed source whose fetch is not written yet (3) is an expected
     # state of this pipeline, not a failure. Anything else — a pin mismatch
@@ -52,6 +53,7 @@ if [ "$MODE" = "real" ]; then
   # definitions are seeded first: criterion_value rows reference both.
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$SCRIPT_DIR/seed_real_sources.sql"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$SCRIPT_DIR/real/seed_real_criteria.sql"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$SCRIPT_DIR/real/seed_nature_criteria.sql"
   "$SCRIPT_DIR/real/10_boundary.sh"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -v cell_size="$CELL_SIZE" \
     -f "$SCRIPT_DIR/04_generate_grid.sql"
@@ -59,11 +61,14 @@ if [ "$MODE" = "real" ]; then
   "$SCRIPT_DIR/real/12_dwd.sh"
   "$SCRIPT_DIR/real/13_dgm200.sh"
   "$SCRIPT_DIR/real/14_protection.sh"
+  "$SCRIPT_DIR/real/15_moorkarte.sh"
+  "$SCRIPT_DIR/real/16_wasserhaushalt.sh"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/20_sample.sql"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/20b_sample_nature.sql"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -v method_version=real-v0 \
     -f "$SCRIPT_DIR/real/21_write_values.sql"
   echo "real ingest run complete for $PILOT_REGION."
-  echo "Next: pnpm db:materialize -- --pilot-region=$PILOT_REGION   (illustrative weights; no outcomes)"
+  echo "Next: pnpm db:materialize -- --pilot-region=$PILOT_REGION   (illustrative weights; cited outcome methods)"
   exit 0
 fi
 
@@ -88,7 +93,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region='fixture-region' \
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region='fixture-region' \
   -f "$SCRIPT_DIR/05b_sample_illustrative_variation.sql"
 
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v method_version='fixture-v0' \
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region='fixture-region' -v method_version='fixture-v0' \
   -f "$SCRIPT_DIR/06_write_criterion_values.sql"
 
 echo "fixture ingest run complete."

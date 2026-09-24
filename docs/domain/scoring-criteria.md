@@ -161,7 +161,7 @@ have not been read, or (for wet classes) whether they are drained at all is unkn
 | CO₂ on site, t CO₂-C/ha·a | 7.9 (6.5–9.4) — T 2.1, p. 2.12 | 3.6 (1.8–5.4) — T 2.1, p. 2.14 | 6.1 (5.0–7.3) — T 2.1, p. 2.13 | 0.50 (−0.71–1.71) — T 3.1, p. 3.12 |
 | DOC, t C/ha·a | 0.31 (0.19–0.46), Temperate — T 2.2, p. 2.20 | same | same | 0.24 (0.14–0.36) — T 3.2, p. 3.14 |
 | CH₄ from the land, kg CH₄/ha·a | 0 (−2.8–2.8) — T 2.3, p. 2.25 | 39 (−2.9–81) — T 2.3, p. 2.26 | 16 (2.4–29) — T 2.3, p. 2.26 | **216 kg CH₄-C** (0–856) — T 3.3, p. 3.18 |
-| CH₄ from ditches, kg CH₄/ha·a, with Frac_ditch | 1165 (335–1995), 0.05 — T 2.4, p. 2.30 | 527 (285–769), 0.05 | 1165 (335–1995), 0.05 | not read — see V3 |
+| CH₄ from ditches, kg CH₄/ha·a, with Frac_ditch | 1165 (335–1995), 0.05 — T 2.4, p. 2.30 | 527 (285–769), 0.05 | 1165 (335–1995), 0.05 | none — ditches count as part of the rewetted site (V3) |
 | N₂O, kg N₂O-N/ha·a | 13 (8.2–18) — T 2.5, p. 2.33 | 1.6 (0.56–2.7) — T 2.5, p. 2.34 | 8.2 (4.9–11) — T 2.5, p. 2.34 | negligible under Tier 1 — p. 3.19 |
 
 Conversion to CO₂ equivalents: C → CO₂ × 44/12; CH₄-C → CH₄ × 16/12; N₂O-N → N₂O × 44/28;
@@ -169,25 +169,41 @@ CH₄ and N₂O weighted by their **100-year GWP from IPCC AR5**, the basis the 
 uses (NIR 2025, Tabelle 386, labelled *"t CO2-Eq. IPCC AR5"*). DOC uses the Supplement's default
 drained factor; its footnote allowing a lower value for fens is recorded but not taken.
 
-**Verification still owed before implementation** (`CLAUDE.md` §5 — nothing is computed on an
-unread number):
+**Verification (2026-09-24).** Nothing is computed on an unread number (`CLAUDE.md` §5):
 
-- **V1.** The AR5 GWP values themselves: read at AR5 WG1 Ch. 8, not assumed.
-- **V2.** The Supplement's equation combining `EF_CH4_ditch` and `Frac_ditch` (Eq. 2.4 area):
-  the tables were read, the equation was not.
-- **V3.** Whether Chapter 3 applies a ditch term to rewetted soils.
-- **V4.** The depth basis of the LBGR carbon stock. The layer describes it as the *"potentiell zu
-  erwartenden Vorrat … auf Grundlage der abgeleiteten Moormächtigkeit des Jahres 2021"*; no method
-  document has been read. Until it is, the stock's confidence is capped at `medium`.
+- **V1 — closed.** GWP100 **CH₄ 28, N₂O 265**: IPCC AR5 WG1 Table 8.7, p. 714, the values without
+  climate–carbon feedback. They are the values the German inventory uses (NID 2025, p. 497:
+  *"CH4-Emissionen … mit dem Faktor 28 (GWP 100 des IPCC AR5"*, N₂O *"mit dem Faktor 265"*). Peat
+  CH₄ is biogenic, so the higher fossil-methane value (30) does not apply (AR5 Table 8.A.1, note ‡).
+- **V2 — closed.** Ditches enter as Ch. 2 **Eq. 2.6** (p. 2.22): (1 − Frac_ditch)·EF_CH4_land +
+  Frac_ditch·EF_CH4_ditch, both in kg CH₄/ha·a. DOC is an **off-site** CO₂ term that Eq. 2.2 adds to
+  the drained CO₂ total; it is converted from C to CO₂ like the on-site term.
+- **V3 — closed.** Tier 1 for rewetted soils has **no ditch term**: *"former ditches are included as
+  a part of rewetted sites and not treated separately"* (Ch. 3, p. 3.5). Rewetted CH₄ is given as
+  CH₄-C (Eq. 3.8) and converted × 16/12. Table 3.1 flags the rewetted CO₂ factor as not
+  significantly different from zero, which its interval (−0.71 to +1.71) already shows.
+- **V4 — still open.** No LBGR document on how the carbon stock was computed (depth, bulk density,
+  carbon content) has been found. The nearest paper (Fell et al. 2015, *Telma* 45) covers the 2013
+  survey, not the stock layer. The stock therefore stays at `medium` confidence at most, and the
+  method page says the depth basis is not documented.
 
 **Confidence.** `peat_carbon_stock`: `medium` (a modelled 2021 potential, not a measurement).
 `peat_ghg_balance`: `low` everywhere — a Tier 1 default applied to a cell, with land use from
 2018 and drainage state unknown.
 
-**Proposals in this subsection, reviewable:** which LBGR classes count as peat; CLC 211 → cropland
-and 231 → grassland; the default DOC factor; combining 95 % intervals by adding their bounds (which
-overstates the spread, and is chosen because understating it is the worse error for a public
-screen); scaling both metrics by peat share so a cell's value is per hectare of cell.
+**Proposals in this subsection, confirmed by the owner on 2026-09-24:** which LBGR classes count as
+peat; CLC 211 → cropland and 231 → grassland; the default DOC factor; combining 95 % intervals by
+adding their bounds (which overstates the spread, and is chosen because understating it is the
+worse error for a public screen); scaling both metrics by peat share so a cell's value is per
+hectare of cell. Two implementation details follow from the data rather than from a choice:
+LBGR publishes the stock in whole kg/m², so *"< 0,5"* is read as 0.25; and every peat class is
+treated as **nutrient-rich** (*Niedermoor*) for the IPCC rows, which is an assumption, not a
+per-polygon reading.
+
+**What the first run on the Uckermark shows** (117 191 cells): 27 805 cells contain peat,
+6 764 contain *Moor-/Anmoorgley*. 4 878 cells carry a small carbon stock (about 19 t C/ha on
+average) on soil the map classes as mineral. There the stock is shown and the balance is
+*trifft nicht zu*, because the balance only applies to a peat body.
 
 ### 4.2 Soil and water — `water-arcegmo-v1`
 
@@ -209,7 +225,7 @@ that (`docs/data/sources.md` §2.10).
 |---|---|
 | `status_quo` | The model's 1991–2020 means for today's land use |
 | `preserve` | **The same values.** Leaving the land as it is does not change its water balance, and the screen says so rather than inventing a difference |
-| `restore` (D7) | **Approximation**, only where §4.1 finds peat: the area-weighted mean of *Elementarflächen* in the pilot region whose land-use class is a wet peatland, on the same hydrotope class (`HYD_NAME`). Range: the interquartile range of those areas. Everywhere else, `not_modelled` |
+| `restore` (D7) | **Approximation**, only where §4.1 finds peat under CLC 211 or 231: the **median** of the *Elementarflächen* in the pilot region whose land-use class is `1110` *feuchte Moore*, matched on the cell's dominant hydrotope class (`HYD_NAME`) when that class has at least 30 such areas, otherwise on all of them; mixed with today's value by peat share. Range: the lower to upper quartile, mixed the same way. Everywhere else, `not_modelled` |
 | `develop_*` | `not_modelled` |
 
 The restore value is **not a model run**. It answers "what does a wet peatland on similar ground
@@ -221,12 +237,28 @@ general. On rewetted peat, more water held at the surface can mean *less* percol
 therefore shown **without gain/loss colouring**. This is this document's proposal, following
 `CLAUDE.md` §4.5.
 
-**Verification still owed:**
+**Verification (2026-09-24).**
 
-- **V5.** Which `LANDNUTZ` codes mean a wet peatland. `1110` *feuchte Moore* is the candidate;
-  `1310` *Moor* and `1112` *Feuchtgrünland* need Tab. 2 of the documentation, read in full.
-- **V6.** A minimum number of reference areas per hydrotope class before the approximation is
-  shown. The proposal is 30, falling back to the pilot-region mean with confidence stated as such.
+- **V5 — closed.** `doku_efl20_pscn.pdf` Tab. 2 lists `1110` *feuchte Moore* as the only wet
+  peatland class; `1310` *Moor* is listed next to *Heide* without a statement on its water regime,
+  and `1112` *Feuchtgrünland* is grassland. Only `1110` is used.
+- **V6 — confirmed as proposed:** at least 30 reference areas per hydrotope class.
+- **Median, not mean.** A mean can lie outside the quartiles, and ADR-0008 requires the range to
+  contain the value.
+
+**What the first run shows, and why this approximation needs a critical look.** The Uckermark has
+only **58** *feuchte Moore* areas. 44 of them are on the hydrotope class `AF` *grundwasserfern*,
+and only 9 on `AN` *grundwassernah*. So cells on `AF` are matched to their own class, and every
+other cell uses the regional set. The reference median percolation is **about 145 mm/a**, which is
+more than twice the average over all cells (about 68 mm/a). In this approximation, rewetting would
+therefore **raise** percolation. That may be an artefact of a small, groundwater-far reference set
+rather than what rewetting a drained fen does. The value carries `low` confidence and the label
+*Näherung*, as decided (D7). Whether it should be shown at all is listed as an open question for
+the owner, not settled here.
+
+Negative percolation occurs in the model (down to about −255 mm/a), mainly on open water and on
+forest and wet land close to groundwater. The documentation does not explain it; it reads as a net
+upward water flux, and the value is passed through unchanged.
 
 ### 4.3 Nature capital — categories, no score (D5)
 

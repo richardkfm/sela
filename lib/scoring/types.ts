@@ -50,7 +50,12 @@ export type Direction = "higher_better" | "lower_better" | "non_monotonic";
 
 export type Confidence = "high" | "medium" | "low";
 
-export type OutcomeStatus = "modelled" | "not_modelled";
+/**
+ * `not_modelled`: the method does not cover this unit (yet). `not_applicable`:
+ * the method covers it and finds nothing to measure — e.g. no peat soil for a
+ * peat-emission metric (ADR-0008). Neither is ever rendered as zero.
+ */
+export type OutcomeStatus = "modelled" | "not_modelled" | "not_applicable";
 
 export type SuitabilityVerdictLabel = "suitable" | "unsuitable" | "excluded";
 
@@ -72,6 +77,8 @@ export interface CriterionDefinition {
 
 /** A `criterion_value` row: one measured value for one spatial unit. */
 export interface CriterionValue {
+  /** The row id, when read from the database — what `outcome_input` points to (ADR-0008). */
+  readonly id?: number;
   readonly criterionId: string;
   readonly spatialUnitId: string;
   readonly value: number;
@@ -92,12 +99,21 @@ export interface SuitabilityVerdict {
   readonly methodVersion: string;
 }
 
-/** An `outcome` row. status = 'not_modelled' is a first-class state (mvp.md §8.3). */
+/**
+ * An `outcome` row. status = 'not_modelled' is a first-class state (mvp.md §8.3).
+ * `metric` is one measure within the dimension, with one unit in every
+ * scenario; rows written before ADR-0008 carry `metric = dimension`.
+ * `valueLow`/`valueHigh`, when set, are the range the interface shows instead
+ * of `value` alone.
+ */
 export interface OutcomeRow {
   readonly spatialUnitId: string;
   readonly scenario: Scenario;
   readonly dimension: OutcomeDimension;
+  readonly metric: string;
   readonly value: number | null;
+  readonly valueLow: number | null;
+  readonly valueHigh: number | null;
   readonly unit: string | null;
   readonly confidence: Confidence | null;
   readonly status: OutcomeStatus;
@@ -114,6 +130,7 @@ export interface OutcomeDelta {
   readonly spatialUnitId: string;
   readonly scenario: Scenario;
   readonly dimension: OutcomeDimension;
+  readonly metric: string;
   readonly baselineValue: number;
   readonly scenarioValue: number;
   readonly delta: number;

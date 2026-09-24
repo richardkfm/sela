@@ -1,6 +1,6 @@
 # Data source inventory
 
-**Version band:** `0.3.x` · **Status:** BKG, DWD and LfU Brandenburg **Confirmed, fetched and ingested** for the Uckermark; LBGR *Moorbodenkarte* and LfU ArcEGMO water balance **Confirmed, not yet fetched** (2026-09-24); BfN and OSM still gated — see §1 · **Last updated:** 2026-09-24
+**Version band:** `0.3.x` · **Status:** BKG, DWD and LfU Brandenburg **Confirmed, fetched and ingested** for the Uckermark; LBGR *Moorbodenkarte* and LfU ArcEGMO water balance **Confirmed, fetched and ingested** (2026-09-24); BfN and OSM still gated — see §1 · **Last updated:** 2026-09-24
 
 This is the gate `docs/architecture/roadmap-to-first-deployment.md` §2.2 and §3.1 requires before
 any dataset enters ingestion: `CLAUDE.md` §5 forbids asserting a licence that has not been
@@ -24,8 +24,8 @@ read at the source cited. Where that has not happened, the row says so.
 | BKG basemap.de 3D Gelände (DGM5 terrain-RGB) | **basemap.de 3D-Beta Dienste** — *not* CC BY 4.0 | **Display only**, through the service, "zu Testzwecken"; no storage, no derived data | **In use, display only** — terrain in the 3D parcel preview (ADR-0006). **Blocks a public `1.0`** until the beta terms are replaced (U10, §2.6) |
 | BKG DGM200 | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-23 — source of `pv_slope` (§2.7). Still not used as preview terrain (§2.6) |
 | LfU Brandenburg Schutzgebiete (WFS-LFU-SCHUTZG) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-23 — source of both protection exclusions for the Uckermark (§2.8). *Nicht rechtsverbindlich* |
-| LBGR Brandenburg *Moorbodenkarte* (WFS-MBK) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed, not yet fetched** 2026-09-24 — peat soils and carbon stock for the climate outcome (§2.9) |
-| LfU Brandenburg *Wasserhaushalt* 1991–2020 (ArcEGMO) | `dl-de/by-2-0` | **Yes**, with attribution, source and data date | **Confirmed, not yet fetched** 2026-09-24 — water balance for the soil-and-water outcome (§2.10). *Keine Rückschlüsse auf liegenschaftsrechtliche Belange* |
+| LBGR Brandenburg *Moorbodenkarte* (WFS-MBK) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-24 — peat soils and carbon stock for the climate outcome (§2.9) |
+| LfU Brandenburg *Wasserhaushalt* 1991–2020 (ArcEGMO) | `dl-de/by-2-0` | **Yes**, with attribution, source and data date | **Confirmed and ingested** 2026-09-24 — water balance for the soil-and-water outcome (§2.10). *Keine Rückschlüsse auf liegenschaftsrechtliche Belange* |
 
 **The machine gate stands open for seven rows and closed for two.** `ingest/sources.manifest.json`
 — which `ingest/01_fetch.sh` actually reads before touching a network — reads `confirmed` for
@@ -357,7 +357,7 @@ It is the route to other *Länder*, not a second source for the Uckermark.
 |---|---|
 | Publisher | Landesamt für Umwelt Brandenburg (LfU) |
 | Use in sela | `percolation`, `root_zone_soil_moisture` and the restore approximation → `water-arcegmo-v1` (`docs/domain/scoring-criteria.md` §4.2) |
-| Artefact | `https://data.geobasis-bb.de/geofachdaten/Wasser/Wasserhaushalt/arcegmo_wh_91-20.zip` — HEAD read 2026-09-24: 355 883 698 bytes, `Last-Modified: Thu, 24 Jul 2025 11:37:19 GMT` |
+| Artefact | `https://data.geobasis-bb.de/geofachdaten/Wasser/Wasserhaushalt/arcegmo_wh_91-20.zip` — **fetched 2026-09-24**, 355 883 698 bytes, `Last-Modified: Thu, 24 Jul 2025 11:37:19 GMT` (pinned), sha256 `1dd62a41c915281e673d04a8fd4ad186194b716dfd760e4ad5a80080c930ed37` — the same hash from two independent downloads |
 | Metadata | `https://geoportal.brandenburg.de/gs-json/xml?fileid=9CF2E255-2038-439A-9501-870C4D31A337` — *"Einzugsgebietsmodell des Landes Brandenburg auf der Grundlage von ArcEGMO"* |
 | Content | Shapefile `wh_efl20_pscn`, **1 157 871** *Elementarflächen* covering the state, model ArcEGMO-PSCN (VEGEN), EPSG:25833. Fields used: `GWN_91_20` (*"Mittlere Jahressumme der Versickerungsmenge für die Reihe 1991 - 2020"*, mm), `NFK_91_20` (*"Mittlere relative Bodenfeuchte in der Wurzelzone bis 150cm"*, %nFK), `LANDNUTZ` (land-use class, Tab. 2), `HYD_NAME` (hydrotope class, Tab. 3) |
 | Scale | *"Einsatzmaßstab: kleiner/gleich 1:10.000"* |
@@ -420,7 +420,7 @@ licence verified and then not attributed is worse than one never used.
 | BKG — **basemap.de 3D Gelände only** | **`© GeoBasis-DE/BKG <Jahr>`**, with a change notice when combined with other services | From `lizenz_basemapde_3D-Beta.pdf` §3 (read 2026-09-23). The preview always combines it with other services, so it always renders as `© GeoBasis-DE/BKG <Jahr> (Daten verändert)`. |
 | BKG — **DGM200 only** | **`© GeoBasis-DE / BKG <Jahr> dl-de/by-2-0 (Daten verändert)`** | From `dgm200.pdf` inside the archive (read 2026-09-23). A slope derived from the DEM is an alteration, so the change notice always applies; `lib/attribution.ts` appends it. |
 | LfU Brandenburg | **`© Landesamt für Umwelt Brandenburg dl-de/by-2-0 (Daten verändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The *Bereitsteller* wording is the service's own `AccessConstraints` (read 2026-09-23). A per-cell covered share is an alteration. |
-| LBGR Brandenburg | **`© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg (LBGR), dl-de/by-2-0 (Daten geändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The publisher's own example in the metadata record (read 2026-09-24), with the optional *(Daten geändert)* made mandatory: a peat share or an area-weighted stock per cell is an alteration. |
+| LBGR Brandenburg | **`© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg (LBGR) dl-de/by-2-0 (Daten verändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The publisher's own example in the metadata record (read 2026-09-24), with its optional change notice made mandatory: a peat share or an area-weighted stock per cell is an alteration. The example writes *(Daten geändert)*; sela renders its one standard wording, *(Daten verändert)* (`lib/attribution.ts`), which says the same. |
 | LfU Brandenburg — **ArcEGMO water balance** | **`Landesamt für Umwelt Brandenburg, Wasserhaushaltsgrößen 1991–2020 (ArcEGMO), Stand 10.03.2023, dl-de/by-2-0 (Daten verändert)`** | The documentation requires *"Erlaubnisvermerk sowie Quelle und Stand der Daten"* (§5), so the data date is part of the notice, not optional. |
 | DWD | `Quelle: Deutscher Wetterdienst` (text form; the DWD logo is an accepted alternative) | Per §7 DWD-Gesetz. To be placed **immediately at the DWD information used**. For substantial modification DWD expects at minimum to be named in a central source list or the Impressum, together with a change notice — DWD's own examples include *"Datenbasis: Deutscher Wetterdienst, Einzelwerte gemittelt"*, which is precisely what sampling a 1 km grid onto hex cells is. The dataset additionally carries its own required citation: `DWD Climate Data Center (CDC): Gridded annual sum of incoming shortwave radiation (global radiation) on the horizontal plain for Germany based on ground and satellite measurements, Version V003, <current year>.` |
 | OSM | `© OpenStreetMap contributors` with the data made clear to be available under the Open Database License — linking to `https://www.openstreetmap.org/copyright` satisfies the latter for a browsable map; printed works must carry the full URL | ADR-0003 already records this as a standing duty on **every screen and every export**. Distributing OSM in data form requires naming and linking the licence directly. |
@@ -710,6 +710,24 @@ what the public is told about real land.
 
 Entries record what was actually fetched and read, so a later session does not repeat a dead end or
 mistake an attempt for a confirmation.
+
+### 2026-09-24 (later), nature capital ingest
+
+- **LBGR *Moorbodenkarte*** — `app:bodentyp_2021` (40 475 features) and `app:kohlenstoff_2021`
+  (57 788) fetched for the Uckermark bbox. The GeoPackages' sha256 differs between two fetches of
+  the same features (the files carry write timestamps), so the feature count, not the hash, is what
+  a re-fetch can be checked against. The carbon stock is published as whole kg/m² (`Wert_gerundet`)
+  plus a class *"< 0,5"*.
+- **LfU ArcEGMO** — fetched and pinned (§2.10). The archive holds three documentation files; the
+  one for the *Elementarflächen* is `dok/doku_efl20_pscn.pdf` (Tab. 2 `LANDNUTZ`, Tab. 3
+  `HYD_NAME`, both read in full). 132 840 *Elementarflächen* touch the Uckermark's extent.
+- **Verification items V1–V5** (`docs/domain/scoring-criteria.md` §4): the AR5 GWPs (WG1 Ch. 8)
+  and the German inventory's use of them (NID 2025), the Wetlands Supplement's Eq. 2.6 and Ch. 3's
+  rule on ditches, and the ArcEGMO code tables, all read. V4, the depth basis of LBGR's carbon
+  stock, is **still unread**: `lbgr.brandenburg.de` and `geo.brandenburg.de` fail TLS through
+  this environment's proxy, and the nearest paper (Fell et al. 2015, *Telma* 45) does not
+  describe the stock layer.
+- **The pipeline ran end to end** with both sources (`ingest/run.sh`, then `pnpm db:materialize`).
 
 ### 2026-09-24, nature capital research (U2)
 
