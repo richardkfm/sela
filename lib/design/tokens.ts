@@ -120,4 +120,8 @@ export const surfaceTokens = {
   surface1: { light: "#ffffff", dark: "#1f1e1b" },
   textPrimary: { light: "#1f1e1b", dark: "#f2f1ee" },
   textSecondary: { light: "#54524c", dark: "#b8b6b0" },
+  // Light: the browser defaults, made explicit. Dark: chosen for ≥ 6.6:1 on
+  // ground and surface1 (design-language.md §10).
+  link: { light: "#0000ee", dark: "#8ab4f8" },
+  linkVisited: { light: "#551a8b", dark: "#c58af9" },
 } as const;

@@ -10,6 +10,9 @@
   --surface-1: #ffffff;
   --text-primary: #1f1e1b;
   --text-secondary: #54524c;
+  /* The browser's own link colours, made explicit so dark mode can replace them. */
+  --link: #0000ee;
+  --link-visited: #551a8b;
 
   --scenario-status-quo: #6f6e6a;
   --scenario-solar-pv: #eda100;
@@ -25,6 +28,9 @@
     --surface-1: #1f1e1b;
     --text-primary: #f2f1ee;
     --text-secondary: #b8b6b0;
+    /* ≥ 6.6:1 on --ground and --surface-1; the browser's blue is below 2:1 here. */
+    --link: #8ab4f8;
+    --link-visited: #c58af9;
 
     --scenario-status-quo: #8b8a85;
     --scenario-solar-pv: #c98500;
@@ -49,6 +55,19 @@ body {
   background: var(--ground);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/*
+ * Links (design-language.md §10). :where() keeps these at zero specificity, so
+ * any class that styles a link (.back-link, .btn, the map attribution) still
+ * wins — a plain `a:visited` would outrank those classes and recolour them.
+ * The underline stays: colour is not the only thing marking a link (WCAG 1.4.1).
+ */
+:where(a) {
+  color: var(--link);
+}
+:where(a:visited) {
+  color: var(--link-visited);
 }
 
 /* Tabular numerals wherever figures are compared — design-language.md §5. */
@@ -256,6 +275,17 @@ body {
   box-shadow: inset 3px 0 0 var(--text-primary);
 }
 
+/*
+ * The map is drawn light in both modes (app/api/tiles/style.json uses the
+ * light tokens), and so are MapLibre's white controls. Text on them keeps the
+ * light-mode ink — --text-primary turns near-white in dark mode and would sit
+ * at 1.1:1 on those white boxes. Deliberately not redefined for dark mode.
+ */
+:root {
+  --map-ink: #1f1e1b;
+  --map-ink-secondary: #54524c;
+}
+
 /* Maplibre's own controls, brought into the same register as the panels. */
 .map-stage .maplibregl-ctrl-group {
   border-radius: 6px;
@@ -263,8 +293,8 @@ body {
   box-shadow: var(--panel-shadow);
 }
 .map-stage .maplibregl-ctrl-scale {
-  border-color: var(--text-secondary);
-  color: var(--text-primary);
+  border-color: var(--map-ink-secondary);
+  color: var(--map-ink);
   background: rgba(255, 255, 255, 0.8);
   font-size: 0.7rem;
 }
@@ -662,6 +692,6 @@ input[type="range"].slider {
 
 /* Attribution is a legal duty (ADR-0005), so its links must be recognisable as links (WCAG 1.4.1). */
 .map-stage .maplibregl-ctrl-attrib a {
-  color: var(--text-primary);
+  color: var(--map-ink);
   text-decoration: underline;
 }
