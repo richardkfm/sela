@@ -13,17 +13,12 @@ import { formatCriterionValue } from "@/lib/scoring/format-value";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
 import { scenarioTokens, scenarioTokenCssVar, technologyToTokenKey } from "@/lib/design/tokens";
+import { TECHNOLOGY_LABEL_DE, appliesToLabel } from "@/lib/scoring/labels";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
-import { TECHNOLOGIES, type SuitabilityVerdict, type Technology } from "@/lib/scoring/types";
+import { TECHNOLOGIES, type SuitabilityVerdict } from "@/lib/scoring/types";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
-
-const TECHNOLOGY_LABEL_DE: Record<Technology, string> = {
-  pv: "Solar-PV",
-  agripv: "Agri-PV",
-  wind: "Wind",
-};
 
 const VERDICT_LABEL_DE: Record<SuitabilityVerdict["verdict"], string> = {
   suitable: "geeignet",
@@ -157,7 +152,7 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
                       <Link href={`/criterion/${value.criterionId}`}>{definition?.nameDe ?? value.criterionId}</Link>
                       <span style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
                         {definition?.isHardConstraint ? "Ausschlusskriterium · " : ""}gilt für{" "}
-                        {(definition?.appliesTo ?? []).map((t) => TECHNOLOGY_LABEL_DE[t as Technology] ?? t).join(", ")}
+                        {(definition?.appliesTo ?? []).map(appliesToLabel).join(", ")}
                       </span>
                     </th>
                     <td className="tabular-nums" style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>

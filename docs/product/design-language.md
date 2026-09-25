@@ -147,6 +147,10 @@ Design quality raises the duty of honesty: a polished chart makes people trust i
 - **Every criterion carries a confidence level**, and low confidence is visible at the point where the value influences a headline number — not only on the evidence screen.
 - **Defined vocabulary:** reduced fill opacity plus a hatched edge for low-confidence marks; an explicit marker glyph beside low-confidence values; ranges rather than point estimates where the data supports only a range.
 - **"Not yet modelled" is a real state** with its own neutral treatment. It is never rendered as zero, and never silently omitted from a comparison.
+- **"Does not apply" (*trifft nicht zu*) is a different state and must look different** (ADR-0008 §3). *Noch nicht modelliert* is a dashed outline badge — a gap in what sela knows. *Trifft nicht zu* is plain secondary text with its one-line reason beneath (e.g. *kein Moorboden in dieser Zelle*) — a statement about the land. Neither is ever zero.
+- **A range is shown as a range** ("28 bis 47 t CO₂-Äq./ha·a"), written with *bis* so negative bounds stay legible, and the central value follows it in smaller secondary text ("Mittel 37"). The central value is never shown alone.
+- **A change between ranged values is the change of their central values, and says so:** "Δ der Mittelwerte −26", beside both ranges. Subtracting the ranges end to end would double-count the uncertainty and is not shown (decided by the project owner, 2026-09-25).
+- **In tables, confidence is the glyph alone** (● hoch, ◐ mittel, ○ niedrig) beside each value, with the words available to screen readers and decoded in the table caption; elsewhere the glyph carries its words.
 - **No false precision.** Significant figures reflect the input's actual resolution. A value derived from 100 m raster data is not displayed to the square metre.
 
 ## 9. Accessibility floor

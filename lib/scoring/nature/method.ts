@@ -16,6 +16,17 @@ export interface CitedFactor {
   readonly citation: string;
 }
 
+/** How one metric of a method is named and read on screen. */
+export interface OutcomeMetricInfo {
+  readonly metric: string;
+  readonly labelDe: string;
+  readonly unit: string;
+  /** The one-line reason shown with *trifft nicht zu* (ADR-0008 §3), for metrics that can be not_applicable. */
+  readonly notApplicableDe?: string;
+  /** What this metric's range means (ADR-0008 §2), for metrics that carry one. */
+  readonly rangeDe?: string;
+}
+
 export interface OutcomeMethod {
   readonly methodVersion: string;
   readonly dimension: OutcomeDimension;
@@ -24,6 +35,8 @@ export interface OutcomeMethod {
   readonly citation: string;
   readonly descriptionDe: string;
   readonly parameters: Readonly<Record<string, unknown>>;
+  /** Every metric the method writes, in display order. */
+  readonly metrics: readonly OutcomeMetricInfo[];
 }
 
 /** A value and the range the method attaches to it (ADR-0008 §2). */

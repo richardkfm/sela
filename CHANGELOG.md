@@ -27,6 +27,34 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Nature capital, phase 3: the cited climate and water results reach the screens.** Asked for
+  by the project owner ("yes start it") and confirmed through the `CLAUDE.md` §3 gate on
+  2026-09-25 with the proposals as written: water under `restore` **not modelled**; a change
+  between ranged values shown as **"Δ der Mittelwerte"** beside both ranges; the energy chart
+  **hidden** where no energy is modelled; the note text for the comparison of real land; and the
+  measure names *Kohlenstoffvorrat im Moorboden*, *Treibhausgasbilanz des Moorbodens*,
+  *Versickerung*, *Bodenfeuchte im Wurzelraum*.
+  - **Scenario comparison** (`app/unit/[id]/compare`) reads the illustrative rows and every cited
+    method (`peat-climate-ipcc2013-v1`, `water-arcegmo-v2`); a cited method's rows replace the
+    illustrative placeholder of their dimension. One row per measure, grouped by dimension. Three
+    states: a value, ***Trifft nicht zu*** with the method's one-line reason (plain text), and
+    *Noch nicht modelliert* (the dashed badge). A ranged value shows its range ("28 bis 47
+    t CO₂-Äq./ha·a") with the central value below it. Every value carries the confidence glyph;
+    the caption decodes it. Rounding: whole units for t C/ha, mm/a and %nFK; two significant
+    figures for the Tier 1 balance.
+  - **"Woher kommen diese Zahlen?"** under the table: per cited measure, its method (linked to the
+    method page), what its range means, and the criterion values it was computed from
+    (`outcome_input`) with their confidence and *Quellenvermerk*.
+  - **Method page:** a section *Wie die Ergebnisse berechnet werden*, one entry per cited method
+    from its stored `outcome_method` row — description, citation, measures, what *trifft nicht
+    zu* and the range mean, and, folded, every setting and factor with its 95 % interval and
+    table and page.
+  - `lib/scoring/outcome-display.ts` (the rows, cells, rounding and delta text, pure and tested in
+    `outcome-display.test.ts`), `lib/scoring/labels.ts`, `components/NotApplicableBadge.tsx`, a
+    compact `ConfidenceMark`; `OutcomeMethod.metrics` names each measure and its reasons.
+  - Verified on the local Uckermark database: arable, grassland and no-peat cells render as
+    described; axe (WCAG 2 A/AA) passes on the comparison, parcel and method pages in light mode.
+
 - **Nature capital, phase 2: real `preserve` and `restore` numbers for the Uckermark, computed and
   traceable (data and computation only; the screens are the next change).** Scoped by the project
   owner on 2026-09-24: the §4 proposals confirmed as written, unverifiable inputs left
@@ -121,6 +149,16 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   this change.
 
 ### Changed
+
+- **BREAKING (scoring): water under `restore` is no longer modelled — `water-arcegmo-v2`
+  replaces `water-arcegmo-v1`.** Decided by the project owner on 2026-09-25. The v1
+  approximation rested on 58 *feuchte Moore* areas, mostly groundwater-far, and showed rewetting
+  raising percolation, which is likely an artefact of that reference set. `restore` now reads
+  *noch nicht modelliert* for both water measures; status quo and preserve are unchanged. The
+  ingest no longer samples the wet-peatland reference, and `seed_nature_criteria.sql` removes the
+  v1 outcomes and the six `water_wet_ref_*` criteria from databases ingested before.
+- Parcel detail, criterion and method pages name scenarios and technologies in German under
+  *gilt für* instead of printing ids such as `preserve`.
 
 - **`computeOutcomeDelta` no longer subtracts rows of different units** (ADR-0008 §1): it returns
   no delta. The illustrative fixture's climate rows are "t CO2e/a", "… avoided" and

@@ -12,7 +12,6 @@
 --                                   carbon stock is not documented (scoring-criteria.md §4.1, V4)
 --   water_percolation,     medium — model output (ArcEGMO), Einsatzmaßstab ≤ 1:10 000
 --   water_root_zone_moisture
---   water_wet_ref_*        low    — the restore approximation: a regional reference, not this cell (§4.2)
 
 \set ON_ERROR_STOP on
 
@@ -20,7 +19,6 @@ INSERT INTO criterion_value (spatial_unit_id, criterion_id, source_id, value, un
 SELECT rs.spatial_unit_id, rs.criterion_id, rs.source_id, rs.raw_value, rs.unit,
        CASE
          WHEN rs.criterion_id = 'pv_slope' THEN 'low'
-         WHEN rs.criterion_id LIKE 'water_wet_ref%' THEN 'low'
          WHEN rs.criterion_id = 'pv_land_cover' THEN CASE WHEN lc.share >= 0.5 THEN 'medium' ELSE 'low' END
          ELSE 'medium'
        END,

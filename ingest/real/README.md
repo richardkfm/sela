@@ -25,7 +25,7 @@ and their *Quellenvermerke*).
 
 After the ingest, `pnpm db:materialize -- --pilot-region=uckermark-12073` writes the illustrative
 verdicts and, by default for a real region, the **cited outcome methods** of `lib/scoring/nature/`
-(ADR-0008): every scenario × metric row under `peat-climate-ipcc2013-v1` and `water-arcegmo-v1`,
+(ADR-0008): every scenario × metric row under `peat-climate-ipcc2013-v1` and `water-arcegmo-v2`,
 each modelled number linked to its criterion values in `outcome_input`, and the methods with
 every factor in `outcome_method`.
 

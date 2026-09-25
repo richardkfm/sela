@@ -119,32 +119,33 @@ test("peat under a land cover without a Tier 1 row here (forest) is not modelled
   assert.equal(metric(out, "peat_ghg_balance").result, null);
 });
 
-test("water: preserve keeps today's values; restore mixes the wet reference by peat share", () => {
-  const values = [
-    cv("water_percolation", 60),
-    cv("water_root_zone_moisture", 70),
-    cv("peat_share", 0.25),
-    cv("pv_land_cover", 231),
-    cv("water_wet_ref_percolation", 140),
-    cv("water_wet_ref_percolation_p25", 100),
-    cv("water_wet_ref_percolation_p75", 170),
-    cv("water_wet_ref_moisture", 94),
-    cv("water_wet_ref_moisture_p25", 90),
-    cv("water_wet_ref_moisture_p75", 95),
-  ];
+test("water: preserve keeps today's values; restore is not modelled, not 'does not apply'", () => {
+  const values = [cv("water_percolation", 60), cv("water_root_zone_moisture", 70), cv("peat_share", 0.25), cv("pv_land_cover", 231)];
   const sq = waterOutcomes("status_quo", values);
   assert.deepEqual(waterOutcomes("preserve", values), sq);
-  const perc = waterOutcomes("restore", values).find((o) => o.metric === "percolation")!.result;
-  assert.ok(perc && typeof perc === "object");
-  close(perc.value, 0.25 * 140 + 0.75 * 60);
-  close(perc.low!, 0.25 * 100 + 0.75 * 60);
-  close(perc.high!, 0.25 * 170 + 0.75 * 60);
-  assert.equal(perc.confidence, "low");
+  const perc = sq.find((o) => o.metric === "percolation")!;
+  assert.deepEqual(perc.result, { value: 60, unit: "mm/a", confidence: "medium" });
+  for (const scenario of ["restore", "develop_pv", "develop_agripv", "develop_wind"] as Scenario[]) {
+    for (const o of waterOutcomes(scenario, values)) assert.equal(o.result, null);
+  }
 });
 
-test("water restore without peat is not modelled (other restoration options exist)", () => {
-  const out = waterOutcomes("restore", [cv("water_percolation", 60), cv("water_root_zone_moisture", 70), cv("peat_share", 0)]);
-  for (const o of out) assert.equal(o.result, null);
+test("water without a model value is not modelled", () => {
+  for (const o of waterOutcomes("status_quo", [cv("peat_share", 0)])) assert.equal(o.result, null);
+});
+
+test("every method names each metric it writes, and each not_applicable metric has a reason", () => {
+  for (const cited of CITED_OUTCOME_METHODS) {
+    const written = new Set(cited.compute("status_quo", []).map((o) => o.metric));
+    assert.deepEqual(new Set(cited.method.metrics.map((m) => m.metric)), written);
+  }
+  const values = [cv("peat_share", 0), cv("peat_organic_unassessed_share", 0)];
+  const peat = CITED_OUTCOME_METHODS.find((m) => m.method.methodVersion === "peat-climate-ipcc2013-v1")!;
+  for (const o of peat.compute("status_quo", values)) {
+    if (o.result === "not_applicable") {
+      assert.ok(peat.method.metrics.find((m) => m.metric === o.metric)?.notApplicableDe);
+    }
+  }
 });
 
 test("methodOutcomeRows writes every scenario × metric, with inputs for each modelled row", () => {

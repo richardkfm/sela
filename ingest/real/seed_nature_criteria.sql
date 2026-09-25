@@ -1,5 +1,5 @@
 -- Criterion definitions for the outcome methods of docs/domain/scoring-criteria.md §4
--- (peat-climate-ipcc2013-v1, water-arcegmo-v1), decided by the project owner on
+-- (peat-climate-ipcc2013-v1, water-arcegmo-v2), decided by the project owner on
 -- 2026-09-24.
 --
 -- These are INPUTS TO OUTCOMES, not suitability criteria. They carry no weight:
@@ -26,26 +26,19 @@ VALUES
    'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['status_quo', 'preserve', 'restore'], 'mm/a', 'nature-v1'),
   ('water_root_zone_moisture', 'Root-zone soil moisture to 150 cm, 1991–2020 mean (ArcEGMO)',
    'Bodenfeuchte in der Wurzelzone bis 150 cm, Mittel 1991–2020 (ArcEGMO)',
-   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['status_quo', 'preserve', 'restore'], '%nFK', 'nature-v1'),
-  ('water_wet_ref_percolation', 'Percolation of wet peatlands in the region, median (approximation)',
-   'Versickerung feuchter Moore in der Region, Median (Näherung)',
-   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['restore'], 'mm/a', 'nature-v1'),
-  ('water_wet_ref_percolation_p25', 'Percolation of wet peatlands in the region, lower quartile',
-   'Versickerung feuchter Moore in der Region, unteres Quartil',
-   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['restore'], 'mm/a', 'nature-v1'),
-  ('water_wet_ref_percolation_p75', 'Percolation of wet peatlands in the region, upper quartile',
-   'Versickerung feuchter Moore in der Region, oberes Quartil',
-   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['restore'], 'mm/a', 'nature-v1'),
-  ('water_wet_ref_moisture', 'Root-zone soil moisture of wet peatlands in the region, median (approximation)',
-   'Bodenfeuchte feuchter Moore in der Region, Median (Näherung)',
-   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['restore'], '%nFK', 'nature-v1'),
-  ('water_wet_ref_moisture_p25', 'Root-zone soil moisture of wet peatlands in the region, lower quartile',
-   'Bodenfeuchte feuchter Moore in der Region, unteres Quartil',
-   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['restore'], '%nFK', 'nature-v1'),
-  ('water_wet_ref_moisture_p75', 'Root-zone soil moisture of wet peatlands in the region, upper quartile',
-   'Bodenfeuchte feuchter Moore in der Region, oberes Quartil',
-   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['restore'], '%nFK', 'nature-v1')
+   'lfu-bb-wasserhaushalt', 'non_monotonic', 0, false, ARRAY['status_quo', 'preserve', 'restore'], '%nFK', 'nature-v1')
 ON CONFLICT (id) DO UPDATE SET
   name_en = EXCLUDED.name_en, name_de = EXCLUDED.name_de, source_id = EXCLUDED.source_id,
   direction = EXCLUDED.direction, weight = EXCLUDED.weight, is_hard_constraint = EXCLUDED.is_hard_constraint,
   applies_to = EXCLUDED.applies_to, unit = EXCLUDED.unit, method_version = EXCLUDED.method_version;
+
+-- Retired with water-arcegmo-v1 (2026-09-25): the restore approximation and the
+-- regional wet-peatland reference it read. The owner decided water under
+-- restore stays not modelled (scoring-criteria.md §4.2). Removed here so a
+-- database ingested under v1 does not keep showing the reference values as
+-- measurements of a cell; outcome_input links go with them (ON DELETE CASCADE).
+DELETE FROM outcome WHERE method_version = 'water-arcegmo-v1';
+DELETE FROM outcome_method WHERE method_version = 'water-arcegmo-v1';
+DELETE FROM criterion_value WHERE criterion_id LIKE 'water\_wet\_ref%';
+DELETE FROM staging.raw_sample WHERE criterion_id LIKE 'water\_wet\_ref%';
+DELETE FROM criterion_definition WHERE id LIKE 'water\_wet\_ref%';

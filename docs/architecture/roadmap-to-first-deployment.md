@@ -307,7 +307,7 @@ Open questions that stay open, and are not resolved by assumption:
 | # | Question | Status after Phase 3 |
 |---|---|---|
 | U1 | Spatial unit | Closed — ADR-0001 |
-| U2 | Nature-capital indicators | **Partly closed (2026-09-24) — methods decided, not yet shipped.** Climate (peat, IPCC 2013 Tier 1) and water (LfU ArcEGMO) for the Uckermark, habitat as categories; outcome provenance in ADR-0008. See `docs/domain/scoring-criteria.md` §4 |
+| U2 | Nature-capital indicators | **Partly closed — climate and water shown on the comparison screen (2026-09-25).** Climate (peat, IPCC 2013 Tier 1) and water (LfU ArcEGMO; `restore` not modelled) for the Uckermark; habitat as categories, not yet computed; outcome provenance in ADR-0008. See `docs/domain/scoring-criteria.md` §4 |
 | U3 | Grid-connection capacity in scope | Open |
 | U4 | Constraints as filters or penalties | Closed — ADR-0004 |
 | U5 | Anonymous vs. account-gated | Open |
