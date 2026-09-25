@@ -8,7 +8,21 @@ const GLYPH: Record<Confidence, string> = { high: "●", medium: "◐", low: "�
 const LABEL_DE: Record<Confidence, string> = { high: "hoch", medium: "mittel", low: "niedrig" };
 const OPACITY: Record<Confidence, number> = { high: 1, medium: 0.75, low: 0.5 };
 
-export function ConfidenceMark({ confidence }: { confidence: Confidence }) {
+/**
+ * `compact` is for table cells beside a value: the glyph alone, with the words
+ * kept for screen readers and as a tooltip. The table's caption decodes the glyphs.
+ */
+export function ConfidenceMark({ confidence, compact = false }: { confidence: Confidence; compact?: boolean }) {
+  if (compact) {
+    return (
+      <span style={{ color: "var(--text-secondary)" }} title={`Konfidenz: ${LABEL_DE[confidence]}`}>
+        <span aria-hidden style={{ opacity: OPACITY[confidence] }}>
+          {GLYPH[confidence]}
+        </span>
+        <span className="visually-hidden">Konfidenz: {LABEL_DE[confidence]}</span>
+      </span>
+    );
+  }
   return (
     <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }} title={`Konfidenz: ${LABEL_DE[confidence]}`}>
       {/* Only the glyph fades with confidence; the words stay at full contrast

@@ -5,7 +5,7 @@
 
 import { computeOutcomeDelta } from "@/lib/scoring/outcomes";
 import type { OutcomeMethod } from "@/lib/scoring/nature/method";
-import type { OutcomeDelta, OutcomeDimension, OutcomeRow, Scenario } from "@/lib/scoring/types";
+import type { Confidence, OutcomeDelta, OutcomeDimension, OutcomeRow, Scenario } from "@/lib/scoring/types";
 import { getPool, query } from "../client";
 
 interface OutcomeSqlRow {
@@ -42,37 +42,127 @@ export interface OutcomeComparisonRow {
   readonly dimension: OutcomeDimension;
   readonly scenario: Scenario;
   readonly outcome: OutcomeRow;
-  /** null when either this row or the status_quo baseline is not_modelled. */
+  /** The status_quo row of the same method, dimension and metric, if there is one. */
+  readonly baseline: OutcomeRow | null;
+  /** null when either this row or the status_quo baseline is not modelled or does not apply. */
   readonly delta: OutcomeDelta | null;
 }
 
 /**
- * Every scenario × dimension outcome for one unit, each paired with its
- * delta against status_quo — the data the scenario comparison screen
- * (roadmap §5.1, the centerpiece) renders directly.
+ * Every scenario × dimension × metric outcome for one unit under the given
+ * methods, each paired with its delta against status_quo of the same method —
+ * the data the scenario comparison screen (roadmap §5.1, the centerpiece)
+ * renders directly.
  */
 export async function listOutcomesForUnit(
   spatialUnitId: string,
-  methodVersion: string,
+  methodVersions: readonly string[],
 ): Promise<OutcomeComparisonRow[]> {
   const rows = await query<OutcomeSqlRow>(
     `SELECT spatial_unit_id, scenario, dimension, metric, value, value_low, value_high, unit, confidence, status,
             method_version
      FROM outcome
-     WHERE spatial_unit_id = $1 AND method_version = $2`,
-    [spatialUnitId, methodVersion],
+     WHERE spatial_unit_id = $1 AND method_version = ANY($2::text[])`,
+    [spatialUnitId, methodVersions],
   );
   const outcomes = rows.map(toOutcomeRow);
-  const baselineByMetric = new Map(
-    outcomes.filter((o) => o.scenario === "status_quo").map((o) => [`${o.dimension}/${o.metric}`, o]),
-  );
+  const key = (o: OutcomeRow) => `${o.methodVersion}/${o.dimension}/${o.metric}`;
+  const baselineByMetric = new Map(outcomes.filter((o) => o.scenario === "status_quo").map((o) => [key(o), o]));
 
   return outcomes.map((outcome) => {
-    const baseline = baselineByMetric.get(`${outcome.dimension}/${outcome.metric}`);
+    const baseline = baselineByMetric.get(key(outcome)) ?? null;
     const delta =
       outcome.scenario === "status_quo" || !baseline ? null : computeOutcomeDelta(outcome, baseline);
-    return { dimension: outcome.dimension, scenario: outcome.scenario, outcome, delta };
+    return { dimension: outcome.dimension, scenario: outcome.scenario, outcome, baseline, delta };
   });
+}
+
+/** A criterion value an outcome was computed from (ADR-0008 §4), for the "where does this come from" view. */
+export interface OutcomeInputRow {
+  readonly methodVersion: string;
+  readonly dimension: OutcomeDimension;
+  readonly metric: string;
+  readonly scenario: Scenario;
+  readonly criterionValueId: number;
+  readonly criterionId: string;
+  readonly value: number;
+  readonly unit: string | null;
+  readonly confidence: Confidence;
+  readonly sourceId: string;
+}
+
+/** Every outcome_input of one unit under the given methods, joined to its criterion value. */
+export async function listOutcomeInputsForUnit(
+  spatialUnitId: string,
+  methodVersions: readonly string[],
+): Promise<OutcomeInputRow[]> {
+  const rows = await query<{
+    method_version: string;
+    dimension: OutcomeDimension;
+    metric: string;
+    scenario: Scenario;
+    criterion_value_id: string;
+    criterion_id: string;
+    value: string;
+    unit: string | null;
+    confidence: Confidence;
+    source_id: string;
+  }>(
+    `SELECT o.method_version, o.dimension, o.metric, o.scenario, cv.id AS criterion_value_id, cv.criterion_id,
+            cv.value, cv.unit, cv.confidence, cv.source_id
+     FROM outcome o
+     JOIN outcome_input oi ON oi.outcome_id = o.id
+     JOIN criterion_value cv ON cv.id = oi.criterion_value_id
+     WHERE o.spatial_unit_id = $1 AND o.method_version = ANY($2::text[])
+     ORDER BY o.method_version, o.dimension, o.metric, cv.criterion_id`,
+    [spatialUnitId, methodVersions],
+  );
+  return rows.map((r) => ({
+    methodVersion: r.method_version,
+    dimension: r.dimension,
+    metric: r.metric,
+    scenario: r.scenario,
+    criterionValueId: Number(r.criterion_value_id),
+    criterionId: r.criterion_id,
+    value: Number(r.value),
+    unit: r.unit,
+    confidence: r.confidence,
+    sourceId: r.source_id,
+  }));
+}
+
+/** An `outcome_method` row as the method page prints it (ADR-0008 §4). */
+export interface OutcomeMethodRow {
+  readonly methodVersion: string;
+  readonly dimension: OutcomeDimension;
+  readonly nameDe: string;
+  readonly citation: string;
+  readonly descriptionDe: string;
+  readonly parameters: Readonly<Record<string, unknown>>;
+}
+
+/** The stored method rows for the given versions — what produced the numbers in this database. */
+export async function listOutcomeMethods(methodVersions: readonly string[]): Promise<OutcomeMethodRow[]> {
+  const rows = await query<{
+    method_version: string;
+    dimension: OutcomeDimension;
+    name_de: string;
+    citation: string;
+    description_de: string;
+    parameters: Record<string, unknown>;
+  }>(
+    `SELECT method_version, dimension, name_de, citation, description_de, parameters
+     FROM outcome_method WHERE method_version = ANY($1::text[])`,
+    [methodVersions],
+  );
+  return rows.map((r) => ({
+    methodVersion: r.method_version,
+    dimension: r.dimension,
+    nameDe: r.name_de,
+    citation: r.citation,
+    descriptionDe: r.description_de,
+    parameters: r.parameters,
+  }));
 }
 
 /**

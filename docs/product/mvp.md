@@ -174,6 +174,11 @@ Each stated as something demonstrable, not as a feeling.
 > suitability traced to real, cited values — but under **illustrative weights**, and its
 > *preserve* and *restore* outcomes are not modelled (U2), so the first criterion below is only
 > half met. See `docs/domain/scoring-criteria.md` §6.
+>
+> **Progress, 2026-09-25:** the comparison screen now shows cited *preserve* and *restore*
+> outcomes for climate (peat carbon stock and greenhouse-gas balance, both scenarios) and water
+> (percolation and root-zone moisture, *preserve* only), each traceable to its inputs and sources.
+> Energy, nature capital (habitat), land use and local benefit are still *noch nicht modelliert*.
 
 - A real parcel in a pilot *Landkreis* can be selected and compared across all four scenarios, with real data.
 - From any displayed number, a user can reach its criterion record with source, licence, weight, and confidence — flow F4 works everywhere, with no dead ends.

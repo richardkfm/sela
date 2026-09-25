@@ -114,7 +114,11 @@ and the one a reviewer would challenge.
   checker does **not** catch every renderer: the comparison page tests `status === "not_modelled"`
   and would print an empty value for `not_applicable`. It reads only the suitability method's
   version today, so the cited methods' rows do not reach it yet; the interface change that shows
-  them must handle all three states (noted at implementation, 2026-09-24).
+  them must handle all three states (noted at implementation, 2026-09-24). **Done 2026-09-25:**
+  the comparison screen reads every cited method through `lib/scoring/outcome-display.ts`, whose
+  tests cover all three states, and lists each measure's `outcome_input` rows with their sources.
+  The *trifft nicht zu* reason is stated per metric in the method's code (`OutcomeMethod.metrics`),
+  not stored per row.
 - Fixture and illustrative outcomes keep working: they get `metric = dimension` and no method row.
   Their method version (`0.2.1-dev`) is labelled illustrative as before.
 - **Not decided here:** how `develop_*` scenarios report climate on peat (a PV array on a drained

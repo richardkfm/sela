@@ -101,7 +101,7 @@ where they were choices between options:
 | D4 | Schema | Outcomes carry their inputs and method — ADR-0008 |
 | D5 | Habitat value | Categories only; no points scale until an expert reviews a crosswalk |
 | D6 | How climate is measured | **Two measures in every scenario**: soil carbon stock *and* annual greenhouse-gas balance |
-| D7 | Water under `restore` | An **approximation** from the same water-balance model, labelled as such |
+| D7 | Water under `restore` | ~~An approximation from the same water-balance model~~ — **revised 2026-09-25: not modelled** (§4.2, `water-arcegmo-v2`) |
 | D8 | Emission factors | **IPCC 2013 Wetlands Supplement, Tier 1**; the German inventory as a later cross-check |
 | D9 | Grassland on peat, drainage depth unknown | **Show the range** between shallow- and deep-drained |
 
@@ -205,7 +205,7 @@ per-polygon reading.
 average) on soil the map classes as mineral. There the stock is shown and the balance is
 *trifft nicht zu*, because the balance only applies to a peat body.
 
-### 4.2 Soil and water — `water-arcegmo-v1`
+### 4.2 Soil and water — `water-arcegmo-v2`
 
 **Source.** LfU Brandenburg, *Wasserhaushaltsgrößen auf Elementarflächenbasis, Reihe 1991–2020*
 (ArcEGMO-PSCN; `docs/data/sources.md` §2.10). Complete coverage of Brandenburg, 1 157 871
@@ -225,12 +225,10 @@ that (`docs/data/sources.md` §2.10).
 |---|---|
 | `status_quo` | The model's 1991–2020 means for today's land use |
 | `preserve` | **The same values.** Leaving the land as it is does not change its water balance, and the screen says so rather than inventing a difference |
-| `restore` (D7) | **Approximation**, only where §4.1 finds peat under CLC 211 or 231: the **median** of the *Elementarflächen* in the pilot region whose land-use class is `1110` *feuchte Moore*, matched on the cell's dominant hydrotope class (`HYD_NAME`) when that class has at least 30 such areas, otherwise on all of them; mixed with today's value by peat share. Range: the lower to upper quartile, mixed the same way. Everywhere else, `not_modelled` |
+| `restore` (D7, revised) | **`not_modelled`.** Rewetting changes the water balance, but the state model has no run for it, and the v1 approximation (below) was withdrawn |
 | `develop_*` | `not_modelled` |
 
-The restore value is **not a model run**. It answers "what does a wet peatland on similar ground
-in this region look like in the same model", and the screen labels it *Näherung*. Confidence:
-`medium` for status quo and preserve, `low` for the approximation.
+Confidence: `medium` for status quo and preserve.
 
 **Direction is not stated.** Neither more percolation nor more root-zone moisture is "better" in
 general. On rewetted peat, more water held at the surface can mean *less* percolation. Deltas are
@@ -246,15 +244,20 @@ therefore shown **without gain/loss colouring**. This is this document's proposa
 - **Median, not mean.** A mean can lie outside the quartiles, and ADR-0008 requires the range to
   contain the value.
 
-**What the first run shows, and why this approximation needs a critical look.** The Uckermark has
-only **58** *feuchte Moore* areas. 44 of them are on the hydrotope class `AF` *grundwasserfern*,
-and only 9 on `AN` *grundwassernah*. So cells on `AF` are matched to their own class, and every
-other cell uses the regional set. The reference median percolation is **about 145 mm/a**, which is
-more than twice the average over all cells (about 68 mm/a). In this approximation, rewetting would
-therefore **raise** percolation. That may be an artefact of a small, groundwater-far reference set
-rather than what rewetting a drained fen does. The value carries `low` confidence and the label
-*Näherung*, as decided (D7). Whether it should be shown at all is listed as an open question for
-the owner, not settled here.
+**Withdrawn: the v1 restore approximation (2026-09-25).** `water-arcegmo-v1` approximated
+`restore` wherever §4.1 found peat under CLC 211 or 231. It took the **median** of the
+*Elementarflächen* in the pilot region whose land-use class is `1110` *feuchte Moore*, matched on
+the cell's dominant hydrotope class (`HYD_NAME`) when that class had at least 30 such areas and on
+all of them otherwise, and mixed it with today's value by peat share. The range was the lower to
+upper quartile, mixed the same way. The first run showed why it could not carry a public number:
+the Uckermark has only **58** *feuchte Moore* areas, 44 of them on `AF` *grundwasserfern* and only
+9 on `AN` *grundwassernah*. Their median percolation, **about 145 mm/a**, is more than twice the
+average over all cells (about 68 mm/a), so rewetting would have *raised* percolation, which is
+more likely an artefact of a small, groundwater-far reference set than what rewetting a drained
+fen does. The project owner decided that water under `restore` stays **not modelled**
+(`water-arcegmo-v2`). V5 and V6 above record how the reference was checked and stay as the
+starting point if a better one is found: a state model run for rewetted conditions, or a larger,
+hydrologically matched reference set.
 
 Negative percolation occurs in the model (down to about −255 mm/a), mainly on open water and on
 forest and wet land close to groundwater. The documentation does not explain it; it reads as a net

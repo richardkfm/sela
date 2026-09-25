@@ -356,7 +356,7 @@ It is the route to other *Länder*, not a second source for the Uckermark.
 | | |
 |---|---|
 | Publisher | Landesamt für Umwelt Brandenburg (LfU) |
-| Use in sela | `percolation`, `root_zone_soil_moisture` and the restore approximation → `water-arcegmo-v1` (`docs/domain/scoring-criteria.md` §4.2) |
+| Use in sela | `percolation`, `root_zone_soil_moisture` for status quo and preserve → `water-arcegmo-v2` (`docs/domain/scoring-criteria.md` §4.2). The v1 restore approximation from `LANDNUTZ 1110` areas was withdrawn on 2026-09-25 |
 | Artefact | `https://data.geobasis-bb.de/geofachdaten/Wasser/Wasserhaushalt/arcegmo_wh_91-20.zip` — **fetched 2026-09-24**, 355 883 698 bytes, `Last-Modified: Thu, 24 Jul 2025 11:37:19 GMT` (pinned), sha256 `1dd62a41c915281e673d04a8fd4ad186194b716dfd760e4ad5a80080c930ed37` — the same hash from two independent downloads |
 | Metadata | `https://geoportal.brandenburg.de/gs-json/xml?fileid=9CF2E255-2038-439A-9501-870C4D31A337` — *"Einzugsgebietsmodell des Landes Brandenburg auf der Grundlage von ArcEGMO"* |
 | Content | Shapefile `wh_efl20_pscn`, **1 157 871** *Elementarflächen* covering the state, model ArcEGMO-PSCN (VEGEN), EPSG:25833. Fields used: `GWN_91_20` (*"Mittlere Jahressumme der Versickerungsmenge für die Reihe 1991 - 2020"*, mm), `NFK_91_20` (*"Mittlere relative Bodenfeuchte in der Wurzelzone bis 150cm"*, %nFK), `LANDNUTZ` (land-use class, Tab. 2), `HYD_NAME` (hydrotope class, Tab. 3) |

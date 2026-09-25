@@ -219,7 +219,7 @@ export const PEAT_CLIMATE_METHOD: OutcomeMethod = {
     "Zwei Größen in jedem Szenario: der Kohlenstoffvorrat des Moorbodens (t C/ha, über die ganze Zelle gemittelt) " +
     "und die jährliche Treibhausgasbilanz seines Moorbodenanteils (t CO₂-Äq./ha·a, positiv = Emission). " +
     "Ist-Zustand und Erhalt: Standardfaktoren für entwässerte Moore nach heutiger Nutzung — Schutz allein stoppt " +
-    "die Emissionen entwässerter Moore nicht. Wiederherstellung: Standardfaktoren für wiedervernässte, " +
+    "die Emissionen entwässerter Moore nicht. Renaturierung: Standardfaktoren für wiedervernässte, " +
     "nährstoffreiche Moore; der Übergang dorthin ist nicht modelliert. Tier-1-Standardwerte beschreiben keine " +
     "Messung an diesem Ort.",
   parameters: {
@@ -236,4 +236,23 @@ export const PEAT_CLIMATE_METHOD: OutcomeMethod = {
     rewetted: REWETTED,
     carbonStock: "LBGR kohlenstoff_2021, whole kg/m² × 10 = t C/ha; '< 0,5' read as 0.25; depth basis not documented (V4)",
   },
+  metrics: [
+    {
+      metric: PEAT_CARBON_STOCK,
+      labelDe: "Kohlenstoffvorrat im Moorboden",
+      unit: STOCK_UNIT,
+      notApplicableDe: "kein Moorboden in dieser Zelle",
+    },
+    {
+      metric: PEAT_GHG_BALANCE,
+      labelDe: "Treibhausgasbilanz des Moorbodens",
+      unit: BALANCE_UNIT,
+      notApplicableDe: "kein Moorboden in dieser Zelle",
+      rangeDe:
+        "Acker und Renaturierung: die 95-%-Intervalle der IPCC-Standardfaktoren, durch Addition ihrer Grenzen " +
+        "zusammengefasst (eher zu breit als zu schmal); der Mittelwert ist der IPCC-Zentralwert. Grünland: die " +
+        "Spanne zwischen flach und tief entwässert, weil der Entwässerungszustand unbekannt ist; der Mittelwert ist " +
+        "die Mitte dieser Spanne.",
+    },
+  ],
 };

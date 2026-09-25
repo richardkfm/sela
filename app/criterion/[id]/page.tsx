@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { IllustrativeBanner } from "@/components/IllustrativeBanner";
 import { getCriterionDefinition, getSource } from "@/lib/db/queries/criteria";
 import { SourceAttribution } from "@/components/SourceAttribution";
+import { appliesToLabel } from "@/lib/scoring/labels";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
         <dd style={{ margin: 0 }}>{criterion.isHardConstraint ? "Ja (ADR-0004)" : "Nein"}</dd>
 
         <dt style={{ color: "var(--text-secondary)" }}>Gilt für</dt>
-        <dd style={{ margin: 0 }}>{criterion.appliesTo.join(", ")}</dd>
+        <dd style={{ margin: 0 }}>{criterion.appliesTo.map(appliesToLabel).join(", ")}</dd>
 
         <dt style={{ color: "var(--text-secondary)" }}>Einheit</dt>
         <dd style={{ margin: 0 }}>{criterion.unit ?? "—"}</dd>
