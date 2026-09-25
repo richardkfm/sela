@@ -6,7 +6,11 @@
 -- pipeline-wide constant.
 --
 -- Invoke with:
---   psql "$DATABASE_URL" -v method_version='...' -f 06_write_criterion_values.sql
+--   psql "$DATABASE_URL" -v pilot_region='fixture-region' -v method_version='...' -f 06_write_criterion_values.sql
+--
+-- Only the given region's samples: staging.raw_sample is shared with the real
+-- pipeline, and without the filter a fixture run after a real ingest copied
+-- every real value a second time under the fixture's method_version.
 --
 -- Idempotent via the criterion_value unique constraint
 -- (spatial_unit_id, criterion_id, method_version).
@@ -14,6 +18,7 @@
 INSERT INTO criterion_value (spatial_unit_id, criterion_id, source_id, value, unit, confidence, method_version)
 SELECT rs.spatial_unit_id, rs.criterion_id, rs.source_id, rs.raw_value, rs.unit, 'medium', :'method_version'
 FROM staging.raw_sample rs
+JOIN spatial_unit su ON su.id = rs.spatial_unit_id AND su.pilot_region = :'pilot_region'
 ON CONFLICT (spatial_unit_id, criterion_id, method_version) DO UPDATE
   SET value = EXCLUDED.value,
       unit = EXCLUDED.unit,

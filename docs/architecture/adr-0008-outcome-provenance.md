@@ -1,6 +1,6 @@
 # ADR-0008 — Outcomes carry their provenance, their measure, and "does not apply"
 
-**Status:** Accepted · **Band:** `0.3.x` · **Date:** 2026-09-24 · **Amends:** the `outcome` table of
+**Status:** Accepted, amended at implementation (§4) · **Band:** `0.3.x` · **Date:** 2026-09-24 · **Amends:** the `outcome` table of
 `lib/db/migrations/0002_domain_schema.sql` (roadmap §4.1)
 
 ---
@@ -45,7 +45,11 @@ dimension), so nothing already stored changes meaning.
 The rule that keeps the comparison honest: **a metric has one unit, in every scenario.** Every
 scenario of a dimension reports the same set of metrics (`mvp.md` §5: "the same outcome
 dimensions"), and deltas are computed per metric. `computeOutcomeDelta` gains a guard: it refuses
-to subtract rows with different `metric` or `unit` rather than trusting callers.
+to subtract rows with different `metric` or `unit` rather than trusting callers — a different
+metric is a caller error and throws; a different unit yields no delta (`null`), which the
+screen shows as no delta. (At implementation this turned out to matter for the illustrative
+fixture, whose climate rows are "t CO2e/a", "… avoided" and "… sequestered": their difference
+had been shown as a number.)
 
 ### 2. A range — `outcome.value_low`, `outcome.value_high`
 
@@ -83,13 +87,21 @@ outcome_input (
 )
 ```
 
-`outcome.method_version` gains a foreign key to `outcome_method` for rows written from this
-migration on. Because `criterion_value.source_id` is already `NOT NULL`, every modelled outcome
-now reaches a source and a licence in two joins: outcome → input → criterion value → source.
+Because `criterion_value.source_id` is already `NOT NULL`, every modelled outcome now reaches a
+source and a licence in two joins: outcome → input → criterion value → source.
 
 **The enforced rule:** a `modelled` outcome under a registered method must have at least one
-`outcome_input` row. This is checked by the materialisation step and by a test, not by a
-database constraint (a deferred trigger for one rule is more machinery than it earns).
+`outcome_input` row. This is checked where the rows are written
+(`lib/db/queries/outcomes.ts` → `replaceOutcomesForPilotRegion`, which refuses the batch) and by
+a test, not by a database constraint (a deferred trigger for one rule is more machinery than it
+earns).
+
+**Amended at implementation (2026-09-24): no foreign key from `outcome.method_version`.** This
+ADR first gave `outcome.method_version` a foreign key to `outcome_method`. It cannot have one: the
+illustrative fixture outcomes share the table under `method_version = '0.2.1-dev'` and have no
+cited method to register, and a key that holds only "for rows written from this migration on" is
+not a key PostgreSQL can express. The materialiser writes the method row before its outcomes, in
+the same run.
 
 The coefficient table lives in `parameters`, not in code. It is the value the method page prints,
 and the one a reviewer would challenge.
@@ -98,10 +110,13 @@ and the one a reviewer would challenge.
 
 - The comparison screen and the export card group outcomes by dimension, then by metric. Two climate
   rows per scenario is the intended result, not clutter.
-- `lib/scoring/types.ts` gains `metric`, `valueLow`, `valueHigh` and the third status; the
-  `OutcomeStatus` union change is caught by the type checker in every renderer.
+- `lib/scoring/types.ts` gains `metric`, `valueLow`, `valueHigh` and the third status. The type
+  checker does **not** catch every renderer: the comparison page tests `status === "not_modelled"`
+  and would print an empty value for `not_applicable`. It reads only the suitability method's
+  version today, so the cited methods' rows do not reach it yet; the interface change that shows
+  them must handle all three states (noted at implementation, 2026-09-24).
 - Fixture and illustrative outcomes keep working: they get `metric = dimension` and no method row.
-  Their method version (`illustrative-*`) is labelled illustrative as before.
+  Their method version (`0.2.1-dev`) is labelled illustrative as before.
 - **Not decided here:** how `develop_*` scenarios report climate on peat (a PV array on a drained
   fen), which stays `not_modelled`. It is a scoring question for a later gate.
 

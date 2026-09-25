@@ -27,6 +27,38 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Nature capital, phase 2: real `preserve` and `restore` numbers for the Uckermark, computed and
+  traceable (data and computation only; the screens are the next change).** Scoped by the project
+  owner on 2026-09-24: the §4 proposals confirmed as written, unverifiable inputs left
+  *noch nicht modelliert*, and this change limited to data and computation.
+  - **Migration `0005_outcome_provenance.sql`** (ADR-0008): `outcome.metric`, `value_low` /
+    `value_high`, the `not_applicable` status, and the tables `outcome_method` and
+    `outcome_input`. ADR-0008 is amended where implementation contradicted it: no foreign key
+    from `outcome.method_version` (the illustrative rows have no method to point to).
+  - **`lib/scoring/nature/`** — `peat-climate-ipcc2013-v1` (carbon stock and annual balance,
+    IPCC 2013 Tier 1, AR5 GWP 28/265) and `water-arcegmo-v1` (percolation, root-zone moisture,
+    and the labelled restore approximation), pure functions with every factor cited to table and
+    page; the factors are written to `outcome_method` from the same code.
+  - **Ingest:** `15_moorkarte.sh`, `16_wasserhaushalt.sh`, `20b_sample_nature.sql`,
+    `seed_nature_criteria.sql`; `run.sh` fetches and runs them. Outcome inputs carry weight 0
+    and apply to scenarios, so the suitability engine and the method page's weighted table leave
+    them out.
+  - **`pnpm db:materialize`** writes the cited methods by default for real regions
+    (`--outcomes=methods`), streaming ~1.4 million rows per method with their `outcome_input`
+    links in one transaction each.
+  - Verification items V1–V3 and V5 closed at primary sources; **V4 (the depth basis of LBGR's
+    carbon stock) is still open**, so the stock stays at `medium` confidence.
+  - Tests: `lib/scoring/__tests__/nature.test.ts`, and new cases in `outcomes.test.ts`.
+  - **First run on the Uckermark** (117 191 cells, ingest ≈ 11 min, materialise ≈ 5 min):
+    peat balance modelled for 17 567 cells (peat under arable land or grassland), *trifft nicht
+    zu* for 87 267, *noch nicht modelliert* for 12 357 (peat under other land cover, or only
+    Moor-/Anmoorgley); carbon stock for 34 802 cells; water balance for every cell, the restore
+    approximation for the 17 567. No modelled outcome is without `outcome_input` rows.
+  - **Open for the owner:** the water restore approximation rests on only 58 *feuchte Moore*
+    areas, mostly on groundwater-far hydrotopes, and shows rewetting *raising* percolation
+    (median ≈ 145 mm/a against ≈ 68 mm/a on average). `docs/domain/scoring-criteria.md` §4.2
+    asks whether it should be shown at all.
+
 - **Nature capital, phase 1: the method is written down, not yet run (U2 partly closed).** Asked
   for by the project owner as the next step after the real Uckermark ingest, and scoped through the
   `CLAUDE.md` §3 gate on 2026-09-24 in two rounds of questions. Decided: **climate and water**
@@ -79,7 +111,25 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 - Unit tests for reading real values (`lib/scoring/__tests__/real-criteria.test.ts`); e2e tests
   for the tile route (`tests/e2e/tiles.spec.ts`).
 
+### Fixed
+
+- **`06_write_criterion_values.sql` wrote every region's samples** as the fixture's values.
+  `staging.raw_sample` is shared with the real pipeline, so a fixture run after a real ingest on
+  the same database copied all ~1.26 million real values a second time under `fixture-v0` with a
+  flat `medium` confidence, and the unit page listed each value twice. The step now takes
+  `pilot_region` and writes only that region's samples. Present since `0.2.1`; found while testing
+  this change.
+
 ### Changed
+
+- **`computeOutcomeDelta` no longer subtracts rows of different units** (ADR-0008 §1): it returns
+  no delta. The illustrative fixture's climate rows are "t CO2e/a", "… avoided" and
+  "… sequestered", so **the fixture's comparison screen no longer shows climate deltas**, which
+  had subtracted incomparable quantities. Rows of different metrics are refused as a caller error.
+- `listCriterionValuesForPilotRegion` takes an optional list of criterion ids; the materialiser
+  reads only what each step uses.
+- `format-value.ts` writes t C/ha, mm/a and %nFK in whole units (no false precision).
+- The suitability step reads only criteria that apply to a technology.
 
 - **The explorer lists the units in view, not the whole region** (117 191 units would not be a
   usable keyboard list), capped at 40; below z12 it asks the reader to zoom in, and a click on the

@@ -98,6 +98,37 @@ INSERT INTO source (
     '© Landesamt für Umwelt Brandenburg dl-de/by-2-0',
     'https://www.govdata.de/dl-de/by-2-0',
     true
+  ),
+  (
+    'lbgr-bb-moorbodenkarte',
+    'Moorbodenkarte Brandenburg (WFS-MBK): Bodentypen 2021, Kohlenstoffvorrat 2021',
+    'Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg (LBGR)',
+    'WFS 2.0.0, abgerufen 2026-09-24; Metadaten überarbeitet 2023-07-18; modellierter Zustand 2021 aus einem 10-m-Raster',
+    DATE '2026-09-24',
+    'dl-de/by-2-0',
+    true,
+    'https://inspire.brandenburg.de/services/moorkarte_wfs',
+    -- The service's own AccessConstraints: dl-de/by-2-0, "Als Bezeichnung des
+    -- Bereitstellers ist „© Landesamt für Bergbau, Geologie und Rohstoffe
+    -- Brandenburg" anzugeben"; the metadata record's example adds "(LBGR)".
+    '© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg (LBGR) dl-de/by-2-0',
+    'https://www.govdata.de/dl-de/by-2-0',
+    true
+  ),
+  (
+    'lfu-bb-wasserhaushalt',
+    'Wasserhaushaltsgrößen für das Land Brandenburg auf Elementarflächenbasis, Reihe 1991–2020 (ArcEGMO-PSCN)',
+    'Landesamt für Umwelt Brandenburg (LfU); Datenhaltung: LGB',
+    'wh_efl20_pscn, Stand der Daten 10.03.2023, Dokumentation 27.06.2025; Einsatzmaßstab ≤ 1:10 000',
+    DATE '2026-09-24',
+    'dl-de/by-2-0',
+    true,
+    'https://data.geobasis-bb.de/geofachdaten/Wasser/Wasserhaushalt/arcegmo_wh_91-20.zip',
+    -- The documentation (§5) asks for "Erlaubnisvermerk sowie Quelle und Stand
+    -- der Daten", so the data date is part of the notice.
+    'Landesamt für Umwelt Brandenburg, Wasserhaushaltsgrößen 1991–2020 (ArcEGMO), Stand 10.03.2023, dl-de/by-2-0',
+    'https://www.govdata.de/dl-de/by-2-0',
+    true
   )
 ON CONFLICT (id) DO UPDATE SET
   dataset                = EXCLUDED.dataset,

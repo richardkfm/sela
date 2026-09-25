@@ -7,12 +7,17 @@ import Link from "next/link";
 import { IllustrativeBanner } from "@/components/IllustrativeBanner";
 import { listCriterionDefinitions, listSources } from "@/lib/db/queries/criteria";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
+import { TECHNOLOGIES } from "@/lib/scoring/types";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
 
 export default async function MethodPage() {
-  const [definitions, sources] = await Promise.all([listCriterionDefinitions(), listSources()]);
+  const [allDefinitions, sources] = await Promise.all([listCriterionDefinitions(), listSources()]);
+  // Only the criteria the suitability engine weighs. Inputs to outcome methods
+  // (ADR-0008) carry no weight, and a "0" in this column would misstate them;
+  // they are presented with their methods instead.
+  const definitions = allDefinitions.filter((d) => d.appliesTo.some((t) => (TECHNOLOGIES as readonly string[]).includes(t)));
   const sourceById = new Map(sources.map((s) => [s.id, s]));
 
   return (

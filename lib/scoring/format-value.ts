@@ -19,6 +19,14 @@ export function formatCriterionValue(criterionId: string, value: number, unit: s
       return `${INTEGER.format(value)} kWh/m²·a`;
     case "°":
       return `${ONE_DECIMAL.format(value)}°`;
+    // Peat carbon (LBGR, whole kg/m² → t/ha) and the ArcEGMO water balance are
+    // model outputs; whole units are already more than they resolve.
+    case "t C/ha":
+      return `${INTEGER.format(value)} t C/ha`;
+    case "mm/a":
+      return `${INTEGER.format(value)} mm/a`;
+    case "%nFK":
+      return `${INTEGER.format(value)} % nFK`;
     default:
       return unit ? `${TWO_DECIMALS.format(value)} ${unit}` : TWO_DECIMALS.format(value);
   }

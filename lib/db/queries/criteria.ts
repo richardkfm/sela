@@ -80,6 +80,7 @@ export async function getCriterionDefinition(id: string): Promise<CriterionDefin
 }
 
 interface CriterionValueSqlRow {
+  id: string;
   criterion_id: string;
   spatial_unit_id: string;
   value: string;
@@ -91,6 +92,7 @@ interface CriterionValueSqlRow {
 
 function toCriterionValue(row: CriterionValueSqlRow): CriterionValue {
   return {
+    id: Number(row.id),
     criterionId: row.criterion_id,
     spatialUnitId: row.spatial_unit_id,
     value: Number(row.value),
@@ -103,7 +105,7 @@ function toCriterionValue(row: CriterionValueSqlRow): CriterionValue {
 
 export async function listCriterionValuesForUnit(spatialUnitId: string): Promise<CriterionValue[]> {
   const rows = await query<CriterionValueSqlRow>(
-    `SELECT criterion_id, spatial_unit_id, value, unit, confidence, source_id, method_version
+    `SELECT id, criterion_id, spatial_unit_id, value, unit, confidence, source_id, method_version
      FROM criterion_value
      WHERE spatial_unit_id = $1`,
     [spatialUnitId],
@@ -112,13 +114,20 @@ export async function listCriterionValuesForUnit(spatialUnitId: string): Promise
 }
 
 /** All criterion_value rows for a pilot region's units, for batch materialization. */
-export async function listCriterionValuesForPilotRegion(pilotRegion: string): Promise<CriterionValue[]> {
+/**
+ * Every criterion value of one pilot region, or only those of the given
+ * criteria — a real region has ~117 000 cells, so callers read what they use.
+ */
+export async function listCriterionValuesForPilotRegion(
+  pilotRegion: string,
+  criterionIds?: readonly string[],
+): Promise<CriterionValue[]> {
   const rows = await query<CriterionValueSqlRow>(
-    `SELECT cv.criterion_id, cv.spatial_unit_id, cv.value, cv.unit, cv.confidence, cv.source_id, cv.method_version
+    `SELECT cv.id, cv.criterion_id, cv.spatial_unit_id, cv.value, cv.unit, cv.confidence, cv.source_id, cv.method_version
      FROM criterion_value cv
      JOIN spatial_unit su ON su.id = cv.spatial_unit_id
-     WHERE su.pilot_region = $1`,
-    [pilotRegion],
+     WHERE su.pilot_region = $1 AND ($2::text[] IS NULL OR cv.criterion_id = ANY ($2::text[]))`,
+    [pilotRegion, criterionIds ?? null],
   );
   return rows.map(toCriterionValue);
 }

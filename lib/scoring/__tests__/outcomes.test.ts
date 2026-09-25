@@ -126,3 +126,51 @@ test("computeOutcomeDelta rejects mismatched dimension or spatial unit", () => {
   assert.throws(() => computeOutcomeDelta(wrongDimension, baseline), SelaScoringError);
   assert.throws(() => computeOutcomeDelta(wrongUnit, baseline), SelaScoringError);
 });
+
+test("computeOutcomeRow: not_applicable carries no value and is distinct from not_modelled (ADR-0008)", () => {
+  const row = computeOutcomeRow({
+    spatialUnitId: SPATIAL_UNIT,
+    scenario: "restore",
+    dimension: "climate",
+    metric: "peat_ghg_balance",
+    aggregated: "not_applicable",
+    methodVersion: METHOD_VERSION,
+  });
+  assert.equal(row.status, "not_applicable");
+  assert.equal(row.metric, "peat_ghg_balance");
+  assert.equal(row.value, null);
+  assert.equal(row.valueLow, null);
+});
+
+test("computeOutcomeRow keeps a range around its value and refuses one that does not contain it", () => {
+  const base = { spatialUnitId: SPATIAL_UNIT, scenario: "status_quo", dimension: "climate", methodVersion: METHOD_VERSION } as const;
+  const row = computeOutcomeRow({ ...base, aggregated: { value: 2, low: 1, high: 3, unit: "t", confidence: "low" } });
+  assert.equal(row.valueLow, 1);
+  assert.equal(row.valueHigh, 3);
+  assert.equal(row.metric, "climate");
+  assert.throws(
+    () => computeOutcomeRow({ ...base, aggregated: { value: 4, low: 1, high: 3, unit: "t", confidence: "low" } }),
+    SelaScoringError,
+  );
+  assert.throws(
+    () => computeOutcomeRow({ ...base, aggregated: { value: 2, low: 1, unit: "t", confidence: "low" } }),
+    SelaScoringError,
+  );
+});
+
+test("computeOutcomeDelta refuses different metrics, gives no delta across units or for not_applicable", () => {
+  const make = (scenario: "status_quo" | "restore", metric: string, unit: string, value: number | "not_applicable") =>
+    computeOutcomeRow({
+      spatialUnitId: SPATIAL_UNIT,
+      scenario,
+      dimension: "climate",
+      metric,
+      aggregated: value === "not_applicable" ? value : { value, unit, confidence: "low" },
+      methodVersion: METHOD_VERSION,
+    });
+  const baseline = make("status_quo", "peat_ghg_balance", "t CO₂-Äq./ha·a", 30);
+  assert.throws(() => computeOutcomeDelta(make("restore", "peat_carbon_stock", "t C/ha", 400), baseline), SelaScoringError);
+  assert.equal(computeOutcomeDelta(make("restore", "peat_ghg_balance", "t C/ha", 10), baseline), null);
+  assert.equal(computeOutcomeDelta(make("restore", "peat_ghg_balance", "", "not_applicable"), baseline), null);
+  assert.equal(computeOutcomeDelta(make("restore", "peat_ghg_balance", "t CO₂-Äq./ha·a", 10), baseline)?.delta, -20);
+});
