@@ -141,6 +141,18 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Fixed
 
+- **Dark mode: links and map controls pass colour contrast.** Links had no colour of their own,
+  so the browser's blue showed through at under 2:1 on the dark ground. Decided by the project
+  owner on 2026-09-25: links stay blue and gain two tokens, `--link` and `--link-visited` —
+  the browser's own colours in light mode (unchanged), `#8ab4f8` and `#c58af9` in dark mode
+  (≥ 6.6:1 on ground and surface). They are set at zero specificity, so links a component
+  styles itself keep their look. The map's attribution links and scale bar sat on MapLibre's
+  white boxes in ink that turns near-white in dark mode (1.1:1); they now use `--map-ink`,
+  because the map is drawn light in both modes. `design-language.md` §10 records the tokens;
+  `lib/design/tokens.ts` mirrors them.
+- **The accessibility suite runs every screen in light and dark mode** (22 checks, was 11), and
+  checks the method page with its factor tables unfolded, after hydration.
+
 - **`06_write_criterion_values.sql` wrote every region's samples** as the fixture's values.
   `staging.raw_sample` is shared with the real pipeline, so a fixture run after a real ingest on
   the same database copied all ~1.26 million real values a second time under `fixture-v0` with a

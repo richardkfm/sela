@@ -171,6 +171,15 @@ Not a finishing task. sela is public-sector-facing in Germany, where BITV 2.0 (a
 
 Both modes are defined from the same **semantic tokens** (`--scenario-preserve`, `--surface-1`, `--text-secondary`), so a component is written once against roles and never against raw hex.
 
+**Links** are blue in both modes and keep their underline, so colour is never the only thing marking a link (WCAG 1.4.1). Light mode uses the browser's own colours, made explicit as tokens; dark mode replaces them, because the browser's blue falls below 2:1 on the dark ground (decided by the project owner, 2026-09-25):
+
+| Token | Light | Dark | Contrast in dark (ground · surface-1) |
+|---|---|---|---|
+| `--link` | `#0000ee` | `#8ab4f8` | 8.7:1 · 7.9:1 |
+| `--link-visited` | `#551a8b` | `#c58af9` | 7.3:1 · 6.7:1 |
+
+A component that styles its own links (a back link, a button, the map attribution) keeps doing so; these tokens apply only where it does not.
+
 ## 11. Open questions
 
 | # | Question | Blocks |
