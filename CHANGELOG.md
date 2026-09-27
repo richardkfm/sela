@@ -33,6 +33,15 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   path. Six ordered steps, each with its `CLAUDE.md` §3 gate named; user validation, public launch
   and wind/agri-PV scoring explicitly out of this milestone. Proposes nothing as decided.
 
+- **Decision memo for the four placeholder scoring rules** (`docs/domain/decision-memo-scoring-rules.md`),
+  roadmap Step 1. Options, measured effect per option on the Uckermark, and a recommendation for
+  each: protection categories (NSG + NP exclude; FFH/SPA and LSG flagged, per BNatSchG §§ 23, 24,
+  26, 34 read at source), the cell-share line (keep ≥ 0.5, flag partial overlap), the land-cover
+  table (three tiers with written reasons), irradiation bounds (national p1–p99, never regional —
+  regional bounds would make 9 056 forest/settlement/water cells "suitable"). Adds a fifth
+  question: the limiting-criterion rule of flow F2. **Nothing decided; no scoring change.**
+  Evidence (queries, scripts, outputs) in `docs/domain/evidence/2026-09-27-scoring-rules/`.
+
 - **Nature capital, phase 3: the cited climate and water results reach the screens.** Asked for
   by the project owner ("yes start it") and confirmed through the `CLAUDE.md` §3 gate on
   2026-09-25 with the proposals as written: water under `restore` **not modelled**; a change

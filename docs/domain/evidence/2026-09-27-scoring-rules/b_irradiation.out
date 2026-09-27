@@ -1,0 +1,42 @@
+--- B. Uckermark cells: pv_irradiation_annual raw (2016-2025 mean at cell centre)
+   n    |  min   |   p5   |  p25   | median |  p75   |  p95   |  max   | distinct_values 
+--------+--------+--------+--------+--------+--------+--------+--------+-----------------
+ 117140 | 1100.4 | 1103.7 | 1114.4 | 1122.3 | 1127.9 | 1134.8 | 1137.0 |             367
+(1 row)
+
+--- cells without an irradiation value (fewer than 10 years at centre)
+ count 
+-------
+    51
+(1 row)
+
+--- criterion_value for pv_irradiation_annual (what scoring reads) matches raw?
+ count  | max 
+--------+-----
+ 117140 |   0
+(1 row)
+
+--- Germany-wide 2016-2025 per-pixel mean (scratch.de_mean, from awk over the ten .asc grids)
+   n    |  min   |   p1   |   p5   |  p25   | median |  p75   |  p95   |  p99   |  max   
+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------
+ 359586 | 1037.2 | 1050.5 | 1062.9 | 1101.6 | 1137.2 | 1187.8 | 1245.4 | 1257.1 | 1271.4
+(1 row)
+
+--- exact p1/p99/min/max (unrounded) for use as bounds
+  min   |   p1   |  p99   |  max   
+--------+--------+--------+--------
+ 1037.2 | 1050.5 | 1257.1 | 1271.4
+(1 row)
+
+--- percentile rank of Uckermark min/median/max within Germany distribution
+ pct_below_uck_min | pct_below_uck_median | pct_at_or_below_uck_max 
+-------------------+----------------------+-------------------------
+              23.9 |                 39.3 |                    49.9
+(1 row)
+
+--- current bounds 1000-1300 vs Germany mean: share of German pixels mapping to normalized score
+ min_norm | max_norm 
+----------+----------
+    0.124 |    0.905
+(1 row)
+

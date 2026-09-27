@@ -313,7 +313,8 @@ What is real and what is not:
 | `wind_protection_status` | wind | Same share | same | medium |
 
 **Choices awaiting the owner's confirmation**, each an illustrative placeholder rather than a
-decided rule:
+decided rule — options, measured effects and recommendations for each are in
+`docs/domain/decision-memo-scoring-rules.md` (2026-09-27):
 
 1. **Only NSG and Nationalpark exclude.** FFH and SPA areas (Natura 2000) are loaded but do not
    exclude: counting them excluded 53 % of the Landkreis, and Natura 2000 requires a

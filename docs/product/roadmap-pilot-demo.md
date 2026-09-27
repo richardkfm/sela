@@ -55,8 +55,10 @@ table, and the irradiation bounds. They come first because Step 2's weights are 
 the normalisation underneath them is still a placeholder.
 
 **Deliverable:** a decision memo with measured effects per option and a recommendation for each —
-`docs/domain/decision-memo-scoring-rules.md` (in preparation — the measurements it needs are
-being taken on a locally rebuilt Uckermark database). The decisions, once taken, are
+`docs/domain/decision-memo-scoring-rules.md` (written 2026-09-27, measured on a local rebuild of
+the Uckermark pipeline; awaiting the owner's decisions). It adds a fifth question — how flow F2
+names the limiting criterion — because the measurements show that, not the bounds, is what makes
+irradiation "limiting" almost everywhere. The decisions, once taken, are
 recorded in `scoring-criteria.md` §6 and implemented as a new `method_version`, never as an edit
 of `illustrative-real-v0`.
 
