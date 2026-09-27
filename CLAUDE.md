@@ -19,7 +19,7 @@ For any given parcel of land, sela must be able to answer four questions in plai
 
 The product is **explainable comparison**, not suitability scoring. A number without a decomposable reason is not a sela output.
 
-**Current state: pre-implementation.** The repository holds planning documents only. No stack has been chosen. See `docs/product/mvp.md` for scope and `docs/product/design-language.md` for the visual standard.
+**Current state: `0.3.x`, working prototype on real data.** A Next.js + PostGIS + MapLibre app (ADR-0002) serves the Landkreis Uckermark pilot with real, cited criterion values — but PV/wind scoring still runs on **illustrative** weights, and several outcome dimensions are not yet modelled. See `docs/product/mvp.md` for scope, `docs/product/roadmap-pilot-demo.md` for the current milestone, and `docs/product/design-language.md` for the visual standard.
 
 ---
 

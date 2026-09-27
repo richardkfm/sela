@@ -1,0 +1,307 @@
+{
+  "C1 1000-1300": {
+    "units": 117191,
+    "verdicts": {
+      "unsuitable": 26519,
+      "excluded": 18363,
+      "suitable": 72309
+    },
+    "limiting": {
+      "unsuitable:pv_land_cover": 26518,
+      "suitable:pv_irradiation_annual": 71483,
+      "suitable:pv_land_cover": 800,
+      "suitable:pv_slope": 26,
+      "unsuitable:pv_slope": 1
+    },
+    "excludedBy": {
+      "pv_protection_status": 18363
+    },
+    "skipped": 0,
+    "scoredCells": 98828,
+    "shortfallStats": {
+      "unsuitable:pv_land_cover": {
+        "n": 26518,
+        "min": 0.7,
+        "p50": 1,
+        "max": 1,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_irradiation_annual": {
+        "n": 71483,
+        "min": 0.5433,
+        "p50": 0.5877,
+        "max": 0.665,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_land_cover": {
+        "n": 800,
+        "min": 0.3,
+        "p50": 0.8,
+        "max": 0.9,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_slope": {
+        "n": 26,
+        "min": 0.0183,
+        "p50": 0.064,
+        "max": 0.6583,
+        "nBelow0_05": 10
+      },
+      "unsuitable:pv_slope": {
+        "n": 1,
+        "min": 0.6805,
+        "p50": 0.6805,
+        "max": 0.6805,
+        "nBelow0_05": 0
+      }
+    },
+    "scoreMin": 0.2402,
+    "scoreP50": 0.753,
+    "scoreMax": 0.9909,
+    "suitableWithLandCoverZero": 0
+  },
+  "C2 DE p1-p99 1050.5-1257.1": {
+    "units": 117191,
+    "verdicts": {
+      "unsuitable": 26818,
+      "excluded": 18363,
+      "suitable": 72010
+    },
+    "limiting": {
+      "unsuitable:pv_land_cover": 26800,
+      "suitable:pv_irradiation_annual": 71577,
+      "suitable:pv_land_cover": 410,
+      "suitable:pv_slope": 23,
+      "unsuitable:pv_irradiation_annual": 17,
+      "unsuitable:pv_slope": 1
+    },
+    "excludedBy": {
+      "pv_protection_status": 18363
+    },
+    "skipped": 0,
+    "scoredCells": 98828,
+    "shortfallStats": {
+      "unsuitable:pv_land_cover": {
+        "n": 26800,
+        "min": 0.7,
+        "p50": 1,
+        "max": 1,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_irradiation_annual": {
+        "n": 71577,
+        "min": 0.5813,
+        "p50": 0.6457,
+        "max": 0.758,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_land_cover": {
+        "n": 410,
+        "min": 0.3,
+        "p50": 0.7,
+        "max": 0.8,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_slope": {
+        "n": 23,
+        "min": 0.0183,
+        "p50": 0.0627,
+        "max": 0.6583,
+        "nBelow0_05": 10
+      },
+      "unsuitable:pv_irradiation_annual": {
+        "n": 17,
+        "min": 0.5857,
+        "p50": 0.7507,
+        "max": 0.7556,
+        "nBelow0_05": 0
+      },
+      "unsuitable:pv_slope": {
+        "n": 1,
+        "min": 0.6805,
+        "p50": 0.6805,
+        "max": 0.6805,
+        "nBelow0_05": 0
+      }
+    },
+    "scoreMin": 0.2249,
+    "scoreP50": 0.7319,
+    "scoreMax": 0.9909,
+    "suitableWithLandCoverZero": 0
+  },
+  "C3 DE min-max 1037.2-1271.4": {
+    "units": 117191,
+    "verdicts": {
+      "unsuitable": 26774,
+      "excluded": 18363,
+      "suitable": 72054
+    },
+    "limiting": {
+      "unsuitable:pv_land_cover": 26764,
+      "suitable:pv_irradiation_annual": 71560,
+      "suitable:pv_land_cover": 470,
+      "suitable:pv_slope": 24,
+      "unsuitable:pv_irradiation_annual": 9,
+      "unsuitable:pv_slope": 1
+    },
+    "excludedBy": {
+      "pv_protection_status": 18363
+    },
+    "skipped": 0,
+    "scoredCells": 98828,
+    "shortfallStats": {
+      "unsuitable:pv_land_cover": {
+        "n": 26764,
+        "min": 0.7,
+        "p50": 1,
+        "max": 1,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_irradiation_annual": {
+        "n": 71560,
+        "min": 0.5739,
+        "p50": 0.6307,
+        "max": 0.7297,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_land_cover": {
+        "n": 470,
+        "min": 0.3,
+        "p50": 0.7,
+        "max": 0.8,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_slope": {
+        "n": 24,
+        "min": 0.0183,
+        "p50": 0.0627,
+        "max": 0.6583,
+        "nBelow0_05": 10
+      },
+      "unsuitable:pv_irradiation_annual": {
+        "n": 9,
+        "min": 0.7178,
+        "p50": 0.7246,
+        "max": 0.7246,
+        "nBelow0_05": 0
+      },
+      "unsuitable:pv_slope": {
+        "n": 1,
+        "min": 0.6805,
+        "p50": 0.6805,
+        "max": 0.6805,
+        "nBelow0_05": 0
+      }
+    },
+    "scoreMin": 0.2284,
+    "scoreP50": 0.7377,
+    "scoreMax": 0.9909,
+    "suitableWithLandCoverZero": 0
+  },
+  "C4 irradiation removed": {
+    "units": 117191,
+    "verdicts": {
+      "unsuitable": 26068,
+      "excluded": 18363,
+      "suitable": 72760
+    },
+    "limiting": {
+      "unsuitable:pv_land_cover": 26068,
+      "suitable:pv_slope": 59570,
+      "suitable:pv_land_cover": 13190
+    },
+    "excludedBy": {
+      "pv_protection_status": 18363
+    },
+    "skipped": 0,
+    "scoredCells": 98828,
+    "shortfallStats": {
+      "unsuitable:pv_land_cover": {
+        "n": 26068,
+        "min": 0.7,
+        "p50": 1,
+        "max": 1,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_slope": {
+        "n": 59570,
+        "min": 0.0005,
+        "p50": 0.0777,
+        "max": 0.6805,
+        "nBelow0_05": 17194
+      },
+      "suitable:pv_land_cover": {
+        "n": 13190,
+        "min": 0.1,
+        "p50": 0.3,
+        "max": 0.9,
+        "nBelow0_05": 0
+      }
+    },
+    "scoreMin": 0.1407,
+    "scoreP50": 0.9246,
+    "scoreMax": 0.9997,
+    "suitableWithLandCoverZero": 0
+  },
+  "C5 Uckermark min-max 1100.4-1137.0": {
+    "units": 117191,
+    "verdicts": {
+      "unsuitable": 17253,
+      "excluded": 18363,
+      "suitable": 81575
+    },
+    "limiting": {
+      "unsuitable:pv_land_cover": 16994,
+      "suitable:pv_irradiation_annual": 58829,
+      "suitable:pv_land_cover": 15473,
+      "suitable:pv_slope": 7273,
+      "unsuitable:pv_irradiation_annual": 259
+    },
+    "excludedBy": {
+      "pv_protection_status": 18363
+    },
+    "skipped": 0,
+    "scoredCells": 98828,
+    "shortfallStats": {
+      "unsuitable:pv_land_cover": {
+        "n": 16994,
+        "min": 0.7,
+        "p50": 1,
+        "max": 1,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_irradiation_annual": {
+        "n": 58829,
+        "min": 0.0082,
+        "p50": 0.4235,
+        "max": 0.9973,
+        "nBelow0_05": 227
+      },
+      "suitable:pv_land_cover": {
+        "n": 15473,
+        "min": 0.1,
+        "p50": 1,
+        "max": 1,
+        "nBelow0_05": 0
+      },
+      "suitable:pv_slope": {
+        "n": 7273,
+        "min": 0.0056,
+        "p50": 0.1472,
+        "max": 0.6805,
+        "nBelow0_05": 406
+      },
+      "unsuitable:pv_irradiation_annual": {
+        "n": 259,
+        "min": 0.7869,
+        "p50": 0.8552,
+        "max": 0.9945,
+        "nBelow0_05": 0
+      }
+    },
+    "scoreMin": 0.22,
+    "scoreP50": 0.7913,
+    "scoreMax": 0.9967,
+    "suitableWithLandCoverZero": 9056
+  }
+}

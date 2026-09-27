@@ -27,6 +27,23 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Roadmap to a credible pilot demo** (`docs/product/roadmap-pilot-demo.md`). Milestone chosen by
+  the project owner on 2026-09-27: for ground-mounted PV in the Uckermark, every number on screen
+  backed by a confirmed method or visibly not modelled, no *ILLUSTRATIV* banner left on the PV
+  path. Six ordered steps, each with its `CLAUDE.md` §3 gate named; user validation, public launch
+  and wind/agri-PV scoring explicitly out of this milestone. Proposes nothing as decided.
+
+- **Decision memo for the four placeholder scoring rules** (`docs/domain/decision-memo-scoring-rules.md`),
+  roadmap Step 1. Options, measured effect per option on the Uckermark, and a recommendation for
+  each: protection categories (NSG + NP exclude; FFH/SPA and LSG flagged, per BNatSchG §§ 23, 24,
+  26, 34 read at source), the cell-share line (keep ≥ 0.5, flag partial overlap), the land-cover
+  table (three tiers with written reasons), irradiation bounds (national p1–p99, never regional —
+  regional bounds would make 9 056 forest/settlement/water cells "suitable"). Adds a fifth
+  question: the limiting-criterion rule of flow F2. **Decided the same day** by the project owner
+  through the §3 gate, each as recommended: 1c, 2d, 3b, 4b (recorded in `scoring-criteria.md` §6).
+  **Not yet implemented** — flag wording, the CLC tier assignment and Q5 come first.
+  Evidence (queries, scripts, outputs) in `docs/domain/evidence/2026-09-27-scoring-rules/`.
+
 - **Nature capital, phase 3: the cited climate and water results reach the screens.** Asked for
   by the project owner ("yes start it") and confirmed through the `CLAUDE.md` §3 gate on
   2026-09-25 with the proposals as written: water under `restore` **not modelled**; a change
@@ -162,6 +179,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Changed
 
+- `CLAUDE.md` §1: the "pre-implementation" status line replaced — the repository has held a
+  working prototype on real Uckermark data since `0.3.0`; the line now points at the current
+  milestone document.
+
 - **BREAKING (scoring): water under `restore` is no longer modelled — `water-arcegmo-v2`
   replaces `water-arcegmo-v1`.** Decided by the project owner on 2026-09-25. The v1
   approximation rested on 58 *feuchte Moore* areas, mostly groundwater-far, and showed rewetting
@@ -193,6 +214,9 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 - `.env.example`: `SELA_PILOT_REGION` replaces the unused `NEXT_PUBLIC_MAP_VIEW`.
 
 ### Open — awaiting the owner's confirmation (`docs/domain/scoring-criteria.md` §6)
+
+> **Decided 2026-09-27** — see `docs/domain/decision-memo-scoring-rules.md`; left standing below as
+> the record of what was open.
 
 - Only **Naturschutzgebiete and the Nationalpark** exclude; FFH and SPA would exclude 53 % of the
   Landkreis although Natura 2000 requires an assessment, not a ban.

@@ -312,8 +312,21 @@ What is real and what is not:
 | `pv_protection_status` | pv, agripv | Share of the cell inside a Naturschutzgebiet or the Nationalpark | **hard constraint**, violated at a share ≥ 0.5 | medium |
 | `wind_protection_status` | wind | Same share | same | medium |
 
-**Choices awaiting the owner's confirmation**, each an illustrative placeholder rather than a
-decided rule:
+**Decided 2026-09-27, not yet implemented.** The four choices below were placeholders; the
+project owner has now decided each through the `CLAUDE.md` §3 gate
+(`docs/domain/decision-memo-scoring-rules.md`, with measured effects):
+
+- **Protection:** NSG and Nationalpark exclude; FFH, SPA and LSG are shown as a named, cited
+  flag, not an exclusion (memo Q1c).
+- **Cell share:** a cell is excluded at a protected share ≥ 0.5; a smaller overlap is flagged
+  with its share (Q2d).
+- **Land cover:** three tiers — *vorgesehen* / *eingeschränkt* / *nicht vorgesehen* — each class
+  with a written reason; the class assignment is still to be proposed and confirmed (Q3b).
+- **Irradiation bounds:** the measured national p1–p99 of the DWD 2016–2025 mean,
+  1 050.5–1 257.1 kWh/m²·a; never regional bounds (Q4b).
+
+They take effect under a new `method_version` when implemented; until then the placeholders
+below remain what `illustrative-real-v0` runs. The placeholders as originally recorded:
 
 1. **Only NSG and Nationalpark exclude.** FFH and SPA areas (Natura 2000) are loaded but do not
    exclude: counting them excluded 53 % of the Landkreis, and Natura 2000 requires a

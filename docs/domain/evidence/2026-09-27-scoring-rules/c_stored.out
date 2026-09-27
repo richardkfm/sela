@@ -1,0 +1,42 @@
+--- C. stored suitability_verdict, technology pv, uckermark-12073
+ method_version |  verdict   | count |  pct  
+----------------+------------+-------+-------
+ 0.2.1-dev      | excluded   | 18363 | 15.67
+ 0.2.1-dev      | suitable   | 72309 | 61.70
+ 0.2.1-dev      | unsuitable | 26519 | 22.63
+(3 rows)
+
+--- limiting / excluded_by by verdict
+  verdict   |               crit               | count | pct_of_verdict 
+------------+----------------------------------+-------+----------------
+ excluded   | excluded_by:pv_protection_status | 18363 |         100.00
+ suitable   | pv_irradiation_annual            | 71483 |          98.86
+ suitable   | pv_land_cover                    |   800 |           1.11
+ suitable   | pv_slope                         |    26 |           0.04
+ unsuitable | pv_land_cover                    | 26518 |         100.00
+ unsuitable | pv_slope                         |     1 |           0.00
+(6 rows)
+
+--- limiting overall among scored (non-excluded) cells
+ limiting_criterion_id | count |  pct  
+-----------------------+-------+-------
+ pv_irradiation_annual | 71483 | 72.33
+ pv_land_cover         | 27318 | 27.64
+ pv_slope              |    27 |  0.03
+(3 rows)
+
+--- agripv / wind verdict counts for reference
+ technology |  verdict   | count 
+------------+------------+-------
+ agripv     | excluded   | 18363
+ agripv     | suitable   | 72309
+ agripv     | unsuitable | 26519
+ wind       | excluded   | 18363
+(4 rows)
+
+--- score distribution (pv, scored cells)
+  min  |  med  |  max  
+-------+-------+-------
+ 0.240 | 0.753 | 0.991
+(1 row)
+

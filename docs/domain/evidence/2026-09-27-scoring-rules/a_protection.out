@@ -1,0 +1,67 @@
+Timing is off.
+SET
+DROP TABLE
+SELECT 117191
+CREATE INDEX
+CREATE INDEX
+ANALYZE
+DROP TABLE
+SELECT 5626
+CREATE INDEX
+ANALYZE
+DROP TABLE
+SELECT 117191
+ALTER TABLE
+UPDATE 117191
+--- sanity: recomputed NSG+NP share vs pipeline raw_sample
+ cells  | max_abs_diff 
+--------+--------------
+ 117191 |            0
+(1 row)
+
+--- A1-A5 exclusion rules
+             rule              | cells | pct_cells |  km2   
+-------------------------------+-------+-----------+--------
+ 1 NSG+NP share>=0.5 (current) | 18363 |     15.67 |  477.1
+ 2 NSG+NP share>0              | 21887 |     18.68 |  568.6
+ 3 NSG+NP centroid inside      | 18391 |     15.69 |  477.8
+ 4 NSG+NP+FFH+SPA share>=0.5   | 62293 |     53.16 | 1618.4
+ 5 NSG+NP+FFH+SPA share>0      | 66985 |     57.16 | 1740.3
+(5 rows)
+
+--- boundary cells NSG+NP
+ 0<share<0.5 | 0.5<=share<1 | share=1 (within 1e-9) 
+-------------+--------------+-----------------------
+        3524 |         3264 |                 15099
+(1 row)
+
+--- same for NSG+NP+FFH+SPA
+ 0<share<0.5 | 0.5<=share<1 | share=1 
+-------------+--------------+---------
+        4692 |         6699 |   55594
+(1 row)
+
+--- centroid rule vs share>=0.5 (NSG+NP) cross-tab
+ centre_strict | share_ge_half | count 
+---------------+---------------+-------
+ f             | f             | 98658
+ f             | t             |   142
+ t             | f             |   170
+ t             | t             | 18221
+(4 rows)
+
+--- % of Landkreis area covered, union per category, clipped to the pilot boundary
+      grp       | km2_in_lk | pct_lk 
+----------------+-----------+--------
+ FFH+SPA        |    1631.9 |  52.94
+ NSG+NP         |     490.9 |  15.93
+ NSG+NP+FFH+SPA |    1634.1 |  53.01
+ any of 6       |    1938.1 |  62.88
+ br             |     598.6 |  19.42
+ ffh            |     675.2 |  21.91
+ lsg            |    1252.4 |  40.63
+ natp           |      99.8 |   3.24
+ nsg            |     490.9 |  15.93
+ spa            |    1478.5 |  47.97
+(10 rows)
+
