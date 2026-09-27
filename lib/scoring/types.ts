@@ -57,7 +57,12 @@ export type Confidence = "high" | "medium" | "low";
  */
 export type OutcomeStatus = "modelled" | "not_modelled" | "not_applicable";
 
-export type SuitabilityVerdictLabel = "suitable" | "unsuitable" | "excluded";
+/**
+ * `not_considered` ("nicht vorgesehen"): a category criterion placed the unit
+ * outside what the method scores — e.g. forest or water for ground-mounted PV
+ * (ADR-0009). Unlike `excluded`, it cites sela's own classification, not a statute.
+ */
+export type SuitabilityVerdictLabel = "suitable" | "unsuitable" | "excluded" | "not_considered";
 
 /**
  * A `criterion_definition` row. Real rows (with a confirmed weight) are
@@ -71,6 +76,12 @@ export interface CriterionDefinition {
   readonly direction: Direction;
   readonly weight: number;
   readonly isHardConstraint: boolean;
+  /**
+   * A category criterion sorts units into named classes and never enters the
+   * weighted score; it can make a unit `not_considered` (ADR-0009). Absent
+   * means false.
+   */
+  readonly isCategory?: boolean;
   readonly appliesTo: readonly string[];
   readonly methodVersion: string;
 }
@@ -94,7 +105,9 @@ export interface SuitabilityVerdict {
   readonly technology: Technology;
   readonly verdict: SuitabilityVerdictLabel;
   readonly score: number | null;
+  /** Null when excluded or not considered, and when no criterion falls clearly below the region's best (Q5). */
   readonly limitingCriterionId: string | null;
+  /** The criterion that decided an `excluded` or `not_considered` verdict. */
   readonly excludedByCriterionId: string | null;
   readonly methodVersion: string;
 }

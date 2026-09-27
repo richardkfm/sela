@@ -1,5 +1,5 @@
-// ILLUSTRATIVE, NOT REAL. Every real criterion weight, normalization bound,
-// and suitability threshold is deliberately left open in
+// ILLUSTRATIVE, NOT REAL. Every real criterion weight, the slope bounds,
+// and the suitability threshold are deliberately left open in
 // docs/domain/scoring-criteria.md, pending the CLAUDE.md §3 confirmation
 // gate — this module does not close that gate or narrow it. It exists so
 // Phase 3's screens and exports (roadmap §5) have something to render
@@ -7,11 +7,15 @@
 // stays open, per the architecture-first split confirmed with the project
 // owner for this phase (see CHANGELOG.md [0.3.0]).
 //
-// Every value this module produces is arbitrary by construction. Nothing
+// The rules the project owner has decided (roadmap Step 1: irradiation bounds,
+// the exclusion share, land-cover tiers, the limiting-criterion rule) live in
+// lib/scoring/pv-rules.ts; this module only applies them next to the
+// placeholders. Every value this module adds is arbitrary by construction. Nothing
 // here may be read as, or silently become, a real scoring decision — any
 // screen or export that surfaces a number derived from this module MUST
 // show ILLUSTRATIVE_MARKER alongside it.
 
+import { IRRADIATION_BOUNDS, PROTECTION_EXCLUSION_SHARE, landCoverTier } from "./pv-rules";
 import type { Normalize } from "./suitability";
 import type { AggregatedOutcome } from "./outcomes";
 import type { CriterionValue, OutcomeDimension, Scenario } from "./types";
@@ -32,52 +36,31 @@ export const ILLUSTRATIVE_EQUAL_WEIGHT = 1.0;
 export const ILLUSTRATIVE_SUITABILITY_THRESHOLD = 0.5;
 
 /**
- * Arbitrary 0..1 scaling bounds per fixture criterion id. Every fixture
- * criterion is seeded to already report roughly in this range (see
- * ingest/05_sample.sql), so this is a clamp-and-orient step, not a
- * meaningful scientific scale.
+ * 0..1 scaling bounds per criterion id. The fixture criteria are seeded to
+ * report roughly in this range already (see ingest/05_sample.sql), so for
+ * them this is a clamp-and-orient step, not a meaningful scientific scale.
  */
-const ILLUSTRATIVE_BOUNDS: Record<string, { min: number; max: number }> = {
+const BOUNDS: Record<string, { min: number; max: number }> = {
   fixture_land_cover_coverage: { min: 0, max: 1 },
   fixture_agripv_suitability: { min: 0, max: 1 },
   fixture_wind_resource: { min: 0, max: 1 },
-  // Real criteria, illustrative scales (ingest/real/seed_real_criteria.sql).
-  // Irradiation: chosen only to span the values DWD's German grids hold — the
-  // 2020 grid's own header reports 1042–1319 kWh/m². Not a judgement of what
-  // irradiation is "enough".
-  pv_irradiation_annual: { min: 1000, max: 1300 },
-  // Slope: 0° best, 10° and steeper worst. Arbitrary.
+  // Decided (memo Q4b): the national p1–p99 of the DWD 2016–2025 mean.
+  pv_irradiation_annual: IRRADIATION_BOUNDS,
+  // Still a placeholder: 0° best, 10° and steeper worst. Arbitrary; no
+  // Uckermark cell reaches 10° (evidence.md §E). Step 2 of the roadmap.
   pv_slope: { min: 0, max: 10 },
-};
-
-/**
- * Illustrative score per CLC class for `pv_land_cover` (non_monotonic: a
- * class is not "more" or "less" of anything). Invented for the demo — arable
- * land high, previously disturbed land (extraction, dumps) high, settlement,
- * forest, wetland and water zero — and in no way a siting rule. Class codes
- * and names: lib/scoring/clc-classes.ts. An unlisted class scores 0.
- */
-export const ILLUSTRATIVE_LAND_COVER_SCORE: Readonly<Record<number, number>> = {
-  111: 0, 112: 0, 121: 0.6, 122: 0.2, 123: 0.3, 124: 0.3,
-  131: 0.9, 132: 0.9, 133: 0.6, 141: 0.1, 142: 0.2,
-  211: 1, 221: 0.3, 222: 0.3, 231: 0.7, 242: 0.7, 243: 0.5,
-  311: 0, 312: 0, 313: 0, 321: 0.3, 322: 0.1, 324: 0.1,
-  331: 0.2, 332: 0.1, 333: 0.3, 334: 0.2, 335: 0,
-  411: 0, 412: 0, 421: 0, 423: 0,
-  511: 0, 512: 0, 521: 0, 522: 0, 523: 0,
 };
 
 /**
  * Raw value at or above which a hard constraint counts as violated. The
  * fixture flag is 0/1; the real protection criteria are the *share* of a cell
  * inside a Naturschutzgebiet or the Nationalpark (ingest/real/20_sample.sql),
- * and "at least half the cell" is an arbitrary line, not a legal one — a
- * protected area's ordinance applies to its whole area, not by share.
+ * excluded from half the cell on (decided, memo Q2d; lib/scoring/pv-rules.ts).
  */
-const ILLUSTRATIVE_CONSTRAINT_THRESHOLD: Record<string, number> = {
+const CONSTRAINT_THRESHOLD: Record<string, number> = {
   fixture_protection_status: 1,
-  pv_protection_status: 0.5,
-  wind_protection_status: 0.5,
+  pv_protection_status: PROTECTION_EXCLUSION_SHARE,
+  wind_protection_status: PROTECTION_EXCLUSION_SHARE,
 };
 
 function clamp01(value: number): number {
@@ -87,17 +70,19 @@ function clamp01(value: number): number {
 /**
  * Caller-supplied `Normalize` for `computeSuitability` (lib/scoring/suitability.ts).
  * A hard constraint is violated once its raw value reaches its entry in
- * ILLUSTRATIVE_CONSTRAINT_THRESHOLD (default 1, the fixture's 0/1 flag).
+ * CONSTRAINT_THRESHOLD (default 1, the fixture's 0/1 flag). Land cover is a
+ * category (memo Q3b and its follow-up): its tier decides whether the cell is
+ * considered at all, and it never moves the score.
  */
 export const illustrativeNormalize: Normalize = (value, definition) => {
   if (definition.isHardConstraint) {
-    const threshold = ILLUSTRATIVE_CONSTRAINT_THRESHOLD[definition.id] ?? 1;
+    const threshold = CONSTRAINT_THRESHOLD[definition.id] ?? 1;
     return { normalizedScore: 0, violatesConstraint: value.value >= threshold };
   }
   if (definition.id === "pv_land_cover") {
-    return { normalizedScore: ILLUSTRATIVE_LAND_COVER_SCORE[Math.round(value.value)] ?? 0, violatesConstraint: false };
+    return { normalizedScore: 0, violatesConstraint: false, notConsidered: landCoverTier(value.value).tier === "nicht_vorgesehen" };
   }
-  const bounds = ILLUSTRATIVE_BOUNDS[definition.id] ?? { min: 0, max: 1 };
+  const bounds = BOUNDS[definition.id] ?? { min: 0, max: 1 };
   const span = bounds.max - bounds.min;
   const scaled = span === 0 ? 0 : clamp01((value.value - bounds.min) / span);
   const normalizedScore = definition.direction === "lower_better" ? 1 - scaled : scaled;

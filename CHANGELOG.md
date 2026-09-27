@@ -27,6 +27,40 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Roadmap Step 1 implemented: the decided scoring rules run on the Uckermark
+  (`illustrative-real-v1`, verdicts `0.3.1-dev`).** Asked for by the project owner ("do the next
+  phase"); the three inputs still open after the memo, and three that its measurements raised, were
+  decided through the `CLAUDE.md` §3 gate on 2026-09-27 (memo, *Follow-up decisions* F1–F6):
+  - **Land cover in three tiers, as a category, not a score** (`lib/scoring/pv-rules.ts`, one
+    written reason per CLC class): 211 arable, 131, 132 *vorgesehen*; 231 grassland and other used
+    or built land *eingeschränkt*; forest, water, settlement, wetland and semi-natural land *nicht
+    vorgesehen*.
+  - **A fourth verdict, *nicht vorgesehen*** (`not_considered`), with no score and its own map
+    class (stipple, between *ungeeignet* and *ausgeschlossen*) — kept apart from *ausgeschlossen*,
+    which cites a statute (ADR-0009, `design-language.md` §4.2a).
+  - **Irradiation on national p1–p99 bounds** (1 050.5–1 257.1 kWh/m²·a), shown with its national
+    quartile ("unteres Mittelfeld der Werte in Deutschland").
+  - **Limiting criterion only where one stands out** (Q5): at least 0.1 below the best value of
+    that criterion among the region's scored cells; otherwise the screen says none lies clearly
+    behind. Irradiation is now named in 12 189 cells instead of ~71 500.
+  - **Prüfhinweise**: FFH and SPA (*Verträglichkeitsprüfung erforderlich*, § 34 BNatSchG), LSG
+    (*Schutzgebietsverordnung prüfen*, § 26), and a Naturschutzgebiet or the Nationalpark on less
+    than half a cell (§ 23 / § 24), each named with *Gebietsnummer* and share, from 1 % of the cell,
+    always "nach den Übersichtsdaten des LfU" — on the parcel page, in the map panel and on the
+    method page (`lib/scoring/protection-flags.ts`, `design-language.md` §8).
+  - **Migration `0006_pv_rules_step1.sql`** (ADR-0009): the `not_considered` verdict, an optional
+    limiting criterion, `criterion_definition.is_category`, and `protection_overlap`, filled by the
+    new ingest step `ingest/real/22_protection_overlap.sql` (191 365 overlaps).
+  - The **method page** renders the decided rules and the full tier table from the module the
+    engine reads; the criterion page shows a category's weight as "keine"; the **scenario card**
+    cites every scored criterion when none is limiting.
+  - **Measured on the Uckermark:** 18 363 *ausgeschlossen*, 27 251 *nicht vorgesehen*, 71 154
+    *geeignet*, 423 *ungeeignet* (evidence in `docs/domain/evidence/2026-09-27-scoring-rules/` §F,
+    §G). The *ILLUSTRATIV* banner stays: weights, slope bounds and the threshold are Step 2.
+  - Tests: category and Q5 cases in `suitability.test.ts`, tiers and bounds in
+    `real-criteria.test.ts`, `protection-flags.test.ts`, the new map class in
+    `verdict-style.test.ts` (95 unit tests pass).
+
 - **Roadmap to a credible pilot demo** (`docs/product/roadmap-pilot-demo.md`). Milestone chosen by
   the project owner on 2026-09-27: for ground-mounted PV in the Uckermark, every number on screen
   backed by a confirmed method or visibly not modelled, no *ILLUSTRATIV* banner left on the PV
@@ -179,6 +213,15 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Changed
 
+- **BREAKING (scoring): verdicts move to method version `0.3.1-dev`**; a database must be
+  migrated (`0006`), re-seeded (`seed_real_criteria.sql`), given `22_protection_overlap.sql` and
+  re-materialised. A scored verdict may now carry no limiting criterion, and a verdict may be
+  `not_considered`; readers of `suitability_verdict` must handle both (ADR-0009).
+- The scenario card no longer calls a real-region cell a "synthetische Demo-Fläche" — its top line
+  now names the region and says "echte Messwerte, Beispiel-Gewichtung".
+- The *ILLUSTRATIV* banner for real regions now says which rules are decided and which are still
+  placeholders (weights, slope bounds, threshold).
+
 - `CLAUDE.md` §1: the "pre-implementation" status line replaced — the repository has held a
   working prototype on real Uckermark data since `0.3.0`; the line now points at the current
   milestone document.
@@ -215,8 +258,8 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Open — awaiting the owner's confirmation (`docs/domain/scoring-criteria.md` §6)
 
-> **Decided 2026-09-27** — see `docs/domain/decision-memo-scoring-rules.md`; left standing below as
-> the record of what was open.
+> **Decided and implemented 2026-09-27** — see `docs/domain/decision-memo-scoring-rules.md` and
+> ADR-0009; left standing below as the record of what was open.
 
 - Only **Naturschutzgebiete and the Nationalpark** exclude; FFH and SPA would exclude 53 % of the
   Landkreis although Natura 2000 requires an assessment, not a ban.

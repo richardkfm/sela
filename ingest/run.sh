@@ -67,6 +67,7 @@ if [ "$MODE" = "real" ]; then
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/20b_sample_nature.sql"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -v method_version=real-v0 \
     -f "$SCRIPT_DIR/real/21_write_values.sql"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/22_protection_overlap.sql"
   echo "real ingest run complete for $PILOT_REGION."
   echo "Next: pnpm db:materialize -- --pilot-region=$PILOT_REGION   (illustrative weights; cited outcome methods)"
   exit 0

@@ -102,6 +102,39 @@ body {
 }
 
 /*
+ * Prüfhinweis (ADR-0009, design-language.md §8): a named, cited condition
+ * next to a verdict. Neutral ink on a hairline left rule with a § glyph — a
+ * thing to check, not an alarm, so no warning hue; the glyph and the words
+ * carry it, never colour alone.
+ */
+.flag-note {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.4rem 0.6rem;
+  border-left: 3px solid var(--text-secondary);
+  background: var(--surface-1);
+  font-size: 0.9rem;
+}
+.flag-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.flag-list .flag-note {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+}
+.flag-glyph {
+  font-weight: 700;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/*
  * Map surfaces — the explorer (app/(map)/) and the 3D parcel preview
  * (app/unit/[id]/preview/). design-language.md §3: the map is the surface,
  * panels float over it and stay quiet; data is the only loud thing. Panels

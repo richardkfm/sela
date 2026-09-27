@@ -1,0 +1,61 @@
+== tiers x NSG exclusion
+       tier       | excluded_nsg | not_excluded | total 
+------------------+--------------+--------------+-------
+ eingeschraenkt   |         2567 |        12139 | 14706
+ nicht_vorgesehen |        13933 |        27251 | 41184
+ vorgesehen       |         1863 |        59438 | 61301
+
+== verdict among not-excluded cells, score = mean(irr 4b, slope 0-10), threshold 0.5
+       tier       | suitable | unsuitable |  min  |  med  |  max  
+------------------+----------+------------+-------+-------+-------
+ eingeschraenkt   |    12030 |        109 | 0.350 | 0.648 | 0.706
+ nicht_vorgesehen |    26930 |        321 | 0.337 | 0.624 | 0.707
+ vorgesehen       |    59103 |        335 | 0.369 | 0.633 | 0.707
+
+== regional spread of normalised values (not-excluded, tier <> nicht_vorgesehen)
+ irr_p5 | irr_p95 | irr_max | sl_p5 | sl_p95 | sl_max 
+--------+---------+---------+-------+--------+--------
+  0.273 |   0.409 |   0.419 | 0.773 |  0.989 |  1.000
+
+== Q5 A: absolute shortfall (1-n)/2 >= 0.1 among varying criteria
+    named    | count 
+-------------+-------
+ irradiation | 71572
+ slope       |     5
+
+== Q5 B: shortfall against the best value in the compared land, (best-n)/2 >= 0.05 and >= 0.1
+  t   |    named    | count 
+------+-------------+-------
+ 0.05 | irradiation | 12210
+ 0.05 | none        | 36394
+ 0.05 | slope       | 22973
+  0.1 | irradiation |    21
+  0.1 | none        | 66174
+  0.1 | slope       |  5382
+
+== Q5 B unweighted (best-n) >= 0.1
+    named    | count 
+-------------+-------
+ irradiation | 12210
+ none        | 36394
+ slope       | 22973
+
+== flags among not-excluded cells (share > 0), and how many are slivers
+ category | any_overlap | under_1pct | half_or_more 
+----------+-------------+------------+--------------
+ br       |       17036 |         62 |        16560
+ ffh      |       12321 |        468 |         7797
+ lsg      |       41871 |        165 |        40065
+ spa      |       43067 |        309 |        39709
+
+  category   | any_overlap | under_1pct 
+-------------+-------------+------------
+ nsg_partial |        3524 |        367
+
+== not-excluded cells with at least one PV flag (ffh/spa/lsg share>=0.01 or nsg partial>=0.01), by tier
+       tier       | flagged | total 
+------------------+---------+-------
+ eingeschraenkt   |    8611 | 12139
+ nicht_vorgesehen |   20099 | 27251
+ vorgesehen       |   29559 | 59438
+

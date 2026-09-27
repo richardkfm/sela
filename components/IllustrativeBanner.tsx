@@ -18,13 +18,14 @@ function message(kind: PilotRegionKind, compact: boolean) {
   if (kind === "real") {
     return compact ? (
       <>
-        echte Messwerte (DWD, BKG, LfU Brandenburg), aber eine willkürliche Beispiel-Gewichtung – keine Aussage
-        über die Eignung dieser Flächen.
+        echte Messwerte (DWD, BKG, LfU Brandenburg) und entschiedene Regeln, aber eine willkürliche
+        Beispiel-Gewichtung – keine Aussage über die Eignung dieser Flächen.
       </>
     ) : (
       <>
-        die Messwerte hinter diesen Zahlen sind echt (DWD, BKG, LfU Brandenburg), ihre Gewichtung und die
-        Eignungsschwelle sind aber willkürliche Platzhalter. Das Ergebnis ist keine Aussage über die Eignung
+        die Messwerte hinter diesen Zahlen sind echt (DWD, BKG, LfU Brandenburg) und Ausschluss, Bodenbedeckung
+        und Strahlungsskala folgen entschiedenen Regeln – die Gewichtung, die Neigungsgrenzen und die
+        Eignungsschwelle sind aber noch willkürliche Platzhalter. Das Ergebnis ist keine Aussage über die Eignung
         dieser Flächen.
       </>
     );

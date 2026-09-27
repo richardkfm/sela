@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { computeSuitability, type Normalize } from "../suitability";
+import { computeLimitingReference, computeSuitability, type Normalize } from "../suitability";
 import { SelaScoringError, type CriterionDefinition, type CriterionValue } from "../types";
 
 const METHOD_VERSION = "test-v0";
@@ -239,4 +239,120 @@ test("verdict never carries both a score and an exclusion reason", () => {
   });
   assert.equal(scored.excludedByCriterionId, null);
   assert.ok(scored.limitingCriterionId !== null);
+});
+
+// Category criteria and the Q5 limiting rule (ADR-0009, decision memo Q5).
+// A category's raw value 0 means "not considered" in this fixture normaliser.
+const categoryNormalize: Normalize = (v, d) =>
+  d.isCategory
+    ? { normalizedScore: 0, violatesConstraint: false, notConsidered: v.value === 0 }
+    : identityNormalize(v, d);
+
+test("a category criterion can make a unit not_considered, naming it, with no score", () => {
+  const definitions = [definition({ id: "land_cover", isCategory: true, weight: 0 }), definition({ id: "irradiation" })];
+  const verdict = computeSuitability({
+    spatialUnitId: SPATIAL_UNIT,
+    technology: "pv",
+    values: [value("land_cover", 0), value("irradiation", 0.9)],
+    definitions,
+    normalize: categoryNormalize,
+    suitabilityThreshold: 0.5,
+    methodVersion: METHOD_VERSION,
+  });
+  assert.equal(verdict.verdict, "not_considered");
+  assert.equal(verdict.excludedByCriterionId, "land_cover");
+  assert.equal(verdict.score, null);
+  assert.equal(verdict.limitingCriterionId, null);
+});
+
+test("a hard constraint outranks a category: a statute before a classification", () => {
+  const definitions = [
+    definition({ id: "protection_status", isHardConstraint: true }),
+    definition({ id: "land_cover", isCategory: true, weight: 0 }),
+    definition({ id: "irradiation" }),
+  ];
+  const verdict = computeSuitability({
+    spatialUnitId: SPATIAL_UNIT,
+    technology: "pv",
+    values: [value("protection_status", 1), value("land_cover", 0), value("irradiation", 0.9)],
+    definitions,
+    normalize: categoryNormalize,
+    suitabilityThreshold: 0.5,
+    methodVersion: METHOD_VERSION,
+  });
+  assert.equal(verdict.verdict, "excluded");
+  assert.equal(verdict.excludedByCriterionId, "protection_status");
+});
+
+test("a considered category never moves the score and is never named as limiting", () => {
+  const definitions = [definition({ id: "land_cover", isCategory: true, weight: 0 }), definition({ id: "irradiation" })];
+  const verdict = computeSuitability({
+    spatialUnitId: SPATIAL_UNIT,
+    technology: "pv",
+    values: [value("land_cover", 1), value("irradiation", 0.4)],
+    definitions,
+    normalize: categoryNormalize,
+    suitabilityThreshold: 0.5,
+    methodVersion: METHOD_VERSION,
+  });
+  assert.equal(verdict.verdict, "unsuitable");
+  assert.equal(verdict.score, 0.4);
+  assert.equal(verdict.limitingCriterionId, "irradiation");
+});
+
+test("Q5: the limiting criterion is measured against the best value in the compared land", () => {
+  const definitions = [definition({ id: "irradiation" }), definition({ id: "slope" })];
+  // Irradiation is low everywhere (0.30–0.35), slope varies (0.6–1.0).
+  const valuesByUnit = new Map([
+    ["a", [value("irradiation", 0.35), value("slope", 1.0)]],
+    ["b", [value("irradiation", 0.3), value("slope", 0.6)]],
+    ["c", [value("irradiation", 0.33), value("slope", 0.95)]],
+  ]);
+  const best = computeLimitingReference({ technology: "pv", valuesByUnit, definitions, normalize: identityNormalize });
+  assert.deepEqual([...best.entries()].sort(), [["irradiation", 0.35], ["slope", 1.0]]);
+
+  const verdictFor = (unit: string) =>
+    computeSuitability({
+      spatialUnitId: unit,
+      technology: "pv",
+      values: valuesByUnit.get(unit)!,
+      definitions,
+      normalize: identityNormalize,
+      suitabilityThreshold: 0.5,
+      methodVersion: METHOD_VERSION,
+      limitingReference: { best, minGap: 0.1 },
+    });
+  // Against a perfect 1, irradiation would be "limiting" in every unit.
+  assert.equal(verdictFor("b").limitingCriterionId, "slope", "slope is 0.4 below the region's best");
+  assert.equal(verdictFor("c").limitingCriterionId, null, "nothing is ≥ 0.1 below the region's best");
+  assert.equal(verdictFor("a").limitingCriterionId, null);
+});
+
+test("without a reference, the gap is measured against 1 and one criterion is always named", () => {
+  const definitions = [definition({ id: "irradiation" }), definition({ id: "slope" })];
+  const verdict = computeSuitability({
+    spatialUnitId: SPATIAL_UNIT,
+    technology: "pv",
+    values: [value("irradiation", 0.35), value("slope", 1.0)],
+    definitions,
+    normalize: identityNormalize,
+    suitabilityThreshold: 0.5,
+    methodVersion: METHOD_VERSION,
+  });
+  assert.equal(verdict.limitingCriterionId, "irradiation");
+});
+
+test("the limiting reference ignores excluded and not-considered units", () => {
+  const definitions = [
+    definition({ id: "protection_status", isHardConstraint: true }),
+    definition({ id: "land_cover", isCategory: true, weight: 0 }),
+    definition({ id: "irradiation" }),
+  ];
+  const valuesByUnit = new Map([
+    ["excluded", [value("protection_status", 1), value("land_cover", 1), value("irradiation", 0.99)]],
+    ["forest", [value("protection_status", 0), value("land_cover", 0), value("irradiation", 0.9)]],
+    ["scored", [value("protection_status", 0), value("land_cover", 1), value("irradiation", 0.4)]],
+  ]);
+  const best = computeLimitingReference({ technology: "pv", valuesByUnit, definitions, normalize: categoryNormalize });
+  assert.equal(best.get("irradiation"), 0.4);
 });

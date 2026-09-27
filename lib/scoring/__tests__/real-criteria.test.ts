@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CLC_CLASS_NAME_DE, formatClcClass } from "../clc-classes";
 import { formatCriterionValue } from "../format-value";
-import { ILLUSTRATIVE_LAND_COVER_SCORE, illustrativeNormalize } from "../illustrative-weights";
+import { illustrativeNormalize } from "../illustrative-weights";
+import { LAND_COVER_TIERS, irradiationNationalPositionDe, landCoverTier } from "../pv-rules";
 import type { CriterionDefinition, CriterionValue } from "../types";
 
 function definition(overrides: Partial<CriterionDefinition> & { id: string }): CriterionDefinition {
@@ -16,7 +17,7 @@ function definition(overrides: Partial<CriterionDefinition> & { id: string }): C
     weight: 1,
     isHardConstraint: false,
     appliesTo: ["pv", "agripv"],
-    methodVersion: "illustrative-real-v0",
+    methodVersion: "illustrative-real-v1",
     ...overrides,
   };
 }
@@ -25,11 +26,19 @@ function value(criterionId: string, v: number): CriterionValue {
   return { criterionId, spatialUnitId: "u", value: v, unit: null, confidence: "medium", sourceId: "test", methodVersion: "real-v0" };
 }
 
-test("irradiation reads higher-is-better on its stated 1000–1300 kWh/m² scale", () => {
+test("irradiation reads higher-is-better on the national p1–p99 scale (memo Q4b)", () => {
   const d = definition({ id: "pv_irradiation_annual" });
-  assert.equal(illustrativeNormalize(value(d.id, 1000), d).normalizedScore, 0);
-  assert.equal(illustrativeNormalize(value(d.id, 1300), d).normalizedScore, 1);
-  assert.ok(Math.abs(illustrativeNormalize(value(d.id, 1120), d).normalizedScore - 0.4) < 1e-9);
+  assert.equal(illustrativeNormalize(value(d.id, 1050.5), d).normalizedScore, 0);
+  assert.equal(illustrativeNormalize(value(d.id, 1257.1), d).normalizedScore, 1);
+  assert.equal(illustrativeNormalize(value(d.id, 1000), d).normalizedScore, 0, "clamped below p1");
+  assert.ok(Math.abs(illustrativeNormalize(value(d.id, 1122.3), d).normalizedScore - (1122.3 - 1050.5) / 206.6) < 1e-9);
+});
+
+test("irradiation is placed in the national distribution by quartile", () => {
+  assert.equal(irradiationNationalPositionDe(1100.4), "unteres Viertel der Werte in Deutschland");
+  assert.equal(irradiationNationalPositionDe(1122.3), "unteres Mittelfeld der Werte in Deutschland");
+  assert.equal(irradiationNationalPositionDe(1150), "oberes Mittelfeld der Werte in Deutschland");
+  assert.equal(irradiationNationalPositionDe(1250), "oberes Viertel der Werte in Deutschland");
 });
 
 test("slope reads lower-is-better, 0° best, 10° and steeper worst", () => {
@@ -39,14 +48,26 @@ test("slope reads lower-is-better, 0° best, 10° and steeper worst", () => {
   assert.equal(illustrativeNormalize(value(d.id, 25), d).normalizedScore, 0);
 });
 
-test("land cover is looked up by class, never scaled as a number", () => {
-  const d = definition({ id: "pv_land_cover", direction: "non_monotonic" });
-  assert.equal(illustrativeNormalize(value(d.id, 211), d).normalizedScore, 1);
-  assert.equal(illustrativeNormalize(value(d.id, 312), d).normalizedScore, 0);
-  assert.equal(illustrativeNormalize(value(d.id, 999), d).normalizedScore, 0, "an undocumented class scores 0");
-  for (const code of Object.keys(ILLUSTRATIVE_LAND_COVER_SCORE)) {
-    assert.ok(CLC_CLASS_NAME_DE[Number(code)], `class ${code} has a documented name`);
+test("land cover is a category: its tier decides whether a cell is considered, never the score (memo Q3b)", () => {
+  const d = definition({ id: "pv_land_cover", direction: "non_monotonic", weight: 0, isCategory: true });
+  for (const [code, considered] of [[211, true], [231, true], [131, true], [312, false], [512, false], [112, false]] as const) {
+    const n = illustrativeNormalize(value(d.id, code), d);
+    assert.equal(n.notConsidered, !considered, `class ${code}`);
+    assert.equal(n.normalizedScore, 0, "a category contributes nothing to the score");
   }
+  assert.equal(illustrativeNormalize(value(d.id, 999), d).notConsidered, true, "an undocumented class is not scored");
+});
+
+test("every documented CLC class has a tier and a written reason, and every tier is documented", () => {
+  for (const code of Object.keys(CLC_CLASS_NAME_DE)) {
+    const entry = LAND_COVER_TIERS[Number(code)];
+    assert.ok(entry, `class ${code} has a tier`);
+    assert.ok(entry.reasonDe.length > 3, `class ${code} has a reason`);
+  }
+  for (const code of Object.keys(LAND_COVER_TIERS)) assert.ok(CLC_CLASS_NAME_DE[Number(code)], `tier for documented class ${code}`);
+  assert.equal(landCoverTier(211).tier, "vorgesehen");
+  assert.equal(landCoverTier(231).tier, "eingeschraenkt");
+  assert.equal(landCoverTier(312).tier, "nicht_vorgesehen");
 });
 
 test("a protection share excludes at half the cell, not before", () => {

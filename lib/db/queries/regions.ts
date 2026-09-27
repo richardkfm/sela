@@ -78,7 +78,7 @@ export async function countVerdicts(
      GROUP BY sv.verdict`,
     [pilotRegion, technology, methodVersion],
   );
-  const counts: VerdictCounts = { suitable: 0, unsuitable: 0, excluded: 0, unscored: 0 };
+  const counts: VerdictCounts = { suitable: 0, unsuitable: 0, excluded: 0, not_considered: 0, unscored: 0 };
   for (const row of rows) {
     const key = (row.verdict ?? "unscored") as keyof VerdictCounts;
     counts[key] = Number(row.n);

@@ -15,6 +15,19 @@ test("suitable and excluded always carry a pattern; the two plain classes differ
   }
 });
 
+test("not considered is its own class: stippled, between unsuitable and excluded in lightness (ADR-0009)", () => {
+  const lightness = (hex: string) => {
+    const v = Number.parseInt(hex.slice(1), 16);
+    return 0.2126 * ((v >> 16) & 0xff) + 0.7152 * ((v >> 8) & 0xff) + 0.0722 * (v & 0xff);
+  };
+  for (const tech of TECHNOLOGIES) {
+    const nc = verdictAppearance("not_considered", tech);
+    assert.equal(nc.encoding, "stipple");
+    assert.ok(lightness(nc.color) < lightness(verdictAppearance("unsuitable", tech).color));
+    assert.ok(lightness(nc.color) > lightness(verdictAppearance("excluded", tech).color));
+  }
+});
+
 test("no two patterned classes share an encoding within one technology", () => {
   for (const tech of TECHNOLOGIES) {
     const encodings = MAP_VERDICTS.map((v) => verdictAppearance(v, tech).encoding).filter(Boolean);

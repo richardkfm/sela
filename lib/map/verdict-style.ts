@@ -9,16 +9,15 @@
 
 import { scenarioTokens, surfaceTokens, technologyToTokenKey, type SecondaryEncoding } from "@/lib/design/tokens";
 import type { SuitabilityVerdictLabel, Technology } from "@/lib/scoring/types";
+import { VERDICT_LABEL_DE as VERDICT_TEXT_LABEL_DE } from "@/lib/scoring/verdict-text";
 import type { MapPatternEncoding } from "./patterns";
 
 export type MapVerdict = SuitabilityVerdictLabel | "unscored";
 
-export const MAP_VERDICTS: readonly MapVerdict[] = ["suitable", "unsuitable", "excluded", "unscored"];
+export const MAP_VERDICTS: readonly MapVerdict[] = ["suitable", "unsuitable", "not_considered", "excluded", "unscored"];
 
 export const VERDICT_LABEL_DE: Record<MapVerdict, string> = {
-  suitable: "geeignet",
-  unsuitable: "ungeeignet",
-  excluded: "ausgeschlossen",
+  ...VERDICT_TEXT_LABEL_DE,
   unscored: "nicht bewertet",
 };
 
@@ -26,7 +25,8 @@ export const VERDICT_LABEL_DE: Record<MapVerdict, string> = {
 export const VERDICT_EXPLANATION_DE: Record<MapVerdict, string> = {
   suitable: "erreicht die Schwelle",
   unsuitable: "unter der Schwelle",
-  excluded: "hartes Ausschlusskriterium",
+  excluded: "Schutzgebiet (hartes Ausschlusskriterium)",
+  not_considered: "Bodenbedeckung, z. B. Wald, Gewässer, Siedlung",
   unscored: "keine Bewertung",
 };
 
@@ -38,6 +38,10 @@ export const TECHNOLOGY_LABEL_DE: Record<Technology, string> = {
 
 const UNSUITABLE_COLOR = "#d8d5cc";
 const EXCLUDED_COLOR = "#8a8a8a";
+// Between "ungeeignet" and "ausgeschlossen" in lightness, with its own stipple:
+// not a statute (hatched grey) and not a low score (plain light grey), but land
+// the method does not score (ADR-0009).
+const NOT_CONSIDERED_COLOR = "#b3b0a8";
 const UNSCORED_COLOR = "#eeece6";
 /** Near-white marks on coloured ground — what the CSS patterns draw too. */
 export const PATTERN_MARK_COLOR = "#fbfaf7";
@@ -63,6 +67,8 @@ export function verdictAppearance(verdict: MapVerdict, technology: Technology): 
       return { color: UNSUITABLE_COLOR, encoding: null };
     case "excluded":
       return { color: EXCLUDED_COLOR, encoding: "hatch-0" };
+    case "not_considered":
+      return { color: NOT_CONSIDERED_COLOR, encoding: "stipple" };
     case "unscored":
       return { color: UNSCORED_COLOR, encoding: null };
   }

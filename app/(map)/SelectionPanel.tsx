@@ -1,8 +1,8 @@
 "use client";
 
 // The selected unit, in one card: all three technologies side by side (never
-// one in isolation — CLAUDE.md §4.2), each with the single criterion that
-// limits or excludes it (flow F2), and the way on. The one accent action is
+// one in isolation — CLAUDE.md §4.2), each with its "why" (flow F2), the
+// Prüfhinweise that apply (ADR-0009), and the way on. The one accent action is
 // the scenario comparison, because comparison is the product
 // (design-language.md §3: "one accent action per screen"); the 3D preview and
 // the evidence are secondary.
@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { TechnologySwatch } from "@/components/TechnologySwitch";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
 import type { PilotRegionKind } from "@/lib/pilot-region";
+import { NO_LIMITING_CRITERION_DE, REASON_LEAD_DE, type LandCoverReading } from "@/lib/scoring/verdict-text";
 import { TECHNOLOGIES, type SuitabilityVerdict, type Technology } from "@/lib/scoring/types";
 
 interface Summary {
@@ -20,8 +21,10 @@ interface Summary {
   areaHa: number | null;
   methodVersion: string;
   verdicts: (SuitabilityVerdict & {
-    reason: { id: string; nameDe: string; kind: "excluded_by" | "limited_by" } | null;
+    reason: { id: string; nameDe: string; kind: "decided_by" | "limited_by" } | null;
   })[];
+  landCover: LandCoverReading | null;
+  flags: string[];
 }
 
 type SummaryVerdict = Summary["verdicts"][number];
@@ -111,9 +114,16 @@ export function SelectionPanel({
                   </div>
                   {verdict?.reason && (
                     <div className="verdict-reason muted">
-                      {verdict.reason.kind === "excluded_by" ? "Ausgeschlossen durch " : "Begrenzt durch "}
+                      {REASON_LEAD_DE[verdict.verdict]}{" "}
                       <Link href={`/criterion/${verdict.reason.id}`}>{verdict.reason.nameDe}</Link>
+                      {verdict.verdict === "not_considered" && summary.landCover && <> – {summary.landCover.classDe}</>}
                     </div>
+                  )}
+                  {verdict && verdict.score !== null && !verdict.reason && (
+                    <div className="verdict-reason muted">{NO_LIMITING_CRITERION_DE}</div>
+                  )}
+                  {verdict && verdict.score !== null && summary.landCover?.tier === "eingeschraenkt" && (
+                    <div className="verdict-reason muted">Bodenbedeckung eingeschränkt: {summary.landCover.classDe}</div>
                   )}
                   {!verdict && <div className="verdict-reason muted">{unscoredReason(tech, regionKind)}</div>}
                 </div>
@@ -121,6 +131,20 @@ export function SelectionPanel({
             );
           })}
         </ul>
+      )}
+
+      {summary && summary.flags.length > 0 && (
+        <>
+          <h3 className="overline">Prüfhinweise · Schutzgebiete</h3>
+          <ul className="flag-list">
+            {summary.flags.map((flag) => (
+              <li key={flag} className="flag-note">
+                <span aria-hidden className="flag-glyph">§</span>
+                <span>{flag}</span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <div className="selection-actions">

@@ -252,3 +252,54 @@ coalesce((SELECT ST_Area(ST_Intersection(c.geom, ST_Union(p.geom))) / c.area
 - LfU protection data is overview data. The service says it is not legally binding and was digitised at 1:10,000.
 - Areas are planar EPSG:25832. The Uckermark (measured extent 13.24–14.45°E) lies outside UTM zone 32 (6–12°E), which is why the planar and geodesic boundary areas differ by 0.18 %.
 - The percentile method is `percentile_cont` (linear interpolation), and in `variants.ts` the shortfall quantiles use nearest-rank.
+
+## F. Follow-up measurements for the Step 1 implementation (same day, fresh rebuild)
+
+A second local rebuild on 2026-09-27 (same pipeline, same sources, 117 191 cells) measured what
+the owner's first answers to the implementation questions would do, before the follow-up
+questions were put. Script `f_step1_followup.sql`, output `f_step1_followup.out`. Tier assignment
+as proposed (211, 131, 132 *vorgesehen*; 231, 221, 222, 242, 243, 121, 123, 124, 133
+*eingeschränkt*; every other class *nicht vorgesehen*).
+
+| Tier | NSG/NP-excluded (share ≥ 0.5) | not excluded | total |
+|---|---|---|---|
+| vorgesehen | 1 863 | 59 438 | 61 301 |
+| eingeschränkt | 2 567 | 12 139 | 14 706 |
+| nicht vorgesehen | 13 933 | 27 251 | 41 184 |
+
+- **Land cover out of the score, nothing else changed:** score = mean of irradiation (national
+  p1–p99) and slope (0–10°); 26 930 of the 27 251 non-excluded *nicht vorgesehen* cells would be
+  *geeignet*, and 98.9 % of all non-excluded cells. This is why *nicht vorgesehen* became its own
+  verdict (ADR-0009).
+- **Regional spread of the normalised values** (non-excluded, tier ≠ *nicht vorgesehen*):
+  irradiation p5–p95 0.273–0.409 (max 0.419), slope 0.773–0.989 (max 1.000). Both "vary" by any
+  threshold ≤ 0.13.
+- **Q5, gap to 1 (as first proposed):** with a shortfall of ≥ 0.1 among varying criteria,
+  irradiation stays "limiting" in 71 572 of 71 577 cells — the artefact is not removed.
+- **Q5, gap to the region's best value:** unweighted gap ≥ 0.1 names irradiation in 12 210
+  cells, slope in 22 973, none in 36 394. (Weighted by ½ each, ≥ 0.05 gives the same split; ≥ 0.1
+  weighted gives irradiation 21, slope 5 382, none 66 174.) The owner chose the unweighted gap
+  ≥ 0.1.
+- **Protected-area overlaps among non-excluded cells** (any share > 0 / share < 1 % / ≥ 50 %):
+  FFH 12 321 / 468 / 7 797; SPA 43 067 / 309 / 39 709; LSG 41 871 / 165 / 40 065;
+  Biosphärenreservat 17 036 / 62 / 16 560; NSG partial 3 524 / 367 / —. At ≥ 1 %, 58 269 of the
+  98 828 non-excluded cells carry at least one Prüfhinweis.
+
+### G. Verdicts as materialised (`0.3.1-dev`, `illustrative-real-v1`)
+
+After implementation, `pnpm db:materialize -- --pilot-region=uckermark-12073`
+(`g_step1_verdicts.out`), for `pv` (agri-PV identical; wind: 18 363 excluded, otherwise not scored):
+
+| Verdict | Named criterion | Cells |
+|---|---|---|
+| ausgeschlossen | `pv_protection_status` | 18 363 |
+| nicht vorgesehen | `pv_land_cover` | 27 251 |
+| geeignet | `pv_irradiation_annual` | 12 189 |
+| geeignet | `pv_slope` | 22 553 |
+| geeignet | none | 36 412 |
+| ungeeignet | `pv_slope` | 423 |
+
+The split differs from F by a few dozen cells because F's Q5 query ran over cells regardless of
+missing values, while the engine skips a criterion a cell has no value for (51 cells lack an
+irradiation mean). `protection_overlap`: 191 365 rows (`22_protection_overlap.sql`); NSG
+overlaps touch 21 887 cells, matching §A.

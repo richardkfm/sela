@@ -41,7 +41,16 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
 
         <dt style={{ color: "var(--text-secondary)" }}>Gewichtung</dt>
         <dd className="tabular-nums" style={{ margin: 0 }}>
-          {criterion.weight} — <em>illustrativ, noch nicht bestätigt (CLAUDE.md §3)</em>
+          {criterion.isCategory ? (
+            <>
+              keine – eine Kategorie, die nicht in die Punktzahl eingeht (<Link href="/method#pv-regeln">Stufen und
+              Begründungen</Link>)
+            </>
+          ) : (
+            <>
+              {criterion.weight} — <em>illustrativ, noch nicht bestätigt (CLAUDE.md §3)</em>
+            </>
+          )}
         </dd>
 
         <dt style={{ color: "var(--text-secondary)" }}>Harte Ausschlusskriterium?</dt>

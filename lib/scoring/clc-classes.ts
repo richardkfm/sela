@@ -1,8 +1,8 @@
 // CORINE Land Cover class names, verbatim from BKG's own product documentation
 // shipped inside the CLC5 archive (clc5_2018.utm32s.shape/dokumentation/clc5_2018.pdf,
 // read 2026-09-23). Only the classes that documentation lists for Germany appear.
-// Display only — which class is how suitable is not decided here but in
-// lib/scoring/illustrative-weights.ts, and is illustrative.
+// Display only — which tier a class sits in for ground-mounted PV is decided in
+// lib/scoring/pv-rules.ts (decision memo Q3b).
 
 export const CLC_CLASS_NAME_DE: Readonly<Record<number, string>> = {
   111: "Durchgängig städtische Prägung",

@@ -312,9 +312,9 @@ What is real and what is not:
 | `pv_protection_status` | pv, agripv | Share of the cell inside a Naturschutzgebiet or the Nationalpark | **hard constraint**, violated at a share ≥ 0.5 | medium |
 | `wind_protection_status` | wind | Same share | same | medium |
 
-**Decided 2026-09-27, not yet implemented.** The four choices below were placeholders; the
-project owner has now decided each through the `CLAUDE.md` §3 gate
-(`docs/domain/decision-memo-scoring-rules.md`, with measured effects):
+**Decided 2026-09-27 and implemented as `illustrative-real-v1`** (see the subsection below). The
+four choices below were placeholders; the project owner has decided each through the
+`CLAUDE.md` §3 gate (`docs/domain/decision-memo-scoring-rules.md`, with measured effects):
 
 - **Protection:** NSG and Nationalpark exclude; FFH, SPA and LSG are shown as a named, cited
   flag, not an exclusion (memo Q1c).
@@ -325,8 +325,8 @@ project owner has now decided each through the `CLAUDE.md` §3 gate
 - **Irradiation bounds:** the measured national p1–p99 of the DWD 2016–2025 mean,
   1 050.5–1 257.1 kWh/m²·a; never regional bounds (Q4b).
 
-They take effect under a new `method_version` when implemented; until then the placeholders
-below remain what `illustrative-real-v0` runs. The placeholders as originally recorded:
+They took effect under a new `method_version`, `illustrative-real-v1`. The placeholders of
+`illustrative-real-v0`, as originally recorded:
 
 1. **Only NSG and Nationalpark exclude.** FFH and SPA areas (Natura 2000) are loaded but do not
    exclude: counting them excluded 53 % of the Landkreis, and Natura 2000 requires a
@@ -339,6 +339,54 @@ below remain what `illustrative-real-v0` runs. The placeholders as originally re
 4. **Irradiation bounds 1 000–1 300 kWh/m²·a.** They span German values nationally, but the
    Uckermark varies only between 1 100 and 1 137, so irradiation becomes the "limiting" criterion
    almost everywhere. That is an artefact of the bounds, not a finding about the region.
+
+### 6.1 `illustrative-real-v1` — the Step 1 rules (2026-09-27)
+
+What the engine runs now (`lib/scoring/pv-rules.ts`, rendered on the method page from the same
+module; verdicts materialised as `0.3.1-dev`; ADR-0009). Decisions: memo Q1–Q5 and its
+*Follow-up decisions* F1–F6.
+
+**In this order, for PV and agri-PV:**
+
+1. **ausgeschlossen** — `pv_protection_status` ≥ 0.5: at least half the cell inside a
+   Naturschutzgebiet or the Nationalpark, per the LfU overview data (Q1c, Q2d).
+2. **nicht vorgesehen** — `pv_land_cover`, now a **category criterion** (`is_category`, weight 0),
+   places the dominant CLC class in the tier *nicht vorgesehen* (F2, F3). No score.
+3. **scored** — equal-weight mean of `pv_irradiation_annual` (linear on the national p1–p99,
+   1 050.5–1 257.1 kWh/m²·a, Q4b) and `pv_slope` (0–10°, **still a placeholder**); *geeignet* at
+   ≥ 0.5 (**placeholder**). A cell of the tier *eingeschränkt* is scored and shows the tier and its
+   reason beside the verdict.
+
+**Limiting criterion (Q5, F4):** the scored criterion with the largest weight × gap, where gap =
+(best normalised value of that criterion among the region's scored cells for the same technology)
+− (this cell's value), named only if gap ≥ 0.1; otherwise none is named.
+
+**Irradiation's national position (Q4b):** shown beside the value by quartile of the same national
+distribution (p25 1 101.6, p50 1 137.2, p75 1 187.8 kWh/m²·a).
+
+**Prüfhinweise (Q1c, Q2d, F5, F6):** from `protection_overlap`, per named area with its share ≥ 1 %
+of the cell: FFH and SPA → *Verträglichkeitsprüfung erforderlich* (§ 34 BNatSchG); LSG →
+*Schutzgebietsverordnung prüfen* (§ 26 BNatSchG); NSG or Nationalpark on a cell that is not
+excluded → *teilweise im …* with its share (§ 23 / § 24 BNatSchG). Biosphärenreservat: stored,
+not shown (§ 25 not read at source). Every text names "Übersichtsdaten des LfU" and no permission
+outcome.
+
+**Land-cover tiers** (reason per class in `pv-rules.ts` and on the method page):
+
+| Tier | Classes |
+|---|---|
+| *vorgesehen* | 211 arable; 131 extraction; 132 dumps |
+| *eingeschränkt* | 231 meadows and pastures; 221, 222 permanent crops; 242, 243 mixed agriculture; 121 industry/commerce; 123 ports; 124 airports; 133 construction sites |
+| *nicht vorgesehen* | 111, 112 settlement; 122 road/rail; 141, 142 urban green and leisure; 311–313 forest; 321, 322, 324 semi-natural vegetation; 331–335 open natural surfaces; 411, 412, 421, 423 wetlands; 511–523 water; any undocumented class |
+
+Classes 221, 332, 334, 335, 421, 423, 521, 522 and 523 do not occur in the Uckermark and were
+assigned by analogy — to be confirmed before a second region is added.
+
+**Measured on the Uckermark** (`evidence/2026-09-27-scoring-rules/evidence.md` §G): 18 363
+*ausgeschlossen*, 27 251 *nicht vorgesehen*, 71 154 *geeignet*, 423 *ungeeignet*.
+
+**Still open (Step 2 and beyond):** every weight, the slope bounds, the threshold — and whether a
+binary threshold is the right presentation at all, now that 99.4 % of scored cells pass it.
 
 **Consequences stated in the interface rather than hidden:**
 
