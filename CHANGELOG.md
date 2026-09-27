@@ -27,6 +27,12 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Roadmap to a credible pilot demo** (`docs/product/roadmap-pilot-demo.md`). Milestone chosen by
+  the project owner on 2026-09-27: for ground-mounted PV in the Uckermark, every number on screen
+  backed by a confirmed method or visibly not modelled, no *ILLUSTRATIV* banner left on the PV
+  path. Six ordered steps, each with its `CLAUDE.md` §3 gate named; user validation, public launch
+  and wind/agri-PV scoring explicitly out of this milestone. Proposes nothing as decided.
+
 - **Nature capital, phase 3: the cited climate and water results reach the screens.** Asked for
   by the project owner ("yes start it") and confirmed through the `CLAUDE.md` §3 gate on
   2026-09-25 with the proposals as written: water under `restore` **not modelled**; a change
@@ -161,6 +167,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   this change.
 
 ### Changed
+
+- `CLAUDE.md` §1: the "pre-implementation" status line replaced — the repository has held a
+  working prototype on real Uckermark data since `0.3.0`; the line now points at the current
+  milestone document.
 
 - **BREAKING (scoring): water under `restore` is no longer modelled — `water-arcegmo-v2`
   replaces `water-arcegmo-v1`.** Decided by the project owner on 2026-09-25. The v1
