@@ -1,8 +1,8 @@
 # Decision memo — the four placeholder scoring rules
 
-**Version band:** `0.3.x` · **Status:** proposed — **nothing here is decided**; each question
-needs the project owner's answer through the `CLAUDE.md` §3 gate (scoring, scope) · **Last
-updated:** 2026-09-27 · Step 1 of `docs/product/roadmap-pilot-demo.md`
+**Version band:** `0.3.x` · **Status:** **Q1–Q4 decided** by the project owner on 2026-09-27
+through the `CLAUDE.md` §3 gate, each as recommended (see *Decisions*); Q5 open; not yet
+implemented · **Last updated:** 2026-09-27 · Step 1 of `docs/product/roadmap-pilot-demo.md`
 
 `docs/domain/scoring-criteria.md` §6 lists four placeholder rules under `illustrative-real-v0`
 that await a decision. This memo puts each one as options, with the **measured** effect of every
@@ -183,14 +183,25 @@ The whole Landkreis spans **36.6 kWh/m²·a**. 23.9 % of German pixels lie below
 
 ---
 
-## Summary for decision
+## Decisions (2026-09-27)
 
-| # | Question | Recommended | Also a decision about |
+The project owner chose the recommended option for each of Q1–Q4. Recorded here and in
+`scoring-criteria.md` §6. **Not implemented yet** — the implementation is its own change, under a
+new `method_version`, and three parts of it still need owner input before code:
+
+- the **wording and visual treatment** of the new flags (Q1c, Q2d) — user-visible behaviour and
+  design language, proposed separately;
+- the **tier of each CLC class** (Q3b) — a proposed assignment with a reason per class, for review;
+- **Q5**, the limiting-criterion rule.
+
+## Summary of options
+
+| # | Question | Recommended → **decided** | Also a decision about |
 |---|---|---|---|
-| Q1 | Categories that exclude | **1c** NSG + NP exclude; FFH/SPA and LSG flagged | user-visible state, wording |
-| Q2 | When a cell is inside | **2d** share ≥ 0.5 excludes; partial overlap flagged with its share | same flag mechanism |
-| Q3 | Land-cover table | **3b** three tiers with written reasons; tier assignment to follow | — |
-| Q4 | Irradiation bounds | **4b** national p1–p99; never regional | — |
+| Q1 | Categories that exclude | **1c** NSG + NP exclude; FFH/SPA and LSG flagged — **decided** | user-visible state, wording |
+| Q2 | When a cell is inside | **2d** share ≥ 0.5 excludes; partial overlap flagged with its share — **decided** | same flag mechanism |
+| Q3 | Land-cover table | **3b** three tiers with written reasons — **decided**; tier assignment to follow | — |
+| Q4 | Irradiation bounds | **4b** national p1–p99; never regional — **decided** | — |
 | Q5 | *(new)* Limiting-criterion rule | minimum shortfall and/or varying-criteria-only — to discuss | flow F2 |
 
 ## Risks
