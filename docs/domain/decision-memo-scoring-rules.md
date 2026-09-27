@@ -1,8 +1,9 @@
 # Decision memo — the four placeholder scoring rules
 
-**Version band:** `0.3.x` · **Status:** **Q1–Q4 decided** by the project owner on 2026-09-27
-through the `CLAUDE.md` §3 gate, each as recommended (see *Decisions*); Q5 open; not yet
-implemented · **Last updated:** 2026-09-27 · Step 1 of `docs/product/roadmap-pilot-demo.md`
+**Version band:** `0.3.x` · **Status:** **Q1–Q5 decided** by the project owner on 2026-09-27
+through the `CLAUDE.md` §3 gate (see *Decisions* and *Follow-up decisions*); **implemented** the
+same day as `illustrative-real-v1` / verdicts `0.3.1-dev` (ADR-0009) · **Last updated:** 2026-09-27 ·
+Step 1 of `docs/product/roadmap-pilot-demo.md`
 
 `docs/domain/scoring-criteria.md` §6 lists four placeholder rules under `illustrative-real-v0`
 that await a decision. This memo puts each one as options, with the **measured** effect of every
@@ -186,13 +187,36 @@ The whole Landkreis spans **36.6 kWh/m²·a**. 23.9 % of German pixels lie below
 ## Decisions (2026-09-27)
 
 The project owner chose the recommended option for each of Q1–Q4. Recorded here and in
-`scoring-criteria.md` §6. **Not implemented yet** — the implementation is its own change, under a
-new `method_version`, and three parts of it still need owner input before code:
+`scoring-criteria.md` §6. The implementation is its own change, under a new `method_version`;
+three parts of it needed owner input before code (answered in *Follow-up decisions*):
 
 - the **wording and visual treatment** of the new flags (Q1c, Q2d) — user-visible behaviour and
   design language, proposed separately;
 - the **tier of each CLC class** (Q3b) — a proposed assignment with a reason per class, for review;
 - **Q5**, the limiting-criterion rule.
+
+## Follow-up decisions (2026-09-27, before implementation)
+
+The three open inputs were put to the project owner in two rounds, the second with measured
+effects (`evidence/2026-09-27-scoring-rules/evidence.md` §F). Decided:
+
+| # | Question | Decision |
+|---|---|---|
+| F1 | Tier of arable land (211) and grassland (231) | 211 *vorgesehen*, 231 *eingeschränkt*; the rest of the proposed table as written. Classes absent from the Uckermark assigned by analogy (`scoring-criteria.md` §6) |
+| F2 | How the tiers enter the verdict | **As a category, not a score** — land cover leaves the weighted score entirely (closer to option 3c, keeping 3b's three written tiers) |
+| F3 | What *nicht vorgesehen* does, given F2 | **Its own verdict state**, *nicht vorgesehen*, with no score and its own map class — not *ausgeschlossen*, and not a note beside *geeignet* (measured: 26 930 forest/water/settlement cells would otherwise read *geeignet*) |
+| F4 | Q5, precisely | A criterion is named as limiting only if its normalised value lies **at least 0.1 below the best value of that criterion among the scored cells of the region**; otherwise none is named. (The first-round wording — shortfall ≥ 0.1 among criteria that vary — was measured to leave irradiation "limiting" in 71 572 of 71 577 cells.) |
+| F5 | Wording and treatment of the flags | As proposed: a neutral *Prüfhinweis* with § glyph under the verdict, naming the area (new table of overlaps with name and *Gebietsnummer*), its share, "nach den Übersichtsdaten des LfU" and the provision (§ 34 for FFH/SPA, § 26 for LSG, § 23/§ 24 for a partial NSG/Nationalpark) |
+| F6 | Minimum share for a flag | **1 % of the cell**; smaller overlaps are within the digitising accuracy (1:10 000) and are stored but not shown |
+
+Not decided by the owner and therefore left as they were: the Biosphärenreservat is not flagged
+(§ 25 BNatSchG not read at source); flags are worded for ground-mounted PV and agri-PV only.
+
+**Measured result** (`evidence.md` §G): of 117 191 cells, 18 363 *ausgeschlossen*, 27 251 *nicht
+vorgesehen*, 71 154 *geeignet*, 423 *ungeeignet* (all limited by slope). Among *geeignet* cells,
+irradiation is named in 12 189, slope in 22 553, none in 36 412. That almost every scored cell
+passes the placeholder threshold is a finding for Step 2 (whether a binary threshold is the right
+presentation at all), not something this change hides.
 
 ## Summary of options
 
@@ -202,7 +226,7 @@ new `method_version`, and three parts of it still need owner input before code:
 | Q2 | When a cell is inside | **2d** share ≥ 0.5 excludes; partial overlap flagged with its share — **decided** | same flag mechanism |
 | Q3 | Land-cover table | **3b** three tiers with written reasons — **decided**; tier assignment to follow | — |
 | Q4 | Irradiation bounds | **4b** national p1–p99; never regional — **decided** | — |
-| Q5 | *(new)* Limiting-criterion rule | minimum shortfall and/or varying-criteria-only — to discuss | flow F2 |
+| Q5 | *(new)* Limiting-criterion rule | **decided** (F4): gap ≥ 0.1 to the region's best value, else none named | flow F2 |
 
 ## Risks
 

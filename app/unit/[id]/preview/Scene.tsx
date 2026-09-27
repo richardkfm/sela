@@ -34,6 +34,7 @@ import {
   PATTERN_MARK_COLOR,
   patternName,
   verdictAppearance,
+  type MapVerdict,
 } from "@/lib/map/verdict-style";
 import {
   moduleTableCentreHeightM,
@@ -476,7 +477,7 @@ function exposeTransformForDeck(map: MaplibreMap): void {
 
 function unitVerdict(data: PreviewData) {
   const own = data.neighbours.features.find((f) => f.id === data.unit.id);
-  return (own?.properties.verdict as "suitable" | "unsuitable" | "excluded" | "unscored" | undefined) ?? "unscored";
+  return (own?.properties.verdict as MapVerdict | undefined) ?? "unscored";
 }
 
 const METRES = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });

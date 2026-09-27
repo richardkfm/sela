@@ -93,7 +93,8 @@ ON CONFLICT (spatial_unit_id, criterion_id) DO UPDATE
 -- first run and excluded 53 % of the Uckermark — but Natura 2000 requires an
 -- assessment (FFH-Verträglichkeitsprüfung), not a ban, so the map would have
 -- called land "ausgeschlossen" where development is legally possible. They
--- stay loaded in staging.protection for display and for a later, decided rule.
+-- stay loaded in staging.protection; step 22 names them per cell as Prüfhinweise
+-- (decision memo Q1c, ADR-0009), which is the decided rule for them.
 --
 -- Every cell gets a value — 0 where nothing overlaps — because
 -- the scoring engine treats a *missing* value as "not checked", never as "clear"

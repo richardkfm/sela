@@ -2,7 +2,7 @@
 
 **Version band:** `0.3.x` · **Status:** proposed — milestone chosen by the project owner
 2026-09-27; every step marked *gated* still needs its own `CLAUDE.md` §3 confirmation ·
-**Last updated:** 2026-09-27
+**Last updated:** 2026-09-27 (Step 1 done)
 
 This document plans the next milestone after `docs/architecture/roadmap-to-first-deployment.md`,
 whose three phases are built. It refines `docs/product/mvp.md`; it does not widen it.
@@ -19,7 +19,7 @@ screenshot of it from being shown to a planning office as anything more than a m
 | Gap | Where it is recorded | Effect on screen today |
 |---|---|---|
 | Every weight, bound, land-cover score and threshold is a placeholder | `scoring-criteria.md` §6 | *ILLUSTRATIV* banner on every verdict |
-| Four placeholder rules awaiting a decision | `scoring-criteria.md` §6, `CHANGELOG.md` *Open* | Irradiation is "limiting" almost everywhere — an artefact of the bounds |
+| Four placeholder rules awaiting a decision — **resolved by Step 1** (weights, slope bounds, threshold remain) | `scoring-criteria.md` §6.1 | Irradiation is "limiting" almost everywhere — an artefact of the bounds |
 | No energy outcome | `scoring-criteria.md` §4 | *develop* shows what it costs, never what it gains — the second of sela's four questions goes unanswered |
 | Wind never scored; agri-PV identical to PV | `scoring-criteria.md` §2–3, §6 | Two of three technologies are placeholders |
 | Habitat not shown | `scoring-criteria.md` §4.3 | *nature capital* is *noch nicht modelliert* on every cell |
@@ -56,12 +56,16 @@ the normalisation underneath them is still a placeholder.
 
 **Deliverable:** a decision memo with measured effects per option and a recommendation for each —
 `docs/domain/decision-memo-scoring-rules.md` (written 2026-09-27, measured on a local rebuild of
-the Uckermark pipeline). **Q1–Q4 decided 2026-09-27** as recommended; implementation pending
-the flag wording, the CLC tier assignment and Q5. It adds a fifth question — how flow F2
-names the limiting criterion — because the measurements show that, not the bounds, is what makes
-irradiation "limiting" almost everywhere. The decisions, once taken, are
-recorded in `scoring-criteria.md` §6 and implemented as a new `method_version`, never as an edit
-of `illustrative-real-v0`.
+the Uckermark pipeline). It adds a fifth question — how flow F2 names the limiting criterion —
+because the measurements show that, not the bounds, is what makes irradiation "limiting" almost
+everywhere.
+
+**Status: done (2026-09-27).** Q1–Q5 and six follow-up questions (tiers, land cover as a category,
+a *nicht vorgesehen* state, the precise Q5 rule, flag wording, a 1 % flag minimum) decided by the
+owner; implemented as `illustrative-real-v1` (verdicts `0.3.1-dev`) with ADR-0009 and recorded in
+`scoring-criteria.md` §6.1. What it leaves for Step 2: with land cover out of the score, 99.4 % of
+scored Uckermark cells pass the placeholder threshold — the question "is a binary threshold the
+right presentation?" is now concrete, not hypothetical.
 
 ### Step 2 — First confirmed PV method (`real-pv-v1`) · gated (scoring)
 

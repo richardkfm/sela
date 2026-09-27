@@ -1,0 +1,17 @@
+ technology |    verdict     |          why           | count 
+------------+----------------+------------------------+-------
+ agripv     | excluded       | pv_protection_status   | 18363
+ agripv     | not_considered | pv_land_cover          | 27251
+ agripv     | suitable       | pv_irradiation_annual  | 12189
+ agripv     | suitable       | pv_slope               | 22553
+ agripv     | suitable       | —                      | 36412
+ agripv     | unsuitable     | pv_slope               |   423
+ pv         | excluded       | pv_protection_status   | 18363
+ pv         | not_considered | pv_land_cover          | 27251
+ pv         | suitable       | pv_irradiation_annual  | 12189
+ pv         | suitable       | pv_slope               | 22553
+ pv         | suitable       | —                      | 36412
+ pv         | unsuitable     | pv_slope               |   423
+ wind       | excluded       | wind_protection_status | 18363
+(13 rows)
+

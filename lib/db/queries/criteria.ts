@@ -40,6 +40,7 @@ interface CriterionDefinitionSqlRow {
   direction: CriterionDefinition["direction"];
   weight: string;
   is_hard_constraint: boolean;
+  is_category: boolean;
   applies_to: string[];
   unit: string | null;
   method_version: string;
@@ -54,6 +55,7 @@ function toCriterionDefinition(row: CriterionDefinitionSqlRow): CriterionDefinit
     direction: row.direction,
     weight: Number(row.weight),
     isHardConstraint: row.is_hard_constraint,
+    isCategory: row.is_category,
     appliesTo: row.applies_to,
     unit: row.unit,
     methodVersion: row.method_version,
@@ -61,7 +63,7 @@ function toCriterionDefinition(row: CriterionDefinitionSqlRow): CriterionDefinit
 }
 
 const CRITERION_DEFINITION_COLUMNS = `
-  id, name_en, name_de, source_id, direction, weight, is_hard_constraint, applies_to, unit, method_version
+  id, name_en, name_de, source_id, direction, weight, is_hard_constraint, is_category, applies_to, unit, method_version
 `;
 
 export async function listCriterionDefinitions(): Promise<CriterionDefinitionRow[]> {

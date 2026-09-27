@@ -1,6 +1,6 @@
 # sela design language
 
-**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-09-23 (§2a, §3 map surfaces)
+**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-09-27 (§4.2a verdict classes, §8 Prüfhinweis)
 
 This document exists so that "it has to look good" is a standard someone can be held to, rather than a matter of taste re-argued in every session. Deviating from it triggers the confirmation gate in `CLAUDE.md` §3.
 
@@ -73,6 +73,26 @@ Two decisions worth their reasoning:
 
 - **`status quo` is neutral, not absent.** It is the reference every other scenario is measured against, so it is a deliberate grey — the role a neutral midpoint plays in a diverging scale — not a lack of colour.
 - **`restore` is not a second green.** The intuitive choice is teal beside conservation green, and it was rejected on measurement: green and teal fail the normal-vision separation floor in dark mode (ΔE 11.9, floor 15). The product reason points the same way — preserving and restoring are *different actions*, and users must never confuse "leave it alone" with "intervene to improve it". Magenta reads as regeneration and is unmistakable beside green.
+
+### 4.2a Verdict classes on the map
+
+Suitability verdicts are not scenarios, so they have their own small set, defined once in
+`lib/map/verdict-style.ts` and shared by the map, its legend and the 3D preview. Each class
+carries a pattern or a lightness step as well as its colour, and the legend names what it means,
+not only what it is called.
+
+| Class | Meaning | Light | Encoding |
+|---|---|---|---|
+| *geeignet* | reaches the (illustrative) threshold | the technology's colour | the technology's hatch |
+| *ungeeignet* | below the threshold | `#d8d5cc` | plain, light |
+| *nicht vorgesehen* | a land-cover class the method does not score — forest, water, settlement, wetland (ADR-0009) | `#b3b0a8` | stipple |
+| *ausgeschlossen* | a hard constraint — for PV, a Naturschutzgebiet or the Nationalpark | `#8a8a8a` | horizontal hatch |
+| *nicht bewertet* | no verdict for this technology | `#eeece6` | plain, lightest |
+
+*Nicht vorgesehen* and *ausgeschlossen* are deliberately different: an exclusion cites a statute,
+*nicht vorgesehen* cites sela's own classification. Merging them would make a classification
+look like law (decided by the project owner, 2026-09-27). The stipple is also restore's scenario
+encoding (§4.2); the two never share a surface, because verdict maps show no scenario fills.
 
 ### 4.3 Validation — measured, not asserted
 
@@ -151,6 +171,8 @@ Design quality raises the duty of honesty: a polished chart makes people trust i
 - **A range is shown as a range** ("28 bis 47 t CO₂-Äq./ha·a"), written with *bis* so negative bounds stay legible, and the central value follows it in smaller secondary text ("Mittel 37"). The central value is never shown alone.
 - **A change between ranged values is the change of their central values, and says so:** "Δ der Mittelwerte −26", beside both ranges. Subtracting the ranges end to end would double-count the uncertainty and is not shown (decided by the project owner, 2026-09-25).
 - **In tables, confidence is the glyph alone** (● hoch, ◐ mittel, ○ niedrig) beside each value, with the words available to screen readers and decoded in the table caption; elsewhere the glyph carries its words.
+- **A *Prüfhinweis* is a condition to check, not an alarm** (ADR-0009). A protected area that does not exclude a cell — FFH, Vogelschutz, Landschaftsschutz, or a Naturschutzgebiet on less than half of it — is shown as a note in neutral ink on a hairline left rule, led by a § glyph: no warning hue, no icon that reads as "danger". Every note names the area, its share of the cell, the provision it cites and "nach den Übersichtsdaten des LfU", and never a permission outcome. Shares below 1 % of a cell are not shown.
+- **A limiting criterion is named only when it stands out.** "Begrenzt am deutlichsten durch" names the criterion furthest — at least 0.1 on the 0–1 scale — below its best value in the region; otherwise the screen says that no criterion lies clearly behind (decision memo Q5). A near-constant regional penalty is never presented as the reason for every cell.
 - **No false precision.** Significant figures reflect the input's actual resolution. A value derived from 100 m raster data is not displayed to the square metre.
 
 ## 9. Accessibility floor

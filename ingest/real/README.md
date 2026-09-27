@@ -17,6 +17,7 @@ and reads only what `01_fetch.sh` put in `data/raw/`, so the pipeline runs offli
 | 20 | `20_sample.sql` | one `staging.raw_sample` row per cell and suitability criterion |
 | 20b | `20b_sample_nature.sql` | the inputs of the outcome methods: peat share, carbon stock, water balance and the wet-peatland reference (`docs/domain/scoring-criteria.md` §4) |
 | 21 | `21_write_values.sql` | `criterion_value` rows with per-criterion confidence |
+| 22 | `22_protection_overlap.sql` | `protection_overlap` — every protected area a cell overlaps, by name and share (the evidence behind the *Prüfhinweise*, ADR-0009) |
 
 Criterion and source rows are seeded by `seed_real_criteria.sql` (definitions, **illustrative
 weights** — see its header), `seed_nature_criteria.sql` (the outcome-method inputs, which carry

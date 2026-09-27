@@ -26,6 +26,11 @@ import { SelaScoringError } from "./types";
 export interface NormalizedCriterion {
   readonly normalizedScore: number;
   readonly violatesConstraint: boolean;
+  /**
+   * Category criteria only (ADR-0009): the unit's class is one the method does
+   * not score. For every other criterion it is ignored.
+   */
+  readonly notConsidered?: boolean;
 }
 
 export type Normalize = (
@@ -63,26 +68,43 @@ export interface ComputeSuitabilityParams {
    */
   readonly suitabilityThreshold: number;
   readonly methodVersion: string;
+  /**
+   * Flow F2's limiting-criterion rule (decision memo Q5). Without it, a
+   * criterion's gap is measured against a perfect 1 and one is always named.
+   * With it, the gap is measured against the best normalised value of that
+   * criterion in the compared land (`computeLimitingReference`), and a
+   * criterion is named only when its gap is at least `minGap`.
+   */
+  readonly limitingReference?: LimitingReference;
+}
+
+export interface LimitingReference {
+  /** Best normalised value per scored criterion id in the compared land. */
+  readonly best: ReadonlyMap<string, number>;
+  readonly minGap: number;
+}
+
+type Gate =
+  | { readonly kind: "excluded" | "not_considered"; readonly criterionId: string }
+  | { readonly kind: "scored"; readonly contributions: readonly Contribution[] };
+
+interface Contribution {
+  readonly definition: CriterionDefinition;
+  readonly normalizedScore: number;
 }
 
 /**
- * Computes one technology's suitability verdict for one spatial unit.
- *
- * A criterion with no `CriterionValue` present for this spatial unit takes
- * no part in either the exclusion check or the score — absence is not
- * evidence of anything, so it is never treated as satisfying or violating a
- * constraint, and never silently contributes a favourable or unfavourable
- * score.
+ * The part of flow F2 before any score: hard constraints first (a statute
+ * outranks a classification), then category criteria, then the normalised
+ * contribution of every scored criterion present.
  */
-export function computeSuitability(params: ComputeSuitabilityParams): SuitabilityVerdict {
-  const { spatialUnitId, technology, values, definitions, normalize, suitabilityThreshold, methodVersion } = params;
-
-  if (suitabilityThreshold < 0 || suitabilityThreshold > 1) {
-    throw new SelaScoringError(
-      `suitabilityThreshold must be within [0, 1], got ${suitabilityThreshold}`,
-    );
-  }
-
+function gate(
+  spatialUnitId: string,
+  technology: Technology,
+  values: readonly CriterionValue[],
+  definitions: readonly CriterionDefinition[],
+  normalize: Normalize,
+): Gate {
   const valueByCriterionId = new Map(values.map((v) => [v.criterionId, v]));
   const applicable = applicableDefinitions(definitions, technology);
 
@@ -96,22 +118,22 @@ export function computeSuitability(params: ComputeSuitabilityParams): Suitabilit
       violated.push({ definition, weight: definition.weight, id: definition.id });
     }
   }
-
   if (violated.length > 0) {
-    const excludedBy = pickByWeightThenId(violated).definition;
-    return {
-      spatialUnitId,
-      technology,
-      verdict: "excluded",
-      score: null,
-      limitingCriterionId: null,
-      excludedByCriterionId: excludedBy.id,
-      methodVersion,
-    };
+    return { kind: "excluded", criterionId: pickByWeightThenId(violated).definition.id };
   }
 
-  const scored = applicable.filter((d) => !d.isHardConstraint);
-  const contributions: { definition: CriterionDefinition; normalizedScore: number }[] = [];
+  // A category criterion without a value is not evidence either way (as above):
+  // the unit is then scored on what is present.
+  const categories = applicable.filter((d) => d.isCategory).sort((a, b) => a.id.localeCompare(b.id));
+  for (const definition of categories) {
+    const value = valueByCriterionId.get(definition.id);
+    if (value && normalize(value, definition).notConsidered) {
+      return { kind: "not_considered", criterionId: definition.id };
+    }
+  }
+
+  const scored = applicable.filter((d) => !d.isHardConstraint && !d.isCategory);
+  const contributions: Contribution[] = [];
   for (const definition of scored) {
     const value = valueByCriterionId.get(definition.id);
     if (!value) continue;
@@ -123,12 +145,46 @@ export function computeSuitability(params: ComputeSuitabilityParams): Suitabilit
     }
     contributions.push({ definition, normalizedScore });
   }
-
   if (contributions.length === 0) {
     throw new SelaScoringError(
       `No scoreable criterion values available for spatial unit "${spatialUnitId}", technology "${technology}" — cannot compute a suitability verdict.`,
     );
   }
+  return { kind: "scored", contributions };
+}
+
+/**
+ * Computes one technology's suitability verdict for one spatial unit.
+ *
+ * A criterion with no `CriterionValue` present for this spatial unit takes
+ * no part in the exclusion check, the category check or the score — absence
+ * is not evidence of anything, so it is never treated as satisfying or
+ * violating a constraint, and never silently contributes a favourable or
+ * unfavourable score.
+ */
+export function computeSuitability(params: ComputeSuitabilityParams): SuitabilityVerdict {
+  const { spatialUnitId, technology, values, definitions, normalize, suitabilityThreshold, methodVersion, limitingReference } =
+    params;
+
+  if (suitabilityThreshold < 0 || suitabilityThreshold > 1) {
+    throw new SelaScoringError(
+      `suitabilityThreshold must be within [0, 1], got ${suitabilityThreshold}`,
+    );
+  }
+
+  const gated = gate(spatialUnitId, technology, values, definitions, normalize);
+  if (gated.kind !== "scored") {
+    return {
+      spatialUnitId,
+      technology,
+      verdict: gated.kind,
+      score: null,
+      limitingCriterionId: null,
+      excludedByCriterionId: gated.criterionId,
+      methodVersion,
+    };
+  }
+  const { contributions } = gated;
 
   const totalWeight = contributions.reduce((sum, c) => sum + c.definition.weight, 0);
   if (totalWeight <= 0) {
@@ -140,23 +196,54 @@ export function computeSuitability(params: ComputeSuitabilityParams): Suitabilit
   const score =
     contributions.reduce((sum, c) => sum + c.definition.weight * c.normalizedScore, 0) / totalWeight;
 
-  // Flow F2 — the single criterion limiting the score most: the one whose
-  // shortfall (weight × room for improvement) is largest, i.e. the
-  // criterion that would raise the score the most if it were perfect.
-  const limiting = pickByWeightThenId(
-    contributions.map((c) => ({
-      weight: c.definition.weight * (1 - c.normalizedScore),
-      id: c.definition.id,
-    })),
-  );
+  // Flow F2 — the criterion limiting the score most: the one whose weighted
+  // gap (weight × distance below its reference) is largest. The reference is
+  // a perfect 1, or — under the Q5 rule — the best value of that criterion in
+  // the compared land, and then only a gap of at least `minGap` is named.
+  const minGap = limitingReference?.minGap ?? 0;
+  const candidates = contributions
+    .map((c) => ({ c, gap: (limitingReference?.best.get(c.definition.id) ?? 1) - c.normalizedScore }))
+    .filter(({ gap }) => gap >= minGap)
+    .map(({ c, gap }) => ({ weight: c.definition.weight * gap, id: c.definition.id }));
+  const limiting = candidates.length > 0 ? pickByWeightThenId(candidates) : null;
 
   return {
     spatialUnitId,
     technology,
     verdict: score >= suitabilityThreshold ? "suitable" : "unsuitable",
     score,
-    limitingCriterionId: limiting.id,
+    limitingCriterionId: limiting?.id ?? null,
     excludedByCriterionId: null,
     methodVersion,
   };
+}
+
+/**
+ * The Q5 reference: for each scored criterion, the best normalised value
+ * among the units that receive a score for this technology — the compared
+ * land. Excluded and not-considered units take no part: their values are not
+ * what a scored unit is compared against.
+ */
+export function computeLimitingReference(params: {
+  readonly technology: Technology;
+  readonly valuesByUnit: ReadonlyMap<string, readonly CriterionValue[]>;
+  readonly definitions: readonly CriterionDefinition[];
+  readonly normalize: Normalize;
+}): Map<string, number> {
+  const { technology, valuesByUnit, definitions, normalize } = params;
+  const best = new Map<string, number>();
+  for (const [spatialUnitId, values] of valuesByUnit) {
+    let gated: Gate;
+    try {
+      gated = gate(spatialUnitId, technology, values, definitions, normalize);
+    } catch (err) {
+      if (err instanceof SelaScoringError) continue;
+      throw err;
+    }
+    if (gated.kind !== "scored") continue;
+    for (const { definition, normalizedScore } of gated.contributions) {
+      best.set(definition.id, Math.max(best.get(definition.id) ?? 0, normalizedScore));
+    }
+  }
+  return best;
 }

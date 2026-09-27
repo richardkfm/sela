@@ -25,9 +25,10 @@ import { replaceVerdictsForPilotRegion } from "../lib/db/queries/verdicts";
 import { CURRENT_METHOD_VERSION } from "../lib/scoring/method-version";
 import { CITED_OUTCOME_METHODS, methodOutcomeRows } from "../lib/scoring/nature";
 import { computeOutcomeRow } from "../lib/scoring/outcomes";
-import { computeSuitability } from "../lib/scoring/suitability";
+import { LIMITING_MIN_GAP } from "../lib/scoring/pv-rules";
+import { computeLimitingReference, computeSuitability, type LimitingReference } from "../lib/scoring/suitability";
 import { OUTCOME_DIMENSIONS, SCENARIOS, SelaScoringError, TECHNOLOGIES } from "../lib/scoring/types";
-import type { CriterionValue, SuitabilityVerdict } from "../lib/scoring/types";
+import type { CriterionValue, SuitabilityVerdict, Technology } from "../lib/scoring/types";
 import {
   ILLUSTRATIVE_SUITABILITY_THRESHOLD,
   illustrativeNormalize,
@@ -97,6 +98,20 @@ async function main() {
     valuesByUnit.set(value.spatialUnitId, list);
   }
 
+  // Flow F2's Q5 rule (decision memo): a limiting criterion is named against
+  // the best value of that criterion among the units scored for the same
+  // technology in this region — the compared land — so the first pass finds
+  // those best values.
+  const limitingReference = new Map<Technology, LimitingReference>(
+    TECHNOLOGIES.map((technology) => [
+      technology,
+      {
+        best: computeLimitingReference({ technology, valuesByUnit, definitions, normalize: illustrativeNormalize }),
+        minGap: LIMITING_MIN_GAP,
+      },
+    ]),
+  );
+
   const verdicts: SuitabilityVerdict[] = [];
   let skippedVerdicts = 0;
   let outcomeCount = 0;
@@ -114,6 +129,7 @@ async function main() {
           normalize: illustrativeNormalize,
           suitabilityThreshold: ILLUSTRATIVE_SUITABILITY_THRESHOLD,
           methodVersion: CURRENT_METHOD_VERSION,
+          limitingReference: limitingReference.get(technology),
         });
         verdicts.push(verdict);
       } catch (err) {

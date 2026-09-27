@@ -9,13 +9,21 @@
 import { ImageResponse } from "next/og";
 import { partitionByCitability, renderAttribution } from "@/lib/attribution";
 import { getActiveBasemap } from "@/lib/basemap/basemap-source";
-import { getCriterionDefinition, getSource, type SourceRow } from "@/lib/db/queries/criteria";
+import {
+  getCriterionDefinition,
+  getSource,
+  listCriterionDefinitions,
+  type CriterionDefinitionRow,
+  type SourceRow,
+} from "@/lib/db/queries/criteria";
+import { pilotRegionInfo } from "@/lib/pilot-region";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
 import { scenarioTokens, technologyToTokenKey } from "@/lib/design/tokens";
 import { ILLUSTRATIVE_MARKER } from "@/lib/scoring/illustrative-weights";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import type { SuitabilityVerdict } from "@/lib/scoring/types";
+import { VERDICT_LABEL_DE } from "@/lib/scoring/verdict-text";
 
 export const runtime = "nodejs";
 
@@ -59,20 +67,31 @@ export async function GET(
     );
   }
 
+  // The criteria this card cites: the one that decided or limits the verdict,
+  // or — where no criterion stands out (decision memo Q5) — every criterion
+  // that entered the score, so the card still cites what its headline rests on.
   const reasonId = headline.excludedByCriterionId ?? headline.limitingCriterionId;
-  if (!reasonId) {
+  const cited = reasonId
+    ? [await getCriterionDefinition(reasonId)]
+    : (await listCriterionDefinitions()).filter(
+        (d) => d.appliesTo.includes(headline.technology) && !d.isHardConstraint && !d.isCategory && d.weight > 0,
+      );
+  if (cited.length === 0) {
     return Response.json({ error: "verdict carries no criterion to cite" }, { status: 422 });
   }
-  const reason = await getCriterionDefinition(reasonId);
-  if (!reason) {
+  const missing = cited.findIndex((d) => d === null);
+  if (missing !== -1) {
     return Response.json({ error: `criterion "${reasonId}" not found — refusing to render uncited card` }, { status: 422 });
   }
-  const source = await getSource(reason.sourceId);
-  if (!source) {
-    return Response.json({ error: `source "${reason.sourceId}" not found — refusing to render uncited card` }, { status: 422 });
+  const criteria = cited as CriterionDefinitionRow[];
+  const sources: SourceRow[] = [];
+  for (const sourceId of new Set(criteria.map((d) => d.sourceId))) {
+    const source = await getSource(sourceId);
+    if (!source) {
+      return Response.json({ error: `source "${sourceId}" not found — refusing to render uncited card` }, { status: 422 });
+    }
+    sources.push(source);
   }
-
-  const sources: SourceRow[] = [source];
 
   // design-language.md §7: "a card that cannot cite itself must not render."
   // A source whose Quellenvermerk was never recorded is exactly that case, so
@@ -93,10 +112,17 @@ export async function GET(
   const tokenKey = technologyToTokenKey[headline.technology];
   const token = scenarioTokens[tokenKey];
   const { width, height } = SIZES[format];
+  const region = pilotRegionInfo(unit.pilotRegion);
+  const names = criteria.map((d) => d.nameDe).join(", ");
+  const technologyLabel = TECHNOLOGY_LABEL_DE[headline.technology];
   const headlineText =
     headline.verdict === "excluded"
-      ? `${TECHNOLOGY_LABEL_DE[headline.technology]}: ausgeschlossen durch ${reason.nameDe}`
-      : `${TECHNOLOGY_LABEL_DE[headline.technology]}: ${headline.verdict === "suitable" ? "geeignet" : "ungeeignet"} — begrenzt durch ${reason.nameDe}`;
+      ? `${technologyLabel}: ausgeschlossen durch ${names}`
+      : headline.verdict === "not_considered"
+        ? `${technologyLabel}: nicht vorgesehen wegen ${names}`
+        : `${technologyLabel}: ${VERDICT_LABEL_DE[headline.verdict]} — ${
+            reasonId ? `begrenzt am deutlichsten durch ${names}` : "kein Kriterium deutlich unter dem Regionsbesten"
+          }`;
 
   return new ImageResponse(
     (
@@ -115,7 +141,9 @@ export async function GET(
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontSize: 20, color: "#54524c" }}>
-            {`Synthetische Demo-Fläche · Fixture-Region · ${ILLUSTRATIVE_MARKER.de}`}
+            {region.kind === "real"
+              ? `Rasterzelle · ${region.nameDe} · echte Messwerte, Beispiel-Gewichtung · ${ILLUSTRATIVE_MARKER.de}`
+              : `Synthetische Demo-Fläche · Fixture-Region · ${ILLUSTRATIVE_MARKER.de}`}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ width: 40, height: 40, borderRadius: 8, background: token.light }} />
@@ -124,9 +152,11 @@ export async function GET(
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 22 }}>
-          <div>
-            {`${reason.nameDe} (${reason.direction === "lower_better" ? "niedriger ist besser" : "höher ist besser"})`}
-          </div>
+          {criteria.map((d) => (
+            <div key={d.id}>
+              {`${d.nameDe} (${d.isCategory ? "Kategorie" : d.isHardConstraint ? "Ausschlusskriterium" : d.direction === "lower_better" ? "niedriger ist besser" : "höher ist besser"})`}
+            </div>
+          ))}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 16, color: "#54524c", borderTop: "1px solid #d8d5cc", paddingTop: 16 }}>

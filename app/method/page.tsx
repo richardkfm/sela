@@ -13,6 +13,16 @@ import type { CitedFactor, OutcomeMethod } from "@/lib/scoring/nature/method";
 import { DIMENSION_LABEL_DE } from "@/lib/scoring/outcome-display";
 import { TECHNOLOGIES } from "@/lib/scoring/types";
 import { appliesToLabel } from "@/lib/scoring/labels";
+import {
+  IRRADIATION_BOUNDS,
+  IRRADIATION_NATIONAL_QUARTILES,
+  LAND_COVER_TIER_LABEL_DE,
+  LIMITING_MIN_GAP,
+  PROTECTION_EXCLUSION_SHARE,
+  PROTECTION_FLAG_MIN_SHARE,
+  landCoverClassesOfTier,
+  type LandCoverTier,
+} from "@/lib/scoring/pv-rules";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
@@ -79,7 +89,7 @@ export default async function MethodPage() {
                   {definition.appliesTo.map(appliesToLabel).join(", ")}
                 </td>
                 <td className="tabular-nums" style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>
-                  {definition.weight}
+                  {definition.isCategory ? "Kategorie, nicht im Score" : definition.weight}
                 </td>
                 <td style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>
                   {source?.dataset ?? definition.sourceId}
@@ -89,6 +99,8 @@ export default async function MethodPage() {
           })}
         </tbody>
       </table>
+
+      <PvRulesSection />
 
       <section aria-labelledby="ergebnis-methoden" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <h2 id="ergebnis-methoden" style={{ fontSize: "1.2rem", fontWeight: 600, margin: "1rem 0 0" }}>
@@ -105,6 +117,109 @@ export default async function MethodPage() {
         ))}
       </section>
     </main>
+  );
+}
+
+const TIERS: readonly LandCoverTier[] = ["vorgesehen", "eingeschraenkt", "nicht_vorgesehen"];
+const TIER_EFFECT_DE: Record<LandCoverTier, string> = {
+  vorgesehen: "wird bewertet",
+  eingeschraenkt: "wird bewertet; die Einschränkung steht neben dem Ergebnis",
+  nicht_vorgesehen: "wird nicht bewertet – Ergebnis „nicht vorgesehen“",
+};
+const KWH = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const PCT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
+
+/**
+ * The rules the project owner decided on 2026-09-27 (roadmap Step 1,
+ * docs/domain/decision-memo-scoring-rules.md), rendered from the same module
+ * the engine reads (lib/scoring/pv-rules.ts), so the page cannot drift from it.
+ */
+function PvRulesSection() {
+  return (
+    <section aria-labelledby="pv-regeln" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.9rem" }}>
+      <h2 id="pv-regeln" style={{ fontSize: "1.2rem", fontWeight: 600, margin: "1rem 0 0" }}>
+        Regeln der Eignungsprüfung für Freiflächen- und Agri-PV
+      </h2>
+      <p style={{ color: "var(--text-secondary)", margin: 0 }}>
+        Diese Regeln sind entschieden (27.09.2026). Gewichte, Neigungsgrenzen und die Eignungsschwelle sind es noch
+        nicht – deshalb bleibt das Ergebnis illustrativ.
+      </p>
+
+      <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: "0.5rem 0 0" }}>In dieser Reihenfolge</h3>
+      <ol style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+        <li>
+          <strong>Ausgeschlossen</strong>, wenn mindestens {PCT.format(PROTECTION_EXCLUSION_SHARE * 100)} % der Fläche nach
+          den Übersichtsdaten des LfU in einem Naturschutzgebiet oder dem Nationalpark liegen – dort verbietet das Gesetz
+          nach Maßgabe der Verordnung Veränderungen (§§ 23, 24 BNatSchG).
+        </li>
+        <li>
+          <strong>Nicht vorgesehen</strong>, wenn die vorherrschende Bodenbedeckung in der Stufe „nicht vorgesehen“ liegt
+          (Tabelle unten). Das ist selas eigene Einordnung, keine Rechtsfolge.
+        </li>
+        <li>
+          Sonst <strong>bewertet</strong> aus Globalstrahlung und Geländeneigung. Die Strahlung wird auf die bundesweite
+          Spanne {KWH.format(IRRADIATION_BOUNDS.min)} bis {KWH.format(IRRADIATION_BOUNDS.max)} kWh/m²·a skaliert (1. bis
+          99. Perzentil des DWD-Mittels 2016–2025 aller Rasterzellen in Deutschland) – nie auf die Spanne einer Region.
+          Zur Einordnung zeigt sela, in welchem Viertel der deutschen Werte eine Fläche liegt (Quartilsgrenzen{" "}
+          {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p25)}, {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p50)} und{" "}
+          {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p75)} kWh/m²·a).
+        </li>
+      </ol>
+
+      <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: "0.5rem 0 0" }}>Begrenzendes Kriterium</h3>
+      <p style={{ margin: 0 }}>
+        Genannt wird das Kriterium, das am weitesten unter seinem besten Wert unter den bewerteten Flächen derselben
+        Region liegt – und nur, wenn der Abstand mindestens {String(LIMITING_MIN_GAP).replace(".", ",")} auf der
+        0–1-Skala beträgt. Sonst steht dort, dass kein Kriterium deutlich zurückliegt. Ein Kriterium, das in der ganzen
+        Region fast gleich ist, wird so nicht überall als „begrenzend“ genannt.
+      </p>
+
+      <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: "0.5rem 0 0" }}>Prüfhinweise zu Schutzgebieten</h3>
+      <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+        <li>FFH- und Europäische Vogelschutzgebiete: Verträglichkeitsprüfung erforderlich (§ 34 BNatSchG) – kein Ausschluss.</li>
+        <li>Landschaftsschutzgebiete: was zulässig ist, regelt die Schutzgebietsverordnung (§ 26 BNatSchG) – kein Ausschluss.</li>
+        <li>
+          Naturschutzgebiet oder Nationalpark auf weniger als {PCT.format(PROTECTION_EXCLUSION_SHARE * 100)} % der Fläche: der
+          Anteil wird genannt.
+        </li>
+        <li>
+          Überschneidungen unter {PCT.format(PROTECTION_FLAG_MIN_SHARE * 100)} % der Fläche werden nicht angezeigt – sie liegen
+          in der Digitalisiergenauigkeit der Übersichtsdaten (1:10 000). Biosphärenreservate werden noch nicht als Hinweis
+          geführt.
+        </li>
+      </ul>
+
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.85rem" }}>
+          <caption style={{ textAlign: "left", captionSide: "top", fontWeight: 600, padding: "0.5rem 0" }}>
+            Bodenbedeckung in drei Stufen (CORINE-Klassen nach CLC5)
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" style={TH}>Klasse</th>
+              <th scope="col" style={TH}>Begründung</th>
+            </tr>
+          </thead>
+          {TIERS.map((tier) => (
+            <tbody key={tier}>
+              <tr>
+                <th scope="rowgroup" colSpan={2} style={{ ...TD, textAlign: "left", paddingTop: "0.6rem" }}>
+                  {LAND_COVER_TIER_LABEL_DE[tier]} – {TIER_EFFECT_DE[tier]}
+                </th>
+              </tr>
+              {landCoverClassesOfTier(tier).map((c) => (
+                <tr key={c.code}>
+                  <th scope="row" style={{ ...TD, fontWeight: 400, textAlign: "left" }}>
+                    <span className="tabular-nums">{c.code}</span> · {c.nameDe}
+                  </th>
+                  <td style={TD}>{c.reasonDe}</td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </section>
   );
 }
 

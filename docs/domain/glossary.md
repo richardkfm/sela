@@ -1,6 +1,6 @@
 # Glossary
 
-**Version band:** `0.2.x`–`0.3.x` · **Status:** first draft · **Last updated:** 2026-09-24
+**Version band:** `0.2.x`–`0.3.x` · **Status:** first draft · **Last updated:** 2026-09-27
 
 Shared vocabulary for sela's domain. English is the working language of documentation and code;
 German terms are kept where they are the precise legal or technical term, per `CLAUDE.md` §5.
@@ -58,6 +58,12 @@ meet in schema, code, or UI — not just a definition.
 | **Versickerung** (percolation) | Water that drains below the root zone, per the LfU water-balance model. Not the same as *Grundwasserneubildung* (groundwater recharge), and sela does not call it that. |
 | **Tier 1** | The IPCC's default-factor level of method: one published factor per land-use category and climate zone, not a site measurement. Why sela's peat emissions carry `low` confidence. |
 | **Biotopwertverfahren** | A points method for habitat/biotope value, such as the federal BKompV Anlage 2 (0–24). **Not adopted** (2026-09-24): the BKompV scale is not Brandenburg law, and Brandenburg assesses verbally. Nature capital is shown as categories instead (`docs/domain/scoring-criteria.md` §4.3). |
+| ***Nicht vorgesehen*** (`verdict = 'not_considered'`) | A suitability verdict for land the method does not score: its dominant land-cover class is in the tier *nicht vorgesehen* (forest, water, settlement, wetland, semi-natural vegetation). No score. Distinct from *ausgeschlossen*, which cites a statute; this cites sela's own classification (ADR-0009). |
+| **Land-cover tier** (*vorgesehen* / *eingeschränkt* / *nicht vorgesehen*) | The category each CLC class is placed in for ground-mounted PV, with a one-line written reason per class (`lib/scoring/pv-rules.ts`, decision memo Q3b). A category, never a score. |
+| **Category criterion** (`criterion_definition.is_category`) | A criterion that sorts cells into named classes and never enters the weighted score; it can make a cell *nicht vorgesehen* (ADR-0009). |
+| ***Prüfhinweis*** | A named, cited condition beside a verdict: a protected area that does not exclude the cell (FFH, SPA, LSG, or a Naturschutzgebiet on less than half of it), with its share and the provision it cites. A thing to check, never a permission outcome (ADR-0009). |
+| **Limiting criterion** (`limiting_criterion_id`) | The criterion furthest — at least 0.1 on the 0–1 scale — below its best value among the scored cells of the same region. May be absent: then no criterion lies clearly behind (decision memo Q5). |
+| **FFH-Verträglichkeitsprüfung** | The assessment § 34 BNatSchG requires before a project affecting a Natura 2000 area is permitted. A duty to assess, not a ban — which is why FFH and SPA areas are *Prüfhinweise* in sela, not exclusions. |
 | **Umweltverträglichkeitsprüfung** (UVP) | Statutory environmental impact assessment. sela produces pre-assessment signals only and is never a substitute for one (`docs/product/mvp.md` §3, non-goals). |
 
 ## Provenance and licensing
