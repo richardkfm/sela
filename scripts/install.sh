@@ -108,16 +108,19 @@ if [ "$BUILD" -eq 1 ]; then
   compose_all build
 else
   step "Pulling the sela images from ghcr.io"
-  compose_all pull
-  # A failed pull of a service that also has a `build` section may only be a
-  # warning; check that every image really is here before `up --no-build`.
+  # A failed pull may exit non-zero or only warn, depending on the Compose
+  # version; either way, check that every image really is here before
+  # `up --no-build`, and say what to do if one is not.
+  compose_all pull || true
   missing=""
   for image in $(compose_all config --images); do
     docker image inspect "$image" >/dev/null 2>&1 || missing="$missing $image"
   done
   [ -z "$missing" ] || die "could not pull:$missing
-If ghcr.io is unreachable from here, or the packages are not public yet, build
-from this checkout instead: scripts/install.sh --build"
+ghcr.io answers \"denied\" both for a private package and for one that does not
+exist yet. Right after a push to main, wait for the \"Publish images\" workflow
+(https://github.com/richardkfm/sela/actions) to finish, then run this again.
+Otherwise build from this checkout instead: scripts/install.sh --build"
 fi
 
 # --- Start --------------------------------------------------------------------

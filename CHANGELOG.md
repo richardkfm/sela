@@ -58,6 +58,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   pnpm 12, which ignores `pnpm.onlyBuiltDependencies` in `package.json` and fails the install
   with `ERR_PNPM_IGNORED_BUILDS`, so the app image no longer built. pnpm is installed in its own
   stage and does not reach the runtime image.
+- **`scripts/install.sh` explains a failed pull** instead of stopping on Docker's raw
+  `denied`. GHCR returns `denied` both for a private package and for one not yet published, so
+  the message points to the "Publish images" run and to `--build`. The first real install hit
+  this: it ran while `sela` and `sela-tools` were still being pushed.
 - **`ingest/run.sh` ignores a leading `--`**, so `docker compose run ingest -- --fixture` cannot
   start the real ≈ 1 GB run if Compose passes the `--` through. The docs now use the unambiguous
   `run --rm ingest --fixture`.
