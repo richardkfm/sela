@@ -36,9 +36,10 @@ export function comparisonMethodVersions(illustrativeVersion: string): string[] 
 }
 
 // Units whose source resolves no better than whole units (format-value.ts).
-const WHOLE_UNITS = new Set(["t C/ha", "mm/a", "%nFK"]);
-// Tier 1 default factors: two significant figures are already generous.
-const TWO_SIGNIFICANT_UNITS = new Set(["t CO₂-Äq./ha·a"]);
+const WHOLE_UNITS = new Set(["t C/ha", "t C", "mm/a", "%nFK"]);
+// Tier 1 default factors, and typical plant factors for energy: two
+// significant figures are already generous.
+const TWO_SIGNIFICANT_UNITS = new Set(["t CO₂-Äq./ha·a", "t CO₂-Äq./a", "MWh/ha·a", "MWh/a", "MWp/ha", "MWp"]);
 
 const INTEGER = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
 const TWO_SIGNIFICANT = new Intl.NumberFormat("de-DE", { maximumSignificantDigits: 2 });
@@ -88,7 +89,12 @@ export function describeOutcomeCell(
   metricInfo?: OutcomeMetricInfo,
 ): OutcomeCell {
   if (!outcome || outcome.status === "not_modelled") return { kind: "not_modelled" };
-  if (outcome.status === "not_applicable") return { kind: "not_applicable", reasonDe: metricInfo?.notApplicableDe ?? null };
+  if (outcome.status === "not_applicable") {
+    return {
+      kind: "not_applicable",
+      reasonDe: metricInfo?.notApplicableByScenarioDe?.[outcome.scenario] ?? metricInfo?.notApplicableDe ?? null,
+    };
+  }
 
   const value = outcome.value!;
   const { unit } = outcome;

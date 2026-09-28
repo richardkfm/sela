@@ -3,7 +3,7 @@
 // source of those factors — the materialiser writes them to `outcome_method`
 // from here, so the method page cannot print a number the code does not use.
 
-import type { OutcomeDimension } from "../types";
+import type { OutcomeDimension, Scenario } from "../types";
 
 /** One published factor, with where it was read. */
 export interface CitedFactor {
@@ -23,6 +23,15 @@ export interface OutcomeMetricInfo {
   readonly unit: string;
   /** The one-line reason shown with *trifft nicht zu* (ADR-0008 §3), for metrics that can be not_applicable. */
   readonly notApplicableDe?: string;
+  /** A scenario-specific reason, where the reason differs by scenario; falls back to `notApplicableDe`. */
+  readonly notApplicableByScenarioDe?: Partial<Record<Scenario, string>>;
+  /**
+   * How a group of cells is summarised as one site (roadmap Step 5,
+   * lib/scoring/site.ts): `sum_per_ha` — a per-hectare quantity, summed over
+   * the cells' areas into a total; `area_mean` — a state of the land, averaged
+   * over the cells' areas.
+   */
+  readonly siteAggregation: "sum_per_ha" | "area_mean";
   /** What this metric's range means (ADR-0008 §2), for metrics that carry one. */
   readonly rangeDe?: string;
 }

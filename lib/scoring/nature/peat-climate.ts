@@ -242,12 +242,14 @@ export const PEAT_CLIMATE_METHOD: OutcomeMethod = {
       labelDe: "Kohlenstoffvorrat im Moorboden",
       unit: STOCK_UNIT,
       notApplicableDe: "kein Moorboden in dieser Zelle",
+      siteAggregation: "sum_per_ha",
     },
     {
       metric: PEAT_GHG_BALANCE,
       labelDe: "Treibhausgasbilanz des Moorbodens",
       unit: BALANCE_UNIT,
       notApplicableDe: "kein Moorboden in dieser Zelle",
+      siteAggregation: "sum_per_ha",
       rangeDe:
         "Acker und Renaturierung: die 95-%-Intervalle der IPCC-Standardfaktoren, durch Addition ihrer Grenzen " +
         "zusammengefasst (eher zu breit als zu schmal); der Mittelwert ist der IPCC-Zentralwert. Grünland: die " +

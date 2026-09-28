@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { PV_YIELD_METHOD_VERSION } from "../energy/pv-yield";
 
 import {
   buildComparisonLines,
@@ -100,7 +101,12 @@ test("no delta against a baseline that does not apply", () => {
 });
 
 test("the comparison reads the illustrative version and every cited method", () => {
-  assert.deepEqual(comparisonMethodVersions("0.2.1-dev"), ["0.2.1-dev", PEAT_CLIMATE_METHOD_VERSION, WATER_METHOD_VERSION]);
+  assert.deepEqual(comparisonMethodVersions("0.2.1-dev"), [
+    "0.2.1-dev",
+    PV_YIELD_METHOD_VERSION,
+    PEAT_CLIMATE_METHOD_VERSION,
+    WATER_METHOD_VERSION,
+  ]);
 });
 
 test("every dimension appears once even with no rows, every cell not modelled", () => {

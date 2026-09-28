@@ -13,12 +13,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MethodNote } from "@/components/MethodNote";
 import { TechnologySwitch } from "@/components/TechnologySwitch";
+import type { Municipality } from "@/lib/db/queries/municipalities";
 import type { RegionSummary, VerdictCounts } from "@/lib/db/queries/regions";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
 import type { PilotRegionInfo } from "@/lib/pilot-region";
 import { TECHNOLOGIES, type Technology } from "@/lib/scoring/types";
+import { MAX_GROUP_CELLS, toggleInGroup } from "@/lib/search/group";
+import { GroupPanel } from "./GroupPanel";
 import { Legend } from "./Legend";
-import { Map, type FocusRequest, type FramePadding, type HoverInfo, type VisibleUnit } from "./Map";
+import { Map, type FocusRequest, type FramePadding, type HoverInfo, type MapOutline, type VisibleUnit } from "./Map";
+import { SearchBox } from "./SearchBox";
 import { SelectionPanel } from "./SelectionPanel";
 import { UnitList } from "./UnitList";
 
@@ -53,7 +57,35 @@ export function Explorer({
   const [visible, setVisible] = useState<VisibleUnit[] | null>(null);
   const [narrow, setNarrow] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const [group, setGroup] = useState<string[]>([]);
+  const [outline, setOutline] = useState<MapOutline | null>(null);
   const nonce = useRef(0);
+
+  const toggleGroup = useCallback((id: string) => {
+    setGroup((current) => {
+      const next = toggleInGroup(current, id);
+      if (next.length === current.length) {
+        setAnnouncement(`Höchstens ${MAX_GROUP_CELLS} Zellen können zusammengefasst werden.`);
+      } else {
+        setAnnouncement(
+          next.length > current.length
+            ? `Zelle ${id.slice(0, 8)} hinzugefügt – ${next.length} Zellen ausgewählt.`
+            : `Zelle ${id.slice(0, 8)} entfernt – ${next.length} Zellen ausgewählt.`,
+        );
+      }
+      return next;
+    });
+  }, []);
+
+  // Flow F1: a Gemeinde is framed and outlined; nothing is selected, because a
+  // Gemeinde is a place to look, not a unit sela assesses.
+  const showMunicipality = useCallback(async (municipality: Municipality) => {
+    setFocus({ kind: "bbox", bbox: municipality.bbox, nonce: ++nonce.current, maxZoom: 13 });
+    setAnnouncement(`Karte zeigt ${municipality.kind} ${municipality.name}.`);
+    const response = await fetch(`/api/municipality/${municipality.ags}`);
+    if (!response.ok) return;
+    setOutline((await response.json()) as MapOutline);
+  }, []);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 760px)");
@@ -111,7 +143,10 @@ export function Explorer({
         hoveredId={hover?.id ?? null}
         focus={focus}
         framePadding={padding}
+        groupIds={group}
+        outline={outline}
         onSelect={setSelectedId}
+        onToggleGroup={toggleGroup}
         onHover={setHover}
         onVisibleUnits={setVisible}
       />
@@ -127,6 +162,10 @@ export function Explorer({
         </header>
 
         <MethodNote compact kind={region.kind} />
+
+        {region.kind === "real" && (
+          <SearchBox region={region.id} onMunicipality={showMunicipality} onUnit={selectFromList} />
+        )}
 
         <section aria-labelledby="tech-heading" className="explorer-section">
           <h2 id="tech-heading" className="overline">
@@ -170,6 +209,17 @@ export function Explorer({
           </p>
         </section>
 
+        <GroupPanel
+          ids={group}
+          selectedId={selectedId}
+          onSelect={selectFromList}
+          onRemove={toggleGroup}
+          onClear={() => {
+            setGroup([]);
+            setAnnouncement("Auswahl mehrerer Zellen geleert.");
+          }}
+        />
+
         <UnitList
           units={visible}
           regionUnitCount={region.unitCount}
@@ -185,6 +235,8 @@ export function Explorer({
           id={selectedId}
           technology={technology}
           regionKind={region.kind}
+          inGroup={group.includes(selectedId)}
+          onToggleGroup={() => toggleGroup(selectedId)}
           onClose={() => setSelectedId(null)}
         />
       )}

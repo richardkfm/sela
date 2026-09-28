@@ -26,8 +26,12 @@ read at the source cited. Where that has not happened, the row says so.
 | LfU Brandenburg Schutzgebiete (WFS-LFU-SCHUTZG) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-23 — source of both protection exclusions for the Uckermark (§2.8). *Nicht rechtsverbindlich* |
 | LBGR Brandenburg *Moorbodenkarte* (WFS-MBK) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-24 — peat soils and carbon stock for the climate outcome (§2.9) |
 | LfU Brandenburg *Wasserhaushalt* 1991–2020 (ArcEGMO) | `dl-de/by-2-0` | **Yes**, with attribution, source and data date | **Confirmed and ingested** 2026-09-24 — water balance for the soil-and-water outcome (§2.10). *Keine Rückschlüsse auf liegenschaftsrechtliche Belange* |
+| LfU Brandenburg *Biotopkataster* (BBK) | `dl-de/by-2-0` per metadata; **CC BY 4.0** per the archive's documentation — to settle with LfU | **Yes** under either licence, with attribution + change notice | **Confirmed and ingested** 2026-09-28 under the owner's delegation of that day — nature capital as categories (§2.12). Selective outside FFH areas and Großschutzgebiete |
 
-**The machine gate stands open for seven rows and closed for two.** `ingest/sources.manifest.json`
+**The machine gate stands open for eight rows and closed for two.** The eighth,
+`lfu-bb-biotopkataster`, was opened on 2026-09-28 (roadmap Step 4, §2.12,
+`docs/domain/decision-memo-habitat.md`).
+Before that change it stood open for seven rows and closed for two: `ingest/sources.manifest.json`
 — which `ingest/01_fetch.sh` actually reads before touching a network — reads `confirmed` for
 `bkg-clc5` and `dwd-cdc-radiation` (2026-09-19), `bkg-vg25` (2026-09-19), and `bkg-dgm200` and
 `lfu-bb-schutzgebiete` (2026-09-23), and `lbgr-bb-moorbodenkarte` and `lfu-bb-wasserhaushalt` (2026-09-24, the owner's decision to model climate and water, `docs/domain/scoring-criteria.md` §4); it still reads `to_confirm` for `bfn-schutzgebiete` and
@@ -184,9 +188,9 @@ resampling — which matters for §5.2.
 | | |
 |---|---|
 | Publisher | Bundesamt für Kartographie und Geodäsie (BKG), Geodatenzentrum |
-| Use in sela | The pilot-region boundary that `04_generate_grid.sql` clips the hex grid to (ADR-0001). Not a scoring input — it defines *where*, not *what*. |
+| Use in sela | The pilot-region boundary that `04_generate_grid.sql` clips the hex grid to (ADR-0001), and — since 2026-09-28 (roadmap Step 5) — the *Gemeinde* boundaries for search and for naming the *Gemeinde* a cell lies in (`ingest/real/17_municipalities.sh`, layer `vg25_gem`). Not a scoring input — it defines *where*, not *what*. |
 | Version / vintage | **Produktstand 31.12.2025** (`aktualitaet.txt` in the archive); terms document dated 08.07.2026 |
-| Coverage / geometry | Federal, vector, layered by administrative level — `vg25_krs` (*Kreise*) is the one sela reads |
+| Coverage / geometry | Federal, vector, layered by administrative level — sela reads `vg25_krs` (*Kreise*) and, since 2026-09-28, `vg25_gem` (*Gemeinden*, the rows with `GF = 9`, "mit Struktur": one row per administrative unit per `vg25.pdf` in the archive). The Uckermark has **30** *Gemeinden* |
 | Retrieved artefact | `https://daten.gdz.bkg.bund.de/produkte/vg/vg25_ebenen/aktuell/vg25.utm32s.gpkg.zip` — **fetched 2026-09-19**, 325 132 397 bytes, `Last-Modified: Fri, 10 Jul 2026 10:18:54 GMT`, sha256 in `data/raw/bkg-vg25/fetch-provenance.json` |
 | Projection | **EPSG:25832** — confirmed from the GeoPackage's own `srs_id`, not from the filename. Already ADR-0002's storage CRS; **no reprojection.** |
 | Licence | **CC BY 4.0** — *not* `dl-de/by-2-0` |
@@ -389,6 +393,26 @@ from Tiemeyer et al. (2020). Its header reads *"t CO2-C ha⁻¹ a⁻¹"*, but Ta
 the same 26.48 for *Ackerland* in *"t CO2-Eq"*. Until that is resolved, the table is not cited
 for a number.
 
+### 2.12 LfU Brandenburg *Biotopkataster* (BBK) → nature capital as categories
+
+| | |
+|---|---|
+| Publisher | Landesamt für Umwelt Brandenburg (LfU), Referat N3; *Prüfung und Bereitstellung*: LGB |
+| Use in sela | Per cell: mapped biotopes, whether the Kataster records them as protected (§ 30 BNatSchG i. V. m. § 18 BbgNatSchAG), FFH *Lebensraumtyp* and its conservation grade — shown as categories, never scored (`docs/domain/scoring-criteria.md` §4.3, `lib/scoring/habitat.ts`) |
+| Artefact | `https://data.geobasis-bb.de/geofachdaten/Natur_und_Landschaft/Biotope_und_Lebensraumtypen/biotope_lrt.zip` — **fetched 2026-09-28**, 181 214 958 bytes, `Last-Modified: Fri, 12 Jun 2026 05:53:54 GMT` (pinned), sha256 `0683757c899a399b7f31f5328deb78dc9d961cf1cb3bfa6ecca91f023865cf80` |
+| Content | Shapefiles `bbk_fl` (329 274 areas), `bbk_li` (87 528 lines), `bbk_pu` (28 601 points), EPSG:25833, statewide; attributes per `dok/doku_bbk_attributbeschreibung.pdf` (`PK_IDENT`, `BIOTYP(_T)`, `BBGNAT(_T)`, `FFHLRT(_T)`, `FFHGES`, `INTEN`, `DATUM_E/_F`). The conservation-grade labels (`A` *hervorragend*, `B` *gut*, `C` *durchschnittlich oder beschränkt*, `E` *Entwicklungsfläche*, `Z` *irrevers. gestört*, `9` *nicht bewertbar*, `0` *Alle anderen Werte*) were read from the WFS field `ffhges_t` on 2026-09-28. Dates of `1111-11-11` are placeholders and read as unknown |
+| Scale | Digitised at 1:10 000; *"Einsatzmaßstab 10.000 – 50.000"* |
+| Currency | *Stand* 20.04.2026 (`dok/doku_bbk_20260420.pdf`); *"Aktualisierungszyklus jährlich bis halbjährlich"* |
+| Coverage | **Selective.** Complete biotope mapping in FFH areas (2001–) and Großschutzgebiete (1993–); outside them, the *selektive Biotopkartierung* records protected biotopes and FFH habitat types only (2007–2018). Areas being revised are left out of the Gesamtdatenbestand (`doku_bbk_wichtige_ergaenzungen.pdf`). An empty cell is **not** evidence that no biotope is there |
+| Licence | **Two statements that differ.** The WFS `AccessConstraints` (*"Datenlizenz Deutschland – Namensnennung – Version 2.0 … „© Landesamt für Umwelt Brandenburg“"*) and the MetaVer dataset record say `dl-de/by-2-0`; the archive's own documentation says *"Datenlizenz CC BY 4.0 Namensnennung 4.0 International … Namensnennung: "Landesamt für Umwelt Brandenburg"; Angabe der URL der Datenquelle; Angabe der Datensatzbezeichnung"*. The download directory's banner names *"GeoBasis-DE / LGB"* as *Bereitsteller*. Both licences allow changed, public use with attribution; sela's notice names LfU, the dataset and its URL under the licence the metadata states, and marks the change |
+| Access restriction | The INSPIRE note that blocked Step 4 reads *"Öffentlicher Zugriff beschränkt entsprechend Artikel 13(1)(e) der INSPIRE-Richtlinie: e) aufgrund nachteiliger Auswirkungen auf die Rechte des geistigen Eigentums"* — intellectual property, not personal data or the location of species. It sits on the **service** metadata records (WFS/WMS) only; the **dataset** record has no access constraint, and the documentation states *"Zugriffsbeschränkung keine"*, *"Kosten keine"* |
+| Evidence | WFS GetCapabilities, the geoportal/GDI-DE records of the service (`95DC1532-…`) and the dataset (`A061BB02-…`), and the three PDFs inside the archive — read 2026-09-28. `§ 18 BbgNatSchAG` itself was **not** read at source (bravors.brandenburg.de failed TLS from this environment) |
+
+**Open with LfU (non-blocking, both licences permit what sela does):** which licence governs; the
+exact attribution given the LGB banner; that the Art. 13(1)(e) note does not restrict re-publication
+of derived facts; and how sela should word the absence of an entry. The questions are drafted in
+`docs/domain/decision-memo-habitat.md` §5.
+
 ### 2.4 OpenStreetMap via Geofabrik — basemap, settlement geometry
 
 | | |
@@ -421,6 +445,7 @@ licence verified and then not attributed is worse than one never used.
 | BKG — **DGM200 only** | **`© GeoBasis-DE / BKG <Jahr> dl-de/by-2-0 (Daten verändert)`** | From `dgm200.pdf` inside the archive (read 2026-09-23). A slope derived from the DEM is an alteration, so the change notice always applies; `lib/attribution.ts` appends it. |
 | LfU Brandenburg | **`© Landesamt für Umwelt Brandenburg dl-de/by-2-0 (Daten verändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The *Bereitsteller* wording is the service's own `AccessConstraints` (read 2026-09-23). A per-cell covered share is an alteration. |
 | LBGR Brandenburg | **`© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg (LBGR) dl-de/by-2-0 (Daten verändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The publisher's own example in the metadata record (read 2026-09-24), with its optional change notice made mandatory: a peat share or an area-weighted stock per cell is an alteration. The example writes *(Daten geändert)*; sela renders its one standard wording, *(Daten verändert)* (`lib/attribution.ts`), which says the same. |
+| LfU Brandenburg — **Biotopkataster** | **`© Landesamt für Umwelt Brandenburg <Jahr>, Biotopkataster Brandenburg, https://lfu.brandenburg.de, dl-de/by-2-0 (Daten verändert)`** | Follows the example in the archive's documentation (provider, year, URL, dataset name) under the licence the metadata states (§2.12). Replace the licence label if LfU confirms CC BY 4.0. |
 | LfU Brandenburg — **ArcEGMO water balance** | **`Landesamt für Umwelt Brandenburg, Wasserhaushaltsgrößen 1991–2020 (ArcEGMO), Stand 10.03.2023, dl-de/by-2-0 (Daten verändert)`** | The documentation requires *"Erlaubnisvermerk sowie Quelle und Stand der Daten"* (§5), so the data date is part of the notice, not optional. |
 | DWD | `Quelle: Deutscher Wetterdienst` (text form; the DWD logo is an accepted alternative) | Per §7 DWD-Gesetz. To be placed **immediately at the DWD information used**. For substantial modification DWD expects at minimum to be named in a central source list or the Impressum, together with a change notice — DWD's own examples include *"Datenbasis: Deutscher Wetterdienst, Einzelwerte gemittelt"*, which is precisely what sampling a 1 km grid onto hex cells is. The dataset additionally carries its own required citation: `DWD Climate Data Center (CDC): Gridded annual sum of incoming shortwave radiation (global radiation) on the horizontal plain for Germany based on ground and satellite measurements, Version V003, <current year>.` |
 | OSM | `© OpenStreetMap contributors` with the data made clear to be available under the Open Database License — linking to `https://www.openstreetmap.org/copyright` satisfies the latter for a browsable map; printed works must carry the full URL | ADR-0003 already records this as a standing duty on **every screen and every export**. Distributing OSM in data form requires naming and linking the licence directly. |
@@ -711,6 +736,17 @@ what the public is told about real land.
 Entries record what was actually fetched and read, so a later session does not repeat a dead end or
 mistake an attempt for a confirmation.
 
+### 2026-09-28, roadmap Steps 4 and 5
+
+- **LfU *Biotopkataster*** — WFS capabilities, service and dataset metadata, and the archive
+  (181 214 958 bytes, sha256 above) read and fetched; the Art. 13(1)(e) note is IPR and on the
+  service records only (§2.12). Loaded into `habitat_overlap` for the Uckermark: 189 493 area,
+  27 799 line and 1 916 point overlaps (`docs/domain/evidence/2026-09-28-habitat/`).
+- **VG25 `vg25_gem`** — 30 *Gemeinden* for AGS `12073…`, `GF = 9`, from the archive already
+  fetched on 2026-09-19. No new download.
+- **BfN FFH-Bericht (Art. 17) distribution data** — considered as an alternative; its metadata
+  says *"Nicht für Planungszwecke geeignet"* and `geodienste.bfn.de` returned 403. Not used.
+
 ### 2026-09-24 (later), nature capital ingest
 
 - **LBGR *Moorbodenkarte*** — `app:bodentyp_2021` (40 475 features) and `app:kohlenstoff_2021`
@@ -989,8 +1025,8 @@ The 2026-09-24 research (U2) adds these, all recorded rather than adopted:
   areas; elsewhere only protected biotopes and FFH habitat types. Attributes include `biotyp`,
   `ffhlrt`, `ffhges`, `datum_e` (Uckermark polygons dated 1993–2025). The service metadata also
   carries an INSPIRE Art. 13(1)(e) restriction note, which needs clarifying with LfU before use.
-  **The source for the categorical nature-capital view** (`scoring-criteria.md` §4.3), in a
-  later change.
+  **The source for the categorical nature-capital view** (`scoring-criteria.md` §4.3) — **adopted
+  2026-09-28, §2.12.**
 - **CIR-BTLN 2009** — complete biotope and land-use mapping of Brandenburg from 2009 colour-infrared
   imagery, 1:10 000, `data.geobasis-bb.de/geofachdaten/Natur_und_Landschaft/Biotope_und_Lebensraumtypen/cir_btln_fl.zip`.
   The directory states `dl-de/by-2-0` with *"Bereitsteller: GeoBasis-DE / LGB"*, which differs from

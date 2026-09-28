@@ -27,6 +27,53 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Roadmap Steps 3–6 in one change**, as asked by the project owner on 2026-09-28 ("work through
+  the whole roadmap at once"). Decisions that `CLAUDE.md` §3 gates were taken under that
+  delegation, each as the conservative option, and are recorded as **pending the owner's
+  confirmation in review**: `docs/domain/decision-memo-energy-outcome.md` (E1–E6),
+  `decision-memo-habitat.md` (H1–H6), `decision-memo-finding-land.md` (L1–L5), ADR-0010.
+  - **Step 3 — energy outcome, `pv-yield-v1`** (`lib/scoring/energy/pv-yield.ts`):
+    - installed capacity (MWp/ha) and technical annual yield (MWh/ha·a) of a new ground-mounted
+      plant: GHI × 1.15 (Fraunhofer ISE p. 37; PVGIS range) × PR 0.85 (p. 39) ÷ 0.88 ha/MWp
+      (ZSW 2025), always with its range (about 1 000–1 400 MWh/ha·a), confidence low;
+    - only where the PV class allows a plant; *trifft nicht zu* on excluded and *nicht
+      vorgesehen* cells and in scenarios that build no plant; agri-PV and wind not modelled;
+    - **finding:** it does not rank Uckermark cells (central values span 3.3 %, every range
+      contains the region's best value).
+  - **Step 4 — nature capital as Biotopkataster categories** (`lib/scoring/habitat.ts`,
+    `habitat_overlap`, source `lfu-bb-biotopkataster`, `docs/data/sources.md` §2.12):
+    - the blocking INSPIRE note turned out to be Art. 13(1)(e) *intellectual property*, on the
+      service records only; the dataset is an open download with *"Zugriffsbeschränkung keine"*;
+    - protected biotopes, FFH habitat types and conservation grades per cell, in the Kataster's
+      own words, with the caveat that a missing entry is not evidence of absence; not used by the
+      PV classification;
+    - **left to the owner:** 16 519 PV-*ohne Einschränkung*/*eingeschränkt* cells contain a
+      biotope recorded as protected (H4).
+  - **Step 5 — finding and grouping land:**
+    - search by *Gemeinde* (VG25 `vg25_gem`, table `municipality`) and by coordinates (WGS84,
+      ETRS89/UTM); no address search (geocoder gated);
+    - several cells by Shift-click or a panel button; `/site` summarises up to 100 cells (counts,
+      area sums that state their coverage, `lib/scoring/site.ts`); `/compare` places 2–6 cells
+      side by side under one scenario, with no ranking;
+    - scenario comparison, site and side-by-side comparison print with date, method versions,
+      sources and the advisory note (flow F5).
+  - **Step 6 — operations:**
+    - CI: `.github/workflows/ci.yml` (typecheck, unit tests, Playwright on the fixture);
+    - the ingest image was built and run end to end for the first time — fixture and the real
+      Uckermark pipeline — and gave results identical to the host run;
+    - a hosted demo was **not** set up: it needs the owner's decisions on serving, U5 and U10.
+  - Tests: 132 unit tests (coordinates, yield, site sums, habitat).
+
+### Changed
+
+- **BREAKING:** `docker/Dockerfile.ingest` is based on Ubuntu 24.04 (GDAL 3.8.4, PostGIS 3.4.2
+  tools, postgresql-client-16) instead of `ghcr.io/osgeo/gdal:alpine-small-3.9.2`. The old image
+  could not run any GDAL tool: `apk add postgis` replaced its PROJ (ADR-0010).
+- **BREAKING:** every cited outcome metric must declare `siteAggregation`; migrations `0008`
+  (`municipality`) and `0009` (`habitat_overlap`) must run before the app starts.
+- The comparison's energy chart shows only the annual yield and draws its range as a whisker.
+
+
 - **Roadmap Step 2: the first confirmed PV method, `real-pv-v1` — classified, not scored
   (verdicts `0.3.2-dev`).** Asked for by the project owner ("continue"). The decisions were
   taken through the `CLAUDE.md` §3 gate on 2026-09-28, after a measurement and a literature

@@ -271,11 +271,54 @@ Brandenburg's own guidance (HVE, 2009) uses a *verbal-argumentative* method with
 no crosswalk from Brandenburg biotope codes to BKompV values has been found. Building one would be
 sela's own invention.
 
-What can be shown instead, when a later change adds the source: whether the cell contains a
-*gesetzlich geschütztes Biotop*, an FFH habitat type (*Lebensraumtyp*) and its recorded
-conservation status, from the LfU *Biotopkataster* (`docs/data/sources.md` §8). These are facts
-about the land, not a score. **Not part of this change**, and the dimension stays `not_modelled`
-until then.
+What can be shown instead: whether the cell contains a *gesetzlich geschütztes Biotop*, an FFH
+habitat type (*Lebensraumtyp*) and its recorded conservation status, from the LfU
+*Biotopkataster*. These are facts about the land, not a score.
+
+**Implemented 2026-09-28 (roadmap Step 4, `docs/domain/decision-memo-habitat.md`, under the
+owner's delegation, pending confirmation).** Source `docs/data/sources.md` §2.12; rules in
+`lib/scoring/habitat.ts`:
+
+- Areas, lines and points of the Kataster, per cell; area biotopes under 1 % of the cell are not
+  listed.
+- Shown in the Kataster's own words: the protection text where it records a biotope as protected
+  (codes `1`, `2`), the habitat type and its *Erhaltungsgrad* (labels from the WFS field
+  `ffhges_t`), the mapping year and method, and "nicht im Gelände überprüft" for aerial-only
+  records.
+- Every surface says the Kataster is selective outside FFH areas and Großschutzgebiete, so a
+  missing entry is not evidence of absence.
+- As a **quantity**, the dimension stays `not_modelled`; the categories sit beside the comparison
+  table, never in it.
+- **Not used by the PV classification** (decision H4). 16 519 cells classed *ohne Einschränkung*
+  or *eingeschränkt* contain a biotope recorded as protected; whether that becomes a Prüfhinweis
+  is left to the owner.
+
+### 4.4 Energy — `pv-yield-v1` (`develop_pv`)
+
+**Implemented 2026-09-28 (roadmap Step 3, `docs/domain/decision-memo-energy-outcome.md`, under
+the owner's delegation, pending confirmation).** Code: `lib/scoring/energy/pv-yield.ts`.
+
+| Metric | Unit | What it says |
+|---|---|---|
+| `pv_installed_capacity` | MWp/ha | Capacity of a new ground-mounted plant per hectare: 1 ÷ area per MWp |
+| `pv_annual_yield` | MWh/ha·a | GHI × 1.15 (transposition, 20°–25°) × PR 0.85 ÷ 1 kW/m² ÷ 0.88 ha/MWp — the technical yield of a plant built today, before curtailment |
+
+| Factor | Value | Range | Source |
+|---|---|---|---|
+| Transposition | 1.15 | 1.137–1.157 | Fraunhofer ISE, *Aktuelle Fakten zur PV*, 20.8.2026, p. 37; range PVGIS 5.3 at 53.1° N 13.9° E, 20°/25° |
+| Performance ratio | 0.85 | 0.80–0.90 | Same, p. 39 |
+| Area per capacity | 0.88 ha/MWp | 0.83–1.0 | ZSW, *Flächeninanspruchnahme von PV-Freiflächenanlagen – Update 2024*, 02.06.2025, pp. 3, 8 |
+| PR definition | Yf = PR × H_POA / G_STC | — | IEA-PVPS T13-28:2024 §2.1.2, p. 14 |
+
+| Scenario | Both metrics |
+|---|---|
+| `develop_pv` | Modelled where the PV class is *ohne Einschränkung* or *eingeschränkt*; ***trifft nicht zu*** where it is *ausgeschlossen* or *nicht vorgesehen*; yield not modelled without an irradiation value |
+| `develop_agripv`, `develop_wind` | `not_modelled` — no cited density or yield |
+| `status_quo`, `preserve`, `restore` | ***trifft nicht zu*** — no new plant in this scenario |
+
+Confidence `low` everywhere. The range combines the factors' bounds in the direction that widens
+it and is always shown. **It does not rank Uckermark cells:** central values span 3.3 %, and every
+cell's range contains the region's best central value.
 
 ## 5. What closes this document
 

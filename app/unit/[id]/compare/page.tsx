@@ -11,15 +11,20 @@ import { ConfidenceMark } from "@/components/ConfidenceMark";
 import { MethodNote } from "@/components/MethodNote";
 import { NotApplicableBadge } from "@/components/NotApplicableBadge";
 import { NotModelledBadge } from "@/components/NotModelledBadge";
+import { PrintButton } from "@/components/PrintButton";
+import { PrintFooter } from "@/components/PrintFooter";
 import { SourceAttribution } from "@/components/SourceAttribution";
 import { listCriterionDefinitions, listSources } from "@/lib/db/queries/criteria";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
+import { listHabitatOverlapsForUnits, regionHasHabitatData } from "@/lib/db/queries/habitat";
+import { habitatFacts, habitatSummaryDe, summariseHabitat } from "@/lib/scoring/habitat";
 import { listOutcomeInputsForUnit, listOutcomesForUnit, type OutcomeInputRow } from "@/lib/db/queries/outcomes";
 import { pilotRegionInfo } from "@/lib/pilot-region";
 import { scenarioTokenCssVar, scenarioTokens } from "@/lib/design/tokens";
 import { formatCriterionValue } from "@/lib/scoring/format-value";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import { CITED_OUTCOME_METHODS } from "@/lib/scoring/nature";
+import { PV_ANNUAL_YIELD } from "@/lib/scoring/energy/pv-yield";
 import {
   DIMENSION_LABEL_DE,
   buildComparisonLines,
@@ -64,11 +69,13 @@ export default async function CompareScenariosPage({ params }: { params: Promise
   if (!unit) notFound();
 
   const versions = comparisonMethodVersions(CURRENT_METHOD_VERSION);
-  const [rows, inputs, definitions, sources] = await Promise.all([
+  const [rows, inputs, definitions, sources, habitat, hasHabitatData] = await Promise.all([
     listOutcomesForUnit(id, versions),
     listOutcomeInputsForUnit(id, versions),
     listCriterionDefinitions(),
     listSources(),
+    listHabitatOverlapsForUnits([id]),
+    regionHasHabitatData(unit.pilotRegion),
   ]);
   const region = pilotRegionInfo(unit.pilotRegion);
   const lines = buildComparisonLines(rows.map((r) => r.outcome));
@@ -77,17 +84,29 @@ export default async function CompareScenariosPage({ params }: { params: Promise
 
   // The energy chart only earns its place when some scenario has energy
   // output; an empty chart would read as "no energy", which is not what
-  // "not modelled" says.
-  const energyRows = rows.filter((r) => r.dimension === "energy" && r.outcome.status === "modelled");
+  // "not modelled" says. One measure only — the annual yield where the cited
+  // method (pv-yield-v1) provides it, else the illustrative placeholder — and
+  // a range is drawn as a range, never as its central value alone (ADR-0008 §2).
+  const modelledEnergy = rows.filter((r) => r.dimension === "energy" && r.outcome.status === "modelled");
+  const citedYield = modelledEnergy.filter((r) => r.outcome.metric === PV_ANNUAL_YIELD);
+  const energyRows = citedYield.length > 0 ? citedYield : modelledEnergy.filter((r) => r.outcome.metric === "energy");
   const energyByScenario = new Map(energyRows.map((r) => [r.scenario, r.outcome.value ?? 0]));
-  const energyMax = Math.max(1, ...energyByScenario.values());
+  const energyRangeByScenario = new Map(
+    energyRows
+      .filter((r) => r.outcome.valueLow !== null && r.outcome.valueHigh !== null)
+      .map((r) => [r.scenario, [r.outcome.valueLow!, r.outcome.valueHigh!] as const]),
+  );
+  const energyMax = Math.max(1, ...energyByScenario.values(), ...[...energyRangeByScenario.values()].map(([, high]) => high));
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "64rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
       {showsIllustrative && <MethodNote kind={region.kind} />}
       {citedLines.length > 0 && <CitedMethodsNote othersNotModelled={!showsIllustrative} />}
       <div>
-        <Link href={`/unit/${id}`}>← Zur Fläche</Link>
+        <p className="no-print" style={{ margin: 0, display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          <Link href={`/unit/${id}`}>← Zur Fläche</Link>
+          <PrintButton />
+        </p>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>
           Szenarienvergleich — Fläche <span className="tabular-nums">{id.slice(0, 8)}</span>
         </h1>
@@ -132,6 +151,18 @@ export default async function CompareScenariosPage({ params }: { params: Promise
               {token.secondaryEncoding !== "none" && token.secondaryEncoding !== "solid" && (
                 <rect x="90" y={y} width={barWidth} height="14" fill={`url(#pat-${token.secondaryEncoding})`} />
               )}
+              {energyRangeByScenario.has(scenario) && (() => {
+                const [low, high] = energyRangeByScenario.get(scenario)!;
+                const x1 = 90 + (low / energyMax) * 380;
+                const x2 = 90 + (high / energyMax) * 380;
+                return (
+                  <g stroke="currentColor" strokeWidth="1.5">
+                    <line x1={x1} y1={y + 7} x2={x2} y2={y + 7} />
+                    <line x1={x1} y1={y + 2} x2={x1} y2={y + 12} />
+                    <line x1={x2} y1={y + 2} x2={x2} y2={y + 12} />
+                  </g>
+                );
+              })()}
             </g>
           );
         })}
@@ -217,6 +248,14 @@ export default async function CompareScenariosPage({ params }: { params: Promise
         </table>
       </div>
 
+      {hasHabitatData && (
+        <p style={{ margin: 0, fontSize: "0.9rem" }}>
+          <strong style={{ fontWeight: 600 }}>Naturkapital</strong> wird nicht als Zahl verglichen, sondern als
+          Kategorie gezeigt: {habitatSummaryDe(summariseHabitat(habitatFacts(habitat)))}.{" "}
+          <Link href={`/unit/${id}#habitat-heading`}>Einzelheiten</Link>
+        </p>
+      )}
+
       {citedLines.length > 0 && (
         <Provenance
           lines={citedLines.map((l) => ({ methodVersion: l.methodVersion!, metric: l.metric, labelDe: l.metricLabelDe! }))}
@@ -225,6 +264,10 @@ export default async function CompareScenariosPage({ params }: { params: Promise
           sources={new Map(sources.map((s) => [s.id, s]))}
         />
       )}
+      <PrintFooter
+        sources={sources.filter((s) => inputs.some((i) => i.sourceId === s.id))}
+        methodVersions={versions}
+      />
     </main>
   );
 }
@@ -242,7 +285,7 @@ function CitedMethodsNote({ othersNotModelled }: { othersNotModelled: boolean })
         background: "var(--surface-1)",
       }}
     >
-      Klima- und Wasserwerte folgen zitierten Methoden (siehe{" "}
+      Energie-, Klima- und Wasserwerte folgen zitierten Methoden (siehe{" "}
       <Link href="/method#ergebnis-methoden">Methode</Link>)
       {othersNotModelled ? "; die übrigen Dimensionen sind noch nicht modelliert." : "."} sela ersetzt keine
       Planungsentscheidung.

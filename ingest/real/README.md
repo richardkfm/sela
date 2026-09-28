@@ -14,10 +14,13 @@ and reads only what `01_fetch.sh` put in `data/raw/`, so the pipeline runs offli
 | 14 | `14_protection.sh` | `staging.protection` — LfU Brandenburg protected areas, one row per area, with its category |
 | 15 | `15_moorkarte.sh` | `staging.peat_soil`, `staging.peat_carbon` — LBGR *Moorbodenkarte* 2021 soil classes and carbon stock |
 | 16 | `16_wasserhaushalt.sh` | `staging.water_balance` — LfU ArcEGMO *Elementarflächen* inside the region's extent |
+| 17 | `17_municipalities.sh` | `municipality` — the region's *Gemeinden* from VG25 `vg25_gem` (search, flow F1; ADR-0010). Skipped with a note if the VG25 archive is missing |
+| 18 | `18_biotopkataster.sh` | `staging.bbk_fl`, `staging.bbk_li`, `staging.bbk_pu` — LfU *Biotopkataster* areas, lines and points inside the region's extent, reprojected from EPSG:25833 |
 | 20 | `20_sample.sql` | one `staging.raw_sample` row per cell and suitability criterion |
 | 20b | `20b_sample_nature.sql` | the inputs of the outcome methods: peat share, carbon stock, water balance and the wet-peatland reference (`docs/domain/scoring-criteria.md` §4) |
 | 21 | `21_write_values.sql` | `criterion_value` rows with per-criterion confidence |
 | 22 | `22_protection_overlap.sql` | `protection_overlap` — every protected area a cell overlaps, by name and share (the evidence behind the *Prüfhinweise*, ADR-0009) |
+| 23 | `23_habitat_overlap.sql` | `habitat_overlap` — every mapped biotope a cell overlaps: share, length or presence (nature capital as categories, `docs/domain/decision-memo-habitat.md`; ADR-0010) |
 
 Criterion and source rows are seeded by `seed_real_criteria.sql` (definitions, **illustrative
 weights** — see its header), `seed_nature_criteria.sql` (the outcome-method inputs, which carry
@@ -25,8 +28,9 @@ weights** — see its header), `seed_nature_criteria.sql` (the outcome-method in
 and their *Quellenvermerke*).
 
 After the ingest, `pnpm db:materialize -- --pilot-region=uckermark-12073` writes the illustrative
-verdicts and, by default for a real region, the **cited outcome methods** of `lib/scoring/nature/`
-(ADR-0008): every scenario × metric row under `peat-climate-ipcc2013-v1` and `water-arcegmo-v2`,
+verdicts and, by default for a real region, the **cited outcome methods** registered in `lib/scoring/nature/`
+(ADR-0008): every scenario × metric row under `pv-yield-v1` (energy, `lib/scoring/energy/`),
+`peat-climate-ipcc2013-v1` and `water-arcegmo-v2`,
 each modelled number linked to its criterion values in `outcome_input`, and the methods with
 every factor in `outcome_method`.
 

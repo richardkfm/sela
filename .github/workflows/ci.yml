@@ -1,0 +1,84 @@
+# Roadmap Step 6 (docs/product/roadmap-pilot-demo.md): every pull request runs
+# the checks a contributor runs locally — typecheck and unit tests — and the
+# Playwright suite (accessibility, greyscale, keyboard, tiles) against the
+# synthetic fixture, the only data CI may hold (real data stays out of the
+# repository, CLAUDE.md §5 layout: data/ is git-ignored).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck and unit tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  e2e:
+    name: Playwright (fixture)
+    runs-on: ubuntu-24.04
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: sela
+          POSTGRES_PASSWORD: sela
+          POSTGRES_DB: sela
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sela -d sela"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://sela:sela@localhost:5432/sela
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      # The fixture ingest is shell + GDAL + psql (ingest/run.sh --fixture); the
+      # runner's Ubuntu 24.04 packages are the ones docker/Dockerfile.ingest uses.
+      - name: Install ingest tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gdal-bin postgresql-client jq
+      - run: pnpm install --frozen-lockfile
+      - name: Migrate, ingest the fixture, materialise
+        run: |
+          pnpm db:migrate
+          sh ingest/run.sh --fixture
+          pnpm db:materialize -- --pilot-region=fixture-region
+      - name: Build and start the app
+        run: |
+          pnpm build
+          pnpm start > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -fs http://localhost:3000/api/health && break; sleep 2; done
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - if: failure()
+        run: tail -n 200 next.log

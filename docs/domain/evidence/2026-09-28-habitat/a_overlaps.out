@@ -1,0 +1,39 @@
+== overlaps by geometry kind ==
+ geometry_kind | overlaps | cells | protected | with_lrt 
+---------------+----------+-------+-----------+----------
+ area          |   189493 | 62896 |     84084 |    48402
+ line          |    27799 | 19014 |      7584 |     3388
+ point         |     1916 |  1677 |      1377 |      284
+
+== cells with at least one shown fact (area >= 1 % or any line/point) ==
+ cells_with_fact | cells_with_protected | cells_with_lrt | cells_total 
+-----------------+----------------------+----------------+-------------
+           62488 |                39940 |          25773 |      117191
+
+== protected-biotope cells by PV class (real-pv-v1, 0.3.2-dev) ==
+    verdict     | cells 
+----------------+-------
+ excluded       | 14299
+ not_considered |  9122
+ restricted     |  4395
+ unrestricted   | 12124
+
+== conservation grade of habitat types (all overlaps) ==
+ lrt_grade | count 
+-----------+-------
+ 0         |    49
+ 9         |   689
+ A         |  2053
+ B         | 21624
+ C         | 17653
+ E         |  9777
+ Z         |    94
+           |   135
+
+== mapping method ==
+ mapping_method | count  
+----------------+--------
+ A              |  47565
+ B              |  35521
+ C              | 136122
+

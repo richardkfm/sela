@@ -17,7 +17,10 @@ import {
   type CriterionDefinitionRow,
   type SourceRow,
 } from "@/lib/db/queries/criteria";
+import { listHabitatOverlapsForUnits, regionHasHabitatData } from "@/lib/db/queries/habitat";
 import { listProtectionOverlapsForUnit } from "@/lib/db/queries/protection";
+import { HabitatFacts } from "@/components/HabitatFacts";
+import { habitatFacts } from "@/lib/scoring/habitat";
 import { formatShareDe, protectionFlags, type ProtectionFlag } from "@/lib/scoring/protection-flags";
 import {
   IRRADIATION_NOTE_DE,
@@ -260,10 +263,13 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
   const unit = await getSpatialUnitById(id);
   if (!unit) notFound();
 
-  const [verdicts, values, overlaps] = await Promise.all([
+  const [verdicts, values, overlaps, habitat, hasHabitatData, habitatSource] = await Promise.all([
     listVerdictsForUnit(id, CURRENT_METHOD_VERSION),
     listCriterionValuesForUnit(id),
     listProtectionOverlapsForUnit(id),
+    listHabitatOverlapsForUnits([id]),
+    regionHasHabitatData(unit.pilotRegion),
+    getSource("lfu-bb-biotopkataster"),
   ]);
   const reasons = new Map(
     await Promise.all(
@@ -337,6 +343,10 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
       )}
 
       {flags && <ProtectionFlags flags={flags} source={flagSource} />}
+
+      {region.kind === "real" && (
+        <HabitatFacts facts={habitatFacts(habitat)} source={habitatSource} hasData={hasHabitatData} />
+      )}
 
       {measured.length > 0 && (
         <section aria-labelledby="measured-heading" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>

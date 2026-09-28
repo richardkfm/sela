@@ -9,6 +9,9 @@ import { listCriterionDefinitions, listSources } from "@/lib/db/queries/criteria
 import { listOutcomeMethods, type OutcomeMethodRow } from "@/lib/db/queries/outcomes";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import { CITED_OUTCOME_METHODS } from "@/lib/scoring/nature";
+import { scenarioToTokenKey, scenarioTokens } from "@/lib/design/tokens";
+import { HABITAT_CAVEAT_DE, HABITAT_MIN_SHARE, LRT_GRADE_DE } from "@/lib/scoring/habitat";
+import type { Scenario } from "@/lib/scoring/types";
 import type { CitedFactor, OutcomeMethod } from "@/lib/scoring/nature/method";
 import { DIMENSION_LABEL_DE } from "@/lib/scoring/outcome-display";
 import { TECHNOLOGIES } from "@/lib/scoring/types";
@@ -113,14 +116,46 @@ export default async function MethodPage() {
           Wie die Ergebnisse berechnet werden
         </h2>
         <p style={{ color: "var(--text-secondary)", margin: 0 }}>
-          Was erhalten bleibt und was eine Renaturierung verbessert, rechnet sela nach veröffentlichten Methoden,
-          nicht mit Gewichten. Jede Methode unten nennt ihre Quelle und jeden Faktor, den sie verwendet; jede Zahl
+          Was eine neue PV-Anlage gewinnt, was erhalten bleibt und was eine Renaturierung verbessert, rechnet sela nach
+          veröffentlichten Methoden, nicht mit Gewichten. Jede Methode unten nennt ihre Quelle und jeden Faktor, den sie verwendet; jede Zahl
           im Szenarienvergleich führt über ihre Eingangswerte zu deren Quelle. Wo eine Methode einen Bereich
           ausgibt, zeigt sela den Bereich, nicht nur einen Mittelwert.
         </p>
         {CITED_OUTCOME_METHODS.map(({ method }) => (
           <OutcomeMethodSection key={method.methodVersion} method={method} stored={storedByVersion.get(method.methodVersion)} />
         ))}
+      </section>
+
+      <section aria-labelledby="naturkapital" style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.9rem" }}>
+        <h2 id="naturkapital" style={{ fontSize: "1.2rem", fontWeight: 600, margin: "1rem 0 0" }}>
+          Naturkapital: Kategorien, keine Punktzahl
+        </h2>
+        <p style={{ margin: 0 }}>
+          Für den Wert eines Biotops gibt es in Brandenburg keine Punkteskala, die sela zitieren könnte. sela zeigt
+          deshalb, was das Biotopkataster des LfU auf einer Fläche verzeichnet: Biotoptyp, ob es dort als geschütztes
+          Biotop (§ 30 BNatSchG i. V. m. § 18 BbgNatSchAG) erfasst ist, FFH-Lebensraumtyp und dessen Erhaltungsgrad (
+          {Object.entries(LRT_GRADE_DE)
+            .filter(([code]) => ["A", "B", "C"].includes(code))
+            .map(([code, label]) => `${code} ${label}`)
+            .join(", ")}
+          ). Flächenbiotope unter {PCT.format(HABITAT_MIN_SHARE * 100)} % einer Zelle werden nicht aufgeführt. Nichts
+          davon wird verrechnet, summiert oder in die Einordnung für PV übernommen.
+        </p>
+        <p style={{ margin: 0, color: "var(--text-secondary)" }}>{HABITAT_CAVEAT_DE}</p>
+      </section>
+
+      <section aria-labelledby="mehrere-zellen" style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.9rem" }}>
+        <h2 id="mehrere-zellen" style={{ fontSize: "1.2rem", fontWeight: 600, margin: "1rem 0 0" }}>
+          Mehrere Zellen als eine Fläche
+        </h2>
+        <p style={{ margin: 0 }}>
+          Wer mehrere Zellen zusammenfasst, sieht Zählungen und Summen der einzelnen Zellen, keine neue Bewertung: je
+          Klasse die Zahl der Zellen, je Schutzgebiet und Biotop die Zahl der berührten Zellen. Größen je Hektar
+          (Kohlenstoffvorrat, Treibhausgasbilanz, Leistung, Ertrag) werden über die Flächen summiert, Zustände
+          (Versickerung, Bodenfeuchte) flächengewichtet gemittelt – jeweils nur über die Zellen, für die die Methode
+          einen Wert hat, und die Seite sagt, über wie viele. Bereiche werden Grenze für Grenze addiert. Eine Änderung
+          gegenüber dem Ist-Zustand wird nur genannt, wo beide Summen dieselben Zellen umfassen.
+        </p>
       </section>
     </main>
   );
@@ -179,7 +214,7 @@ function PvRulesSection() {
           Rasterzellen; Grenzen {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p25)},{" "}
           {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p50)} und {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p75)} kWh/m²·a).
           Die ganze Uckermark liegt im unteren Mittelfeld; innerhalb der Region unterscheidet die Strahlung Flächen kaum.
-          Ihre eigentliche Aufgabe ist der Energieertrag, der noch nicht modelliert ist.
+          Ihre eigentliche Aufgabe ist der Energieertrag (unten, <code>pv-yield-v1</code>).
         </li>
         <li>
           <strong>Geländeneigung</strong>, nur als Messwert mit niedriger Konfidenz: Das 200-m-Geländemodell glättet
@@ -292,6 +327,15 @@ function OutcomeMethodSection({ method, stored }: { method: OutcomeMethod; store
           <li key={m.metric}>
             <strong>{m.labelDe}</strong> ({m.unit})
             {m.notApplicableDe && <> · „Trifft nicht zu“, wenn: {m.notApplicableDe}</>}
+            {m.notApplicableByScenarioDe && (
+              <>
+                {" "}· „Trifft nicht zu“:{" "}
+                {Object.entries(m.notApplicableByScenarioDe)
+                  .map(([scenario, reason]) => `${scenarioTokens[scenarioToTokenKey[scenario as Scenario]].labelDe} – ${reason}`)
+                  .join("; ")}
+              </>
+            )}
+            {" "}· mehrere Zellen: {m.siteAggregation === "sum_per_ha" ? "Summe über die Flächen" : "Flächenmittel"}
             {m.rangeDe && <> · Bereich: {m.rangeDe}</>}
           </li>
         ))}
@@ -313,7 +357,7 @@ function OutcomeMethodSection({ method, stored }: { method: OutcomeMethod; store
             <div style={{ overflowX: "auto" }}>
               <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.85rem", marginTop: "0.5rem" }}>
                 <caption style={{ textAlign: "left", captionSide: "top", color: "var(--text-secondary)" }}>
-                  Faktoren mit ihrem veröffentlichten 95-%-Intervall
+                  Faktoren mit ihrer veröffentlichten Spanne (bei IPCC-Faktoren das 95-%-Intervall)
                 </caption>
                 <thead>
                   <tr>
