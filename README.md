@@ -145,7 +145,9 @@ scripts/install.sh               Docker installer — prebuilt GHCR images, asks
 ## Install
 
 You need Docker with Compose v2 (Docker Desktop, or Docker Engine with the Compose plugin), on
-Linux, macOS or Windows via WSL 2. Ports 3000 and 5432 must be free.
+Linux, macOS or Windows via WSL 2. sela uses ports 3000 (app) and 5432 (database). If either is
+taken, set `SELA_APP_PORT` or `SELA_DB_PORT` in `.env`; the installer checks both before it
+starts.
 
 ```
 git clone https://github.com/richardkfm/sela.git

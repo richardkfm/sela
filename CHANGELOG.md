@@ -58,6 +58,14 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   pnpm 12, which ignores `pnpm.onlyBuiltDependencies` in `package.json` and fails the install
   with `ERR_PNPM_IGNORED_BUILDS`, so the app image no longer built. pnpm is installed in its own
   stage and does not reach the runtime image.
+- **Host ports are configurable and checked:**
+  - `compose.yaml` publishes `${SELA_APP_PORT:-3000}` and `${SELA_DB_PORT:-5432}`;
+  - `scripts/install.sh` checks both before anything starts, and ports sela already holds pass
+    on a re-run;
+  - when a port is taken, the installer names the container or program holding it and the
+    `.env` line to add;
+  - the first real install stopped on `Bind for 0.0.0.0:5432 failed: port is already
+    allocated`, because another Postgres held the port.
 - **`scripts/install.sh` explains a failed pull** instead of stopping on Docker's raw
   `denied`. GHCR returns `denied` both for a private package and for one not yet published, so
   the message points to the "Publish images" run and to `--build`. The first real install hit
