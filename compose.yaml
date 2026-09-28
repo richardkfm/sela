@@ -1,3 +1,11 @@
+# Every sela service names both an `image` and a `build` (ADR-0011):
+#   - scripts/install.sh pulls the prebuilt images from GHCR
+#     (`docker compose pull`, then `up --no-build`);
+#   - from a checkout, `docker compose up --build` builds them from source
+#     instead. Plain `up` may use a previously pulled image rather than your
+#     working tree — pass `--build` when you mean the source.
+# SELA_VERSION picks the published tag: `latest` (main) or a release, e.g. 0.3.0.
+
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -16,6 +24,7 @@ services:
       retries: 10
 
   migrate:
+    image: ghcr.io/richardkfm/sela-tools:${SELA_VERSION:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -28,16 +37,19 @@ services:
         condition: service_healthy
 
   materialize:
+    image: ghcr.io/richardkfm/sela-tools:${SELA_VERSION:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile
       target: builder
     # Phase 3 (0.3.0): bridges criterion_value rows to suitability_verdict/
     # outcome rows via lib/scoring/ — see ingest/README.md "Materializing
-    # scores". Run after `docker compose --profile ingest run ingest --
+    # scores". Run after `docker compose --profile ingest run --rm ingest
     # --fixture` (or a confirmed real ingest run); not part of `up` by
     # default since it depends on data the ingest step must produce first.
-    command: ["pnpm", "db:materialize", "--", "--pilot-region=fixture-region"]
+    # SELA_MATERIALIZE_REGION names the region to score — fixture-region by
+    # default, uckermark-12073 after a real ingest run.
+    command: ["pnpm", "db:materialize", "--", "--pilot-region=${SELA_MATERIALIZE_REGION:-fixture-region}"]
     profiles: ["ingest"]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://sela:sela@db:5432/sela}
@@ -46,6 +58,7 @@ services:
         condition: service_healthy
 
   app:
+    image: ghcr.io/richardkfm/sela:${SELA_VERSION:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -60,6 +73,7 @@ services:
         condition: service_completed_successfully
 
   ingest:
+    image: ghcr.io/richardkfm/sela-ingest:${SELA_VERSION:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.ingest

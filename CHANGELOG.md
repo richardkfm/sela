@@ -25,6 +25,43 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ## [Unreleased]
 
+### Added — Docker installer and prebuilt images
+
+- **Docker installer and prebuilt images** (ADR-0011; options chosen by the owner on
+  2026-09-28):
+  - `scripts/install.sh`, run from a clone:
+    - checks Docker and Compose v2, creates `.env`, pulls the images, starts sela and waits for
+      `/api/health`;
+    - asks which data to load (synthetic fixture, real Uckermark, or none), then ingests and
+      materialises it;
+    - `--data` answers without asking; `--build` builds from the checkout instead of pulling;
+  - `.github/workflows/publish-images.yml` publishes `ghcr.io/richardkfm/sela`, `sela-tools`
+    (migrate, materialize) and `sela-ingest`:
+    - `:latest` from `main`, `:X.Y.Z` and `:X.Y` from `vX.Y.Z` tags, `:sha-<short>` always;
+    - pull requests that change `docker/`, `compose.yaml` or the workflow build without pushing;
+    - `linux/amd64` only;
+    - the app image is built without the OSM-derived basemap archive, so no image redistributes
+      OSM data;
+  - README: an *Install* section; the former *Running it* is now *Running it from source*.
+
+### Changed — for the installer
+
+- **`compose.yaml` names an `image` for every sela service** next to its `build`, tagged by
+  `SELA_VERSION` (default `latest`), so the same file serves the installer's pull and a source
+  build (`docker compose up --build`).
+- **`materialize` scores `SELA_MATERIALIZE_REGION`** (default `fixture-region`, as before)
+  instead of a hard-coded region, so a real Uckermark run can be scored without overriding the
+  command.
+- **`docker/Dockerfile` takes `WITH_BASEMAP`** (default `true`, the previous behaviour). The OSM
+  basemap stage now writes to `/out`, so its `build.sh` no longer lands in the runtime image.
+- **`docker/Dockerfile` pins pnpm 10**, the major CI uses. `corepack enable` had started fetching
+  pnpm 12, which ignores `pnpm.onlyBuiltDependencies` in `package.json` and fails the install
+  with `ERR_PNPM_IGNORED_BUILDS`, so the app image no longer built. pnpm is installed in its own
+  stage and does not reach the runtime image.
+- **`ingest/run.sh` ignores a leading `--`**, so `docker compose run ingest -- --fixture` cannot
+  start the real ≈ 1 GB run if Compose passes the `--` through. The docs now use the unambiguous
+  `run --rm ingest --fixture`.
+
 ### Added
 
 - **Roadmap Steps 3–6 in one change**, as asked by the project owner on 2026-09-28 ("work through

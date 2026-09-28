@@ -17,6 +17,12 @@ set -eu
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 : "${DATABASE_URL:?DATABASE_URL is not set}"
 
+# `docker compose run ingest -- --fixture` may hand the `--` through to this
+# script; without this shift it would start the real (≈ 1 GB) run instead.
+if [ "${1:-}" = "--" ]; then
+  shift
+fi
+
 MODE="real"
 if [ "${1:-}" = "--fixture" ]; then
   MODE="fixture"
