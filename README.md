@@ -114,6 +114,7 @@ docs/architecture/               ADRs and system design
   adr-0005-osm-free-stack.md     OpenStreetMap out of the stack; basemap.de — closes U7
   adr-0006-3d-parcel-preview.md  2D explorer + a literal-3D parcel preview (deck.gl over MapLibre)
   adr-0007-unit-vector-tiles.md  Units served as vector tiles cut by PostGIS (ST_AsMVT)
+  adr-0011-prebuilt-images-and-installer.md  Prebuilt images on GHCR and the Docker installer
 docs/domain/glossary.md          DE/EN vocabulary
 docs/domain/scoring-criteria.md  Criteria catalogue per technology — weights deliberately left open
 docs/data/sources.md             Dataset inventory and verification log — the licence gate on real ingestion
@@ -137,15 +138,41 @@ ingest/                          GDAL + SQL pipeline, gated on sources.md; real/
 tests/e2e/                       Playwright: WCAG 2.2 AA, keyboard-only navigation, greyscale
 docker/                          Dockerfile (app + basemap build stage) and Dockerfile.ingest
 compose.yaml                     app · db (PostGIS) · ingest (profile) · materialize (profile)
+scripts/install.sh               Docker installer — prebuilt GHCR images, asks which data to load
+.github/workflows/               ci.yml (typecheck, tests, Playwright) · publish-images.yml (GHCR)
 ```
 
-## Running it
+## Install
+
+You need Docker with Compose v2 (Docker Desktop, or Docker Engine with the Compose plugin), on
+Linux, macOS or Windows via WSL 2. Ports 3000 and 5432 must be free.
+
+```
+git clone https://github.com/richardkfm/sela.git
+cd sela
+./scripts/install.sh
+```
+
+The installer pulls the prebuilt images from GitHub Container Registry (`ghcr.io/richardkfm/sela`,
+`sela-tools`, `sela-ingest`), starts sela on <http://localhost:3000> and asks which data to load:
+
+- the synthetic test data (small and quick, not a real place);
+- the real Landkreis Uckermark (a ≈ 1 GB download from the publishers, several minutes);
+- none.
+
+`--data fixture|uckermark|none` answers without asking, and `--build` builds the images from your
+checkout instead of pulling them. Run it again to update. `docker compose down` stops sela; add
+`-v` to delete the database as well. The images are amd64 only, so Apple Silicon runs them under
+emulation. See ADR-0011.
+
+## Running it from source
 
 ```
 cp .env.example .env
-docker compose up                                   # app on :3000, PostGIS on :5432, migrations applied automatically
-docker compose --profile ingest run ingest -- --fixture   # synthetic data, proves the pipeline
-docker compose --profile ingest run materialize      # populates suitability_verdict/outcome from it
+docker compose up --build                           # app on :3000, PostGIS on :5432, migrations applied automatically
+docker compose --profile ingest run --rm ingest --fixture   # synthetic data, proves the pipeline
+docker compose --profile ingest run --rm materialize        # populates suitability_verdict/outcome from it
+SELA_MATERIALIZE_REGION=uckermark-12073 docker compose --profile ingest run --rm materialize   # after a real ingest run
 docker compose down -v                               # tear down, including the database volume
 
 pnpm install
