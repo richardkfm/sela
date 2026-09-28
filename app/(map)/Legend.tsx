@@ -4,14 +4,17 @@
 // reachable"). The bars share one axis: the total number of units.
 
 import {
-  MAP_VERDICTS,
+  CLASSIFICATION_NOTE_DE,
+  INK,
   TECHNOLOGY_LABEL_DE,
   VERDICT_EXPLANATION_DE,
   VERDICT_LABEL_DE,
+  mapVerdictsFor,
   patternClass,
   verdictAppearance,
   type MapVerdict,
 } from "@/lib/map/verdict-style";
+import type { PilotRegionKind } from "@/lib/pilot-region";
 import type { Technology } from "@/lib/scoring/types";
 import Link from "next/link";
 
@@ -21,8 +24,10 @@ export function Legend({
   technology,
   counts,
   total,
+  regionKind,
 }: {
   technology: Technology;
+  regionKind: PilotRegionKind;
   /** Undefined while this technology's counts are loading. */
   counts: Record<MapVerdict, number> | undefined;
   total: number;
@@ -44,7 +49,7 @@ export function Legend({
           </tr>
         </thead>
         <tbody>
-          {MAP_VERDICTS.map((verdict) => {
+          {mapVerdictsFor(regionKind).map((verdict) => {
             const appearance = verdictAppearance(verdict, technology);
             const count = counts?.[verdict];
             return (
@@ -74,9 +79,23 @@ export function Legend({
           })}
         </tbody>
       </table>
-      <p className="explorer-note muted">
-        Schwelle und Gewichte sind Platzhalter. <Link href="/method">Wie bewertet wird →</Link>
-      </p>
+      {regionKind === "real" ? (
+        <>
+          {technology !== "wind" && (
+            <p className="explorer-note muted legend-flag">
+              <span aria-hidden className="legend-flag-swatch" style={{ borderColor: INK }} />
+              <span>Gestrichelt umrandet: mindestens ein Prüfhinweis zu Schutzgebieten (ab Zoomstufe 12 sichtbar).</span>
+            </p>
+          )}
+          <p className="explorer-note muted">
+            {CLASSIFICATION_NOTE_DE} <Link href="/method">Wie eingeordnet wird →</Link>
+          </p>
+        </>
+      ) : (
+        <p className="explorer-note muted">
+          Schwelle und Gewichte sind Platzhalter. <Link href="/method">Wie bewertet wird →</Link>
+        </p>
+      )}
     </section>
   );
 }

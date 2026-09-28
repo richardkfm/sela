@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { patternImage } from "../patterns";
-import { MAP_VERDICTS, verdictAppearance } from "../verdict-style";
+import { mapVerdictsFor, verdictAppearance } from "../verdict-style";
 import { TECHNOLOGIES } from "../../scoring/types";
 
 test("suitable and excluded always carry a pattern; the two plain classes differ in lightness", () => {
@@ -28,10 +28,30 @@ test("not considered is its own class: stippled, between unsuitable and excluded
   }
 });
 
-test("no two patterned classes share an encoding within one technology", () => {
-  for (const tech of TECHNOLOGIES) {
-    const encodings = MAP_VERDICTS.map((v) => verdictAppearance(v, tech).encoding).filter(Boolean);
-    assert.equal(new Set(encodings).size, encodings.length, tech);
+test("no two patterned classes share an encoding within one region's legend", () => {
+  // "geeignet" (fixture only) and "ohne Einschränkung" (real regions only) share
+  // the technology hatch; they never appear on the same map.
+  for (const kind of ["real", "fixture"] as const) {
+    for (const tech of TECHNOLOGIES) {
+      const encodings = mapVerdictsFor(kind).map((v) => verdictAppearance(v, tech).encoding).filter(Boolean);
+      assert.equal(new Set(encodings).size, encodings.length, `${kind} ${tech}`);
+    }
+  }
+});
+
+test("real-region classes: every class is its own step in lightness or pattern (greyscale print)", () => {
+  const lightness = (hex: string) => {
+    const v = Number.parseInt(hex.slice(1), 16);
+    return 0.2126 * ((v >> 16) & 0xff) + 0.7152 * ((v >> 8) & 0xff) + 0.0722 * (v & 0xff);
+  };
+  for (const tech of ["pv", "agripv"] as const) {
+    const [unrestricted, restricted, notConsidered, excluded, unscored] = mapVerdictsFor("real").map((v) => verdictAppearance(v, tech));
+    assert.ok(unrestricted!.encoding, "ohne Einschränkung is hatched");
+    assert.equal(restricted!.encoding, null);
+    assert.ok(lightness(restricted!.color) > lightness(unrestricted!.color) + 20, "eingeschränkt is clearly lighter");
+    assert.ok(lightness(unscored!.color) > lightness(restricted!.color) + 15, "and still darker than nicht bewertet");
+    assert.equal(notConsidered!.encoding, "stipple");
+    assert.equal(excluded!.encoding, "hatch-0");
   }
 });
 

@@ -6,6 +6,7 @@
 import type {
   CriterionDefinition,
   CriterionValue,
+  CategoryClass,
   SuitabilityVerdict,
   Technology,
 } from "./types";
@@ -27,10 +28,12 @@ export interface NormalizedCriterion {
   readonly normalizedScore: number;
   readonly violatesConstraint: boolean;
   /**
-   * Category criteria only (ADR-0009): the unit's class is one the method does
-   * not score. For every other criterion it is ignored.
+   * Category criteria only (ADR-0009): the class the unit's value falls in.
+   * `not_considered` takes the unit out of the method; `restricted` and
+   * `unrestricted` classify it when no weighted criterion applies. Ignored for
+   * every other criterion.
    */
-  readonly notConsidered?: boolean;
+  readonly categoryClass?: CategoryClass;
 }
 
 export type Normalize = (
@@ -85,8 +88,10 @@ export interface LimitingReference {
 }
 
 type Gate =
-  | { readonly kind: "excluded" | "not_considered"; readonly criterionId: string }
+  | { readonly kind: "excluded" | CategoryClass; readonly criterionId: string }
   | { readonly kind: "scored"; readonly contributions: readonly Contribution[] };
+
+const CATEGORY_ORDER: Record<CategoryClass, number> = { not_considered: 0, restricted: 1, unrestricted: 2 };
 
 interface Contribution {
   readonly definition: CriterionDefinition;
@@ -94,9 +99,11 @@ interface Contribution {
 }
 
 /**
- * The part of flow F2 before any score: hard constraints first (a statute
- * outranks a classification), then category criteria, then the normalised
- * contribution of every scored criterion present.
+ * Flow F2 up to the score: hard constraints first (a statute outranks a
+ * classification), then category criteria, then the normalised contribution
+ * of every weighted criterion present. Where no weighted criterion applies
+ * (weight 0 marks a criterion as measured, not scored), the unit is classified
+ * by its categories instead — the most restrictive class wins.
  */
 function gate(
   spatialUnitId: string,
@@ -122,17 +129,21 @@ function gate(
     return { kind: "excluded", criterionId: pickByWeightThenId(violated).definition.id };
   }
 
-  // A category criterion without a value is not evidence either way (as above):
-  // the unit is then scored on what is present.
+  // A category criterion without a value is not evidence either way (as above).
   const categories = applicable.filter((d) => d.isCategory).sort((a, b) => a.id.localeCompare(b.id));
+  const classes: { criterionId: string; categoryClass: CategoryClass }[] = [];
   for (const definition of categories) {
     const value = valueByCriterionId.get(definition.id);
-    if (value && normalize(value, definition).notConsidered) {
-      return { kind: "not_considered", criterionId: definition.id };
-    }
+    const categoryClass = value ? normalize(value, definition).categoryClass : undefined;
+    if (categoryClass) classes.push({ criterionId: definition.id, categoryClass });
+  }
+  classes.sort((a, b) => CATEGORY_ORDER[a.categoryClass] - CATEGORY_ORDER[b.categoryClass]);
+  const mostRestrictive = classes[0];
+  if (mostRestrictive?.categoryClass === "not_considered") {
+    return { kind: "not_considered", criterionId: mostRestrictive.criterionId };
   }
 
-  const scored = applicable.filter((d) => !d.isHardConstraint && !d.isCategory);
+  const scored = applicable.filter((d) => !d.isHardConstraint && !d.isCategory && d.weight > 0);
   const contributions: Contribution[] = [];
   for (const definition of scored) {
     const value = valueByCriterionId.get(definition.id);
@@ -144,6 +155,12 @@ function gate(
       );
     }
     contributions.push({ definition, normalizedScore });
+  }
+  // No weighted value for this unit — decided by what is present, never by
+  // which definitions exist (another region's weighted criteria may apply to
+  // the same technology): the unit is classified by its categories.
+  if (contributions.length === 0 && mostRestrictive) {
+    return { kind: mostRestrictive.categoryClass, criterionId: mostRestrictive.criterionId };
   }
   if (contributions.length === 0) {
     throw new SelaScoringError(

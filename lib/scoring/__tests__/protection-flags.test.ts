@@ -21,6 +21,11 @@ test("FFH, SPA and LSG are named as conditions, with the duty their statute sets
   );
 });
 
+test("the texts are grammatical German: dative after \"im\"", () => {
+  const [spa] = protectionFlags([overlap("spa", 0.8, "Schorfheide-Chorin")], 0);
+  assert.match(spa!.textDe, /im Europäischen Vogelschutzgebiet „Schorfheide-Chorin“/);
+});
+
 test("an overlap under 1 % of the cell is not shown", () => {
   assert.equal(protectionFlags([overlap("ffh", 0.009)], 0).length, 0);
   assert.equal(protectionFlags([overlap("ffh", 0.01)], 0).length, 1);

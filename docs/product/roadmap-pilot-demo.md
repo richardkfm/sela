@@ -2,7 +2,7 @@
 
 **Version band:** `0.3.x` · **Status:** proposed — milestone chosen by the project owner
 2026-09-27; every step marked *gated* still needs its own `CLAUDE.md` §3 confirmation ·
-**Last updated:** 2026-09-27 (Step 1 done)
+**Last updated:** 2026-09-28 (Steps 1 and 2 done)
 
 This document plans the next milestone after `docs/architecture/roadmap-to-first-deployment.md`,
 whose three phases are built. It refines `docs/product/mvp.md`; it does not widen it.
@@ -75,6 +75,17 @@ Weights for the PV criteria that have sources (`pv_irradiation_annual`, `pv_land
 with its decomposition only. Each weight carries a written rationale in `scoring-criteria.md` §2.
 Output: a seed migration, the banner removed for the PV path only, method page updated from the
 same rows.
+
+**Status: done (2026-09-28)** — and it concluded that the binary threshold is *not* the right
+presentation. Measured: the unsuitable share moved between 0 % and 100 % across plausible weights,
+slope bounds and thresholds, and no source supports citable values. Decided by the owner
+(`docs/domain/decision-memo-pv-method.md`): **classes per criterion, never combined** — the cell's
+class from protection and land cover (*ohne Einschränkung* / *eingeschränkt* / *nicht vorgesehen*
+/ *ausgeschlossen*), irradiation by national quartile, slope as a measured value only; a dashed
+contour for cells with Prüfhinweise; the *ILLUSTRATIV* banner removed for real regions. With this,
+the milestone's condition for the PV path holds: every number is backed by a decided rule or a
+measurement, or is visibly *nicht bewertet*. Step 3 (energy yield) is what can tell cells apart
+within a class.
 
 ### Step 3 — Energy outcome under `develop_pv` · gated (scoring, data)
 

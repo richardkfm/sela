@@ -1,6 +1,6 @@
 # ADR-0009 — A "not considered" verdict, an optional limiting criterion, and named protection overlaps
 
-**Status:** Accepted · **Band:** `0.3.x` · **Date:** 2026-09-27 · **Amends:** `suitability_verdict`
+**Status:** Accepted, amended 2026-09-28 (amendment 1) · **Band:** `0.3.x` · **Date:** 2026-09-27 · **Amends:** `suitability_verdict`
 and `criterion_definition` in `lib/db/migrations/0002_domain_schema.sql`, via
 `0006_pv_rules_step1.sql`
 
@@ -68,3 +68,36 @@ owner decided on 2026-09-27 (`docs/domain/decision-memo-scoring-rules.md`, Q1–
   "geeignet" on 26 930 forest and water cells. Rejected.
 - **Store only a share per category** (no names) — no new table, but "ein FFH-Gebiet" instead of
   the area's name and code. Rejected by the owner in favour of named, citable areas.
+
+---
+
+## Amendment 1 (2026-09-28) — real PV is classified, not scored (`real-pv-v1`)
+
+Roadmap Step 2 (`docs/domain/decision-memo-pv-method.md`) decided that real regions get **no
+weighted score and no *geeignet/ungeeignet***. Each criterion is shown in its own class. A cell's
+class follows from the protection exclusion and the land-cover tier. Migration
+`0007_pv_classified.sql` adds:
+
+1. **Two classified states, `restricted` ("eingeschränkt") and `unrestricted` ("ohne
+   Einschränkung").** Like `excluded` and `not_considered`, they carry no score and name the
+   criterion that placed the cell (`excluded_by_criterion_id` = `pv_land_cover`).
+   - `suitable`/`unsuitable` remain, for the illustrative fixture only.
+   - The engine decides per unit (`lib/scoring/suitability.ts`). If no weighted criterion has a
+     value for that unit, the unit is classified by its most restrictive category.
+   - Weight 0 marks a criterion as measured but not scored. Irradiation and slope are such
+     criteria under `real-pv-v1`.
+   - The decision is taken on the unit's values, not on which definitions exist: the fixture's
+     weighted criteria also apply to PV, but a real unit has no values for them.
+2. **`suitability_verdict.protection_flag_count`.** The materialiser counts each cell's
+   Prüfhinweise with `lib/scoring/protection-flags.ts`, the one place the rule lives. Vector
+   tiles carry this count as `h_pv` / `h_agripv` from z12, so the map can draw a dashed contour
+   without restating the rule in SQL.
+3. **The map has five classes on a real region:** *ohne Einschränkung*, *eingeschränkt*, *nicht
+   vorgesehen*, *ausgeschlossen*, *nicht bewertet*. The fixture keeps *geeignet*, *ungeeignet*,
+   *ausgeschlossen* and *nicht bewertet* (`mapVerdictsFor`).
+   - "Ohne Einschränkung" shares the technology hatch with "geeignet". The two never appear on
+     the same map.
+
+Decision 3 above — `limiting_criterion_id` may be null, under the Q5 rule — now applies only to
+the fixture's scored verdicts. Verdicts are materialised as `0.3.2-dev`; the PV criterion
+definitions carry `real-pv-v1`.

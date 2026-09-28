@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { TechnologySwatch } from "@/components/TechnologySwitch";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
 import type { PilotRegionKind } from "@/lib/pilot-region";
-import { NO_LIMITING_CRITERION_DE, REASON_LEAD_DE, type LandCoverReading } from "@/lib/scoring/verdict-text";
+import { NO_LIMITING_CRITERION_DE, REASON_LEAD_DE, isClassified, type LandCoverReading } from "@/lib/scoring/verdict-text";
 import { TECHNOLOGIES, type SuitabilityVerdict, type Technology } from "@/lib/scoring/types";
 
 interface Summary {
@@ -96,7 +96,7 @@ export function SelectionPanel({
         </button>
       </div>
 
-      <h3 className="overline">Eignung je Technologie · illustrativ</h3>
+      <h3 className="overline">{regionKind === "real" ? "Einordnung je Technologie" : "Eignung je Technologie · illustrativ"}</h3>
       {failed && <p>Die Angaben zu dieser Fläche konnten nicht geladen werden.</p>}
       {!summary && !failed && <p className="muted">Lädt …</p>}
       {summary && (
@@ -116,7 +116,9 @@ export function SelectionPanel({
                     <div className="verdict-reason muted">
                       {REASON_LEAD_DE[verdict.verdict]}{" "}
                       <Link href={`/criterion/${verdict.reason.id}`}>{verdict.reason.nameDe}</Link>
-                      {verdict.verdict === "not_considered" && summary.landCover && <> – {summary.landCover.classDe}</>}
+                      {isClassified(verdict.verdict) && verdict.reason.kind === "decided_by" && verdict.verdict !== "excluded" && summary.landCover && (
+                        <> – {summary.landCover.classDe}</>
+                      )}
                     </div>
                   )}
                   {verdict && verdict.score !== null && !verdict.reason && (
@@ -163,7 +165,9 @@ export function SelectionPanel({
       {summary && (
         <p className="explorer-note muted">
           Methode <span className="tabular-nums">{summary.methodVersion}</span> ·{" "}
-          {regionKind === "real" ? "echte Messwerte, " : ""}Beispiel-Gewichtung, keine Aussage über eine Genehmigung.
+          {regionKind === "real"
+            ? "veröffentlichte Regeln, echte Messwerte, keine Planungs- oder Genehmigungsaussage."
+            : "Beispiel-Gewichtung, keine Aussage über eine Genehmigung."}
         </p>
       )}
     </section>

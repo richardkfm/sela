@@ -245,7 +245,7 @@ test("verdict never carries both a score and an exclusion reason", () => {
 // A category's raw value 0 means "not considered" in this fixture normaliser.
 const categoryNormalize: Normalize = (v, d) =>
   d.isCategory
-    ? { normalizedScore: 0, violatesConstraint: false, notConsidered: v.value === 0 }
+    ? { normalizedScore: 0, violatesConstraint: false, categoryClass: v.value === 0 ? "not_considered" : v.value === 2 ? "restricted" : "unrestricted" }
     : identityNormalize(v, d);
 
 test("a category criterion can make a unit not_considered, naming it, with no score", () => {
@@ -355,4 +355,84 @@ test("the limiting reference ignores excluded and not-considered units", () => {
   ]);
   const best = computeLimitingReference({ technology: "pv", valuesByUnit, definitions, normalize: categoryNormalize });
   assert.equal(best.get("irradiation"), 0.4);
+});
+
+// real-pv-v1 (ADR-0009, amendment 1): measured criteria carry weight 0, so a
+// unit is classified by its category and never scored.
+test("with no weighted criterion, a unit is classified by its category, with no score", () => {
+  const definitions = [
+    definition({ id: "protection_status", isHardConstraint: true }),
+    definition({ id: "land_cover", isCategory: true, weight: 0 }),
+    definition({ id: "irradiation", weight: 0 }),
+  ];
+  const verdictFor = (landCover: number, protection = 0) =>
+    computeSuitability({
+      spatialUnitId: SPATIAL_UNIT,
+      technology: "pv",
+      values: [value("protection_status", protection), value("land_cover", landCover), value("irradiation", 0.4)],
+      definitions,
+      normalize: categoryNormalize,
+      suitabilityThreshold: 0.5,
+      methodVersion: METHOD_VERSION,
+    });
+  for (const [landCover, expected] of [[1, "unrestricted"], [2, "restricted"], [0, "not_considered"]] as const) {
+    const v = verdictFor(landCover);
+    assert.equal(v.verdict, expected);
+    assert.equal(v.score, null);
+    assert.equal(v.limitingCriterionId, null);
+    assert.equal(v.excludedByCriterionId, "land_cover");
+  }
+  assert.equal(verdictFor(1, 1).verdict, "excluded", "a statute still comes first");
+});
+
+test("the most restrictive of several categories decides", () => {
+  const definitions = [
+    definition({ id: "a_category", isCategory: true, weight: 0 }),
+    definition({ id: "b_category", isCategory: true, weight: 0 }),
+  ];
+  const v = computeSuitability({
+    spatialUnitId: SPATIAL_UNIT,
+    technology: "pv",
+    values: [value("a_category", 1), value("b_category", 2)],
+    definitions,
+    normalize: categoryNormalize,
+    suitabilityThreshold: 0.5,
+    methodVersion: METHOD_VERSION,
+  });
+  assert.equal(v.verdict, "restricted");
+  assert.equal(v.excludedByCriterionId, "b_category");
+});
+
+test("with neither a weighted criterion nor a category value, there is nothing to classify", () => {
+  assert.throws(
+    () =>
+      computeSuitability({
+        spatialUnitId: SPATIAL_UNIT,
+        technology: "pv",
+        values: [value("irradiation", 0.4)],
+        definitions: [definition({ id: "irradiation", weight: 0 }), definition({ id: "land_cover", isCategory: true, weight: 0 })],
+        normalize: categoryNormalize,
+        suitabilityThreshold: 0.5,
+        methodVersion: METHOD_VERSION,
+      }),
+    SelaScoringError,
+  );
+});
+
+test("a weighted definition without a value for this unit does not stop classification", () => {
+  // The fixture's weighted criteria apply to PV too; a real unit has no values for them.
+  const v = computeSuitability({
+    spatialUnitId: SPATIAL_UNIT,
+    technology: "pv",
+    values: [value("land_cover", 1), value("irradiation", 0.4)],
+    definitions: [
+      definition({ id: "fixture_weighted", weight: 1 }),
+      definition({ id: "land_cover", isCategory: true, weight: 0 }),
+      definition({ id: "irradiation", weight: 0 }),
+    ],
+    normalize: categoryNormalize,
+    suitabilityThreshold: 0.5,
+    methodVersion: METHOD_VERSION,
+  });
+  assert.equal(v.verdict, "unrestricted");
 });

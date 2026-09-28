@@ -48,14 +48,22 @@ test("slope reads lower-is-better, 0° best, 10° and steeper worst", () => {
   assert.equal(illustrativeNormalize(value(d.id, 25), d).normalizedScore, 0);
 });
 
-test("land cover is a category: its tier decides whether a cell is considered, never the score (memo Q3b)", () => {
+test("land cover is a category: its tier places the cell, never a score (memo Q3b)", () => {
   const d = definition({ id: "pv_land_cover", direction: "non_monotonic", weight: 0, isCategory: true });
-  for (const [code, considered] of [[211, true], [231, true], [131, true], [312, false], [512, false], [112, false]] as const) {
+  for (const [code, expected] of [
+    [211, "unrestricted"],
+    [131, "unrestricted"],
+    [231, "restricted"],
+    [121, "restricted"],
+    [312, "not_considered"],
+    [512, "not_considered"],
+    [112, "not_considered"],
+  ] as const) {
     const n = illustrativeNormalize(value(d.id, code), d);
-    assert.equal(n.notConsidered, !considered, `class ${code}`);
-    assert.equal(n.normalizedScore, 0, "a category contributes nothing to the score");
+    assert.equal(n.categoryClass, expected, `class ${code}`);
+    assert.equal(n.normalizedScore, 0, "a category contributes nothing to a score");
   }
-  assert.equal(illustrativeNormalize(value(d.id, 999), d).notConsidered, true, "an undocumented class is not scored");
+  assert.equal(illustrativeNormalize(value(d.id, 999), d).categoryClass, "not_considered", "an undocumented class is not placed");
 });
 
 test("every documented CLC class has a tier and a written reason, and every tier is documented", () => {

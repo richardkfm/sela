@@ -1,10 +1,10 @@
 // Method page — how sela scores, in public, with weights and sources
 // listed (mvp.md §7). Rendered from live criterion_definition/source rows,
 // so it cannot drift from the scoring code in effect (roadmap §5.1). Phase
-// 3 (0.3.0) fixture data — see IllustrativeBanner.
+// 3 (0.3.0) fixture data — see MethodNote.
 
 import Link from "next/link";
-import { IllustrativeBanner } from "@/components/IllustrativeBanner";
+import { MethodNote } from "@/components/MethodNote";
 import { listCriterionDefinitions, listSources } from "@/lib/db/queries/criteria";
 import { listOutcomeMethods, type OutcomeMethodRow } from "@/lib/db/queries/outcomes";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
@@ -13,11 +13,10 @@ import type { CitedFactor, OutcomeMethod } from "@/lib/scoring/nature/method";
 import { DIMENSION_LABEL_DE } from "@/lib/scoring/outcome-display";
 import { TECHNOLOGIES } from "@/lib/scoring/types";
 import { appliesToLabel } from "@/lib/scoring/labels";
+import { isMeasuredOnly } from "@/lib/scoring/verdict-text";
 import {
-  IRRADIATION_BOUNDS,
   IRRADIATION_NATIONAL_QUARTILES,
   LAND_COVER_TIER_LABEL_DE,
-  LIMITING_MIN_GAP,
   PROTECTION_EXCLUSION_SHARE,
   PROTECTION_FLAG_MIN_SHARE,
   landCoverClassesOfTier,
@@ -43,17 +42,18 @@ export default async function MethodPage() {
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <IllustrativeBanner kind={definitions.some((d) => !d.id.startsWith("fixture_")) ? "real" : "fixture"} />
+      <MethodNote kind={definitions.some((d) => !d.id.startsWith("fixture_")) ? "real" : "fixture"} />
       <div>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600 }}>Methode</h1>
         <p style={{ color: "var(--text-secondary)" }}>
           Diese Seite listet exakt die <code>criterion_definition</code>-Zeilen, die die
           Bewertungs-Engine (<code>lib/scoring/</code>, Methodenversion{" "}
           <span className="tabular-nums">{CURRENT_METHOD_VERSION}</span>) tatsächlich liest — sie kann
-          daher nicht vom aktiven Code abweichen. Die echte Kriterienkatalog-Gewichtung ist noch
-          offen; siehe <code>docs/domain/scoring-criteria.md</code>. Kriterien mit dem Präfix{" "}
-          <code>fixture_</code> gehören zum synthetischen Beispieldatensatz, alle anderen lesen echte
-          Messwerte der Pilotregion Uckermark – mit derselben Platzhalter-Gewichtung.
+          daher nicht vom aktiven Code abweichen. Kriterien mit dem Präfix <code>fixture_</code> gehören
+          zum synthetischen Beispieldatensatz und tragen eine willkürliche Beispiel-Gewichtung. Alle
+          anderen lesen echte Messwerte der Pilotregion Uckermark und werden nicht gewichtet, sondern nach
+          den unten beschriebenen Regeln eingeordnet (Methode <code>real-pv-v1</code>, siehe{" "}
+          <code>docs/domain/scoring-criteria.md</code>).
         </p>
       </div>
 
@@ -89,7 +89,13 @@ export default async function MethodPage() {
                   {definition.appliesTo.map(appliesToLabel).join(", ")}
                 </td>
                 <td className="tabular-nums" style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>
-                  {definition.isCategory ? "Kategorie, nicht im Score" : definition.weight}
+                  {definition.isCategory
+                    ? "Kategorie"
+                    : isMeasuredOnly(definition)
+                      ? "Messwert, nicht verrechnet"
+                      : definition.isHardConstraint && !definition.id.startsWith("fixture_")
+                        ? "Ausschluss"
+                        : definition.weight}
                 </td>
                 <td style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)" }}>
                   {source?.dataset ?? definition.sourceId}
@@ -122,9 +128,9 @@ export default async function MethodPage() {
 
 const TIERS: readonly LandCoverTier[] = ["vorgesehen", "eingeschraenkt", "nicht_vorgesehen"];
 const TIER_EFFECT_DE: Record<LandCoverTier, string> = {
-  vorgesehen: "wird bewertet",
-  eingeschraenkt: "wird bewertet; die Einschränkung steht neben dem Ergebnis",
-  nicht_vorgesehen: "wird nicht bewertet – Ergebnis „nicht vorgesehen“",
+  vorgesehen: "Einordnung „ohne Einschränkung“",
+  eingeschraenkt: "Einordnung „eingeschränkt“",
+  nicht_vorgesehen: "Einordnung „nicht vorgesehen“",
 };
 const KWH = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const PCT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
@@ -138,11 +144,14 @@ function PvRulesSection() {
   return (
     <section aria-labelledby="pv-regeln" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.9rem" }}>
       <h2 id="pv-regeln" style={{ fontSize: "1.2rem", fontWeight: 600, margin: "1rem 0 0" }}>
-        Regeln der Eignungsprüfung für Freiflächen- und Agri-PV
+        Wie Flächen für Freiflächen- und Agri-PV eingeordnet werden
       </h2>
       <p style={{ color: "var(--text-secondary)", margin: 0 }}>
-        Diese Regeln sind entschieden (27.09.2026). Gewichte, Neigungsgrenzen und die Eignungsschwelle sind es noch
-        nicht – deshalb bleibt das Ergebnis illustrativ.
+        Methode <code>real-pv-v1</code>, entschieden am 27. und 28.09.2026. Es gibt keine Punktzahl und kein
+        „geeignet“: Für eine Gewichtung von Strahlung und Neigung und für eine Eignungsschwelle fand sich keine
+        belastbare Quelle, und mit plausiblen Annahmen wären zwischen 0 % und 100 % der Flächen „ungeeignet“
+        gewesen. Jedes Kriterium wird deshalb für sich eingeordnet. Die Einordnung ist beratend – keine Planungs-,
+        Eignungs- oder Genehmigungsaussage.
       </p>
 
       <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: "0.5rem 0 0" }}>In dieser Reihenfolge</h3>
@@ -157,22 +166,27 @@ function PvRulesSection() {
           (Tabelle unten). Das ist selas eigene Einordnung, keine Rechtsfolge.
         </li>
         <li>
-          Sonst <strong>bewertet</strong> aus Globalstrahlung und Geländeneigung. Die Strahlung wird auf die bundesweite
-          Spanne {KWH.format(IRRADIATION_BOUNDS.min)} bis {KWH.format(IRRADIATION_BOUNDS.max)} kWh/m²·a skaliert (1. bis
-          99. Perzentil des DWD-Mittels 2016–2025 aller Rasterzellen in Deutschland) – nie auf die Spanne einer Region.
-          Zur Einordnung zeigt sela, in welchem Viertel der deutschen Werte eine Fläche liegt (Quartilsgrenzen{" "}
-          {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p25)}, {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p50)} und{" "}
-          {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p75)} kWh/m²·a).
+          Sonst <strong>eingeschränkt</strong> oder <strong>ohne Einschränkung</strong>, je nach der Stufe der
+          Bodenbedeckung. „Ohne Einschränkung“ heißt: keiner der geprüften Gründe spricht dagegen – nicht, dass die
+          Fläche geeignet, geplant oder genehmigungsfähig wäre.
         </li>
       </ol>
 
-      <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: "0.5rem 0 0" }}>Begrenzendes Kriterium</h3>
-      <p style={{ margin: 0 }}>
-        Genannt wird das Kriterium, das am weitesten unter seinem besten Wert unter den bewerteten Flächen derselben
-        Region liegt – und nur, wenn der Abstand mindestens {String(LIMITING_MIN_GAP).replace(".", ",")} auf der
-        0–1-Skala beträgt. Sonst steht dort, dass kein Kriterium deutlich zurückliegt. Ein Kriterium, das in der ganzen
-        Region fast gleich ist, wird so nicht überall als „begrenzend“ genannt.
-      </p>
+      <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: "0.5rem 0 0" }}>Gezeigt, aber nicht verrechnet</h3>
+      <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+        <li>
+          <strong>Globalstrahlung</strong>, eingestuft nach Vierteln der Werte in Deutschland (DWD-Mittel 2016–2025 aller
+          Rasterzellen; Grenzen {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p25)},{" "}
+          {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p50)} und {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p75)} kWh/m²·a).
+          Die ganze Uckermark liegt im unteren Mittelfeld; innerhalb der Region unterscheidet die Strahlung Flächen kaum.
+          Ihre eigentliche Aufgabe ist der Energieertrag, der noch nicht modelliert ist.
+        </li>
+        <li>
+          <strong>Geländeneigung</strong>, nur als Messwert mit niedriger Konfidenz: Das 200-m-Geländemodell glättet
+          Neigungen, und Brandenburg empfiehlt zwar, Hanglagen zu vermeiden, nennt aber keinen Grenzwert (Gemeinsame
+          Arbeitshilfe PV-FFA, 2023, S. 21). Die steilste Uckermark-Fläche misst 6,8°.
+        </li>
+      </ul>
 
       <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: "0.5rem 0 0" }}>Prüfhinweise zu Schutzgebieten</h3>
       <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>

@@ -13,17 +13,18 @@ import {
   getCriterionDefinition,
   getSource,
   listCriterionDefinitions,
+  listCriterionValuesForUnit,
   type CriterionDefinitionRow,
   type SourceRow,
 } from "@/lib/db/queries/criteria";
 import { pilotRegionInfo } from "@/lib/pilot-region";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
-import { scenarioTokens, technologyToTokenKey } from "@/lib/design/tokens";
 import { ILLUSTRATIVE_MARKER } from "@/lib/scoring/illustrative-weights";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import type { SuitabilityVerdict } from "@/lib/scoring/types";
-import { VERDICT_LABEL_DE } from "@/lib/scoring/verdict-text";
+import { VERDICT_LABEL_DE, isClassified, readLandCover } from "@/lib/scoring/verdict-text";
+import { verdictAppearance } from "@/lib/map/verdict-style";
 
 export const runtime = "nodejs";
 
@@ -109,17 +110,19 @@ export async function GET(
     );
   }
   const basemapAttribution = getActiveBasemap().attribution;
-  const tokenKey = technologyToTokenKey[headline.technology];
-  const token = scenarioTokens[tokenKey];
   const { width, height } = SIZES[format];
   const region = pilotRegionInfo(unit.pilotRegion);
   const names = criteria.map((d) => d.nameDe).join(", ");
   const technologyLabel = TECHNOLOGY_LABEL_DE[headline.technology];
+  // A classified verdict decided by land cover names the class that placed it.
+  const landCoverValue = (await listCriterionValuesForUnit(id)).find((v) => v.criterionId === "pv_land_cover");
+  const landCoverClass =
+    landCoverValue && criteria.some((d) => d.isCategory) ? `Bodenbedeckung: ${readLandCover(landCoverValue.value).classDe}` : names;
   const headlineText =
     headline.verdict === "excluded"
       ? `${technologyLabel}: ausgeschlossen durch ${names}`
-      : headline.verdict === "not_considered"
-        ? `${technologyLabel}: nicht vorgesehen wegen ${names}`
+      : isClassified(headline.verdict)
+        ? `${technologyLabel}: ${VERDICT_LABEL_DE[headline.verdict]} — ${landCoverClass}`
         : `${technologyLabel}: ${VERDICT_LABEL_DE[headline.verdict]} — ${
             reasonId ? `begrenzt am deutlichsten durch ${names}` : "kein Kriterium deutlich unter dem Regionsbesten"
           }`;
@@ -142,11 +145,11 @@ export async function GET(
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontSize: 20, color: "#54524c" }}>
             {region.kind === "real"
-              ? `Rasterzelle · ${region.nameDe} · echte Messwerte, Beispiel-Gewichtung · ${ILLUSTRATIVE_MARKER.de}`
+              ? `Rasterzelle · ${region.nameDe} · veröffentlichte Regeln, echte Messwerte · beratend, keine Planungs- oder Genehmigungsaussage`
               : `Synthetische Demo-Fläche · Fixture-Region · ${ILLUSTRATIVE_MARKER.de}`}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 8, background: token.light }} />
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: verdictAppearance(headline.verdict, headline.technology).color }} />
             <div style={{ fontSize: 36, fontWeight: 700 }}>{headlineText}</div>
           </div>
         </div>

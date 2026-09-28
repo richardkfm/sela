@@ -27,6 +27,64 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ### Added
 
+- **Roadmap Step 2: the first confirmed PV method, `real-pv-v1` — classified, not scored
+  (verdicts `0.3.2-dev`).** Asked for by the project owner ("continue"). The decisions were
+  taken through the `CLAUDE.md` §3 gate on 2026-09-28, after a measurement and a literature
+  check (`docs/domain/decision-memo-pv-method.md`, evidence in
+  `docs/domain/evidence/2026-09-28-pv-method/`).
+  - **What the evidence showed:**
+    - Across plausible weights, slope bounds and thresholds, 0 % to 100 % of the 71 577 scored
+      Uckermark cells came out *ungeeignet*.
+    - No source supports a citable weight or threshold.
+    - Brandenburg's guidance says only "Hängen zu vermeiden", with no number.
+    - DGM200 flattens slopes, and the steepest cell is 6.8°.
+  - **Decided (D1–D5):**
+    - No score and no *geeignet/ungeeignet* for real regions. Each criterion has its own class:
+      - protection exclusion;
+      - land-cover tier;
+      - irradiation, by national quartile (99.8 % of cells: *unteres Mittelfeld*);
+      - slope, as a measured value only.
+    - The map shows four classes, with a dashed contour on cells with at least one Prüfhinweis
+      (from z12).
+    - Neutral names outside the method: *ohne Einschränkung* instead of *vorgesehen*.
+    - The *ILLUSTRATIV* banner is removed for real regions; an advisory note (*Beratend* — keine
+      Planungs- oder Genehmigungsaussage) replaces it. The synthetic fixture keeps its banner
+      and its illustrative score.
+  - **Uckermark result:**
+
+    | Class | Cells |
+    |---|---|
+    | *ohne Einschränkung* | 59 438 |
+    | *eingeschränkt* | 12 139 |
+    | *nicht vorgesehen* | 27 251 |
+    | *ausgeschlossen* | 18 363 |
+
+    38 170 of the 71 577 cells that are not excluded or *nicht vorgesehen* carry at least one
+    Prüfhinweis.
+  - **Code:**
+    - **Migration `0007_pv_classified.sql`** adds the `restricted`/`unrestricted` states and
+      `protection_flag_count` (ADR-0009 amendment 1).
+    - **The engine classifies a unit by its categories when no weighted criterion has a value for
+      it.** A test pins that the decision rests on the unit's values: the fixture's weighted
+      criteria also apply to PV.
+    - `seed_real_criteria.sql` gives irradiation and slope weight 0.
+    - The materialiser counts Prüfhinweise with the one rule in `protection-flags.ts`.
+    - Tiles carry `h_pv`/`h_agripv`.
+    - `mapVerdictsFor` gives a region-aware legend.
+  - **Screens:**
+    - The parcel page gains *Einordnung je Kriterium*.
+    - The map panel, 3D preview and scenario card use the classified wording.
+    - The method page explains why there is no score.
+    - The criterion page reads "Messwert, nicht verrechnet".
+    - `IllustrativeBanner` is renamed `MethodNote`.
+  - **Fixed along the way:** the dative in the flag texts ("im Europäischen Vogelschutzgebiet").
+  - **Docs:** the memo, ADR-0009 amendment 1, `scoring-criteria.md` §6.2, `design-language.md`
+    §4.2a, the glossary, the roadmap, the amendment to `mvp.md` F2, and the status line in
+    `CLAUDE.md`.
+  - **Tests:** 101 unit tests pass. In this environment, Playwright reports 27 passed and 4
+    failed. All 4 need units drawn on the map, and the basemap is blocked by the sandbox's proxy
+    certificate; they fail identically on the base commit.
+
 - **Roadmap Step 1 implemented: the decided scoring rules run on the Uckermark
   (`illustrative-real-v1`, verdicts `0.3.1-dev`).** Asked for by the project owner ("do the next
   phase"); the three inputs still open after the memo, and three that its measurements raised, were
@@ -212,6 +270,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   this change.
 
 ### Changed
+
+- **BREAKING (scoring): real regions no longer have *geeignet/ungeeignet* or a score**; verdicts
+  move to `0.3.2-dev`. Migrate (`0007`), re-seed `seed_real_criteria.sql` and re-materialise.
+  Readers of `suitability_verdict` must handle `restricted`/`unrestricted` (ADR-0009 amendment 1).
 
 - **BREAKING (scoring): verdicts move to method version `0.3.1-dev`**; a database must be
   migrated (`0006`), re-seeded (`seed_real_criteria.sql`), given `22_protection_overlap.sql` and

@@ -15,6 +15,17 @@ interface ProtectionOverlapSqlRow {
   source_id: string;
 }
 
+/** Every overlap of a region's units, for materialisation (ingest/07_materialize_scores.ts). */
+export async function listProtectionOverlapsForPilotRegion(pilotRegion: string): Promise<ProtectionOverlap[]> {
+  const rows = await query<ProtectionOverlapSqlRow>(
+    `SELECT po.spatial_unit_id, po.category, po.area_code, po.name, po.share, po.source_id
+     FROM protection_overlap po JOIN spatial_unit su ON su.id = po.spatial_unit_id
+     WHERE su.pilot_region = $1`,
+    [pilotRegion],
+  );
+  return rows.map(toOverlap);
+}
+
 export async function listProtectionOverlapsForUnit(spatialUnitId: string): Promise<ProtectionOverlap[]> {
   const rows = await query<ProtectionOverlapSqlRow>(
     `SELECT spatial_unit_id, category, area_code, name, share, source_id
@@ -23,12 +34,16 @@ export async function listProtectionOverlapsForUnit(spatialUnitId: string): Prom
      ORDER BY category, share DESC, name`,
     [spatialUnitId],
   );
-  return rows.map((row) => ({
+  return rows.map(toOverlap);
+}
+
+function toOverlap(row: ProtectionOverlapSqlRow): ProtectionOverlap {
+  return {
     spatialUnitId: row.spatial_unit_id,
     category: row.category,
     areaCode: row.area_code,
     name: row.name,
     share: Number(row.share),
     sourceId: row.source_id,
-  }));
+  };
 }

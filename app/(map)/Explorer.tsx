@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IllustrativeBanner } from "@/components/IllustrativeBanner";
+import { MethodNote } from "@/components/MethodNote";
 import { TechnologySwitch } from "@/components/TechnologySwitch";
 import type { RegionSummary, VerdictCounts } from "@/lib/db/queries/regions";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
@@ -66,7 +66,9 @@ export function Explorer({
   const changeTechnology = useCallback(
     async (next: Technology) => {
       setTechnology(next);
-      setAnnouncement(`Karte zeigt jetzt die Eignung für ${TECHNOLOGY_LABEL_DE[next]}.`);
+      setAnnouncement(
+        `Karte zeigt jetzt die ${region.kind === "real" ? "Einordnung" : "Eignung"} für ${TECHNOLOGY_LABEL_DE[next]}.`,
+      );
       if (countsByTech[next]) return;
       const response = await fetch(`/api/units/stats?region=${encodeURIComponent(region.id)}&technology=${next}`);
       if (!response.ok) return;
@@ -124,11 +126,11 @@ export function Explorer({
           </p>
         </header>
 
-        <IllustrativeBanner compact kind={region.kind} />
+        <MethodNote compact kind={region.kind} />
 
         <section aria-labelledby="tech-heading" className="explorer-section">
           <h2 id="tech-heading" className="overline">
-            Karte zeigt Eignung für
+            Karte zeigt {region.kind === "real" ? "Einordnung" : "Eignung"} für
           </h2>
           <TechnologySwitch value={technology} onChange={changeTechnology} options={TECHNOLOGIES} />
           {region.kind === "real" && technology === "agripv" && (
@@ -145,7 +147,7 @@ export function Explorer({
           )}
         </section>
 
-        <Legend technology={technology} counts={counts} total={region.unitCount} />
+        <Legend technology={technology} counts={counts} total={region.unitCount} regionKind={region.kind} />
 
         <section aria-labelledby="view-heading" className="explorer-section">
           <h2 id="view-heading" className="overline">
@@ -163,7 +165,7 @@ export function Explorer({
           </div>
           <p className="explorer-note muted">
             {region.kind === "real"
-              ? `${COUNT.format(region.unitCount)} Rasterzellen à 100 m über den ganzen Landkreis. Die Messwerte sind echt, die Gewichtung ist ein Platzhalter.`
+              ? `${COUNT.format(region.unitCount)} Rasterzellen à 100 m über den ganzen Landkreis. Die Messwerte sind echt; eingeordnet wird nach veröffentlichten Regeln, ohne Punktzahl.`
               : `Die ${COUNT.format(region.unitCount)} Beispielflächen liegen bewusst bei 0° N 0° O, damit sie nicht mit einem echten Ort verwechselt werden.`}
           </p>
         </section>

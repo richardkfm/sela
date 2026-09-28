@@ -1,0 +1,22 @@
+  pilot_region   | technology |    verdict     | excluded_by_criterion_id  | count | flagged 
+-----------------+------------+----------------+---------------------------+-------+---------
+ fixture-region  | agripv     | excluded       | fixture_protection_status |     1 |       0
+ fixture-region  | agripv     | suitable       |                           |    17 |       0
+ fixture-region  | agripv     | unsuitable     |                           |    15 |       0
+ fixture-region  | pv         | excluded       | fixture_protection_status |     1 |       0
+ fixture-region  | pv         | suitable       |                           |    29 |       0
+ fixture-region  | pv         | unsuitable     |                           |     3 |       0
+ fixture-region  | wind       | excluded       | fixture_protection_status |     1 |       0
+ fixture-region  | wind       | suitable       |                           |    18 |       0
+ fixture-region  | wind       | unsuitable     |                           |    14 |       0
+ uckermark-12073 | agripv     | excluded       | pv_protection_status      | 18363 |   18354
+ uckermark-12073 | agripv     | not_considered | pv_land_cover             | 27251 |   20099
+ uckermark-12073 | agripv     | restricted     | pv_land_cover             | 12139 |    8611
+ uckermark-12073 | agripv     | unrestricted   | pv_land_cover             | 59438 |   29559
+ uckermark-12073 | pv         | excluded       | pv_protection_status      | 18363 |   18354
+ uckermark-12073 | pv         | not_considered | pv_land_cover             | 27251 |   20099
+ uckermark-12073 | pv         | restricted     | pv_land_cover             | 12139 |    8611
+ uckermark-12073 | pv         | unrestricted   | pv_land_cover             | 59438 |   29559
+ uckermark-12073 | wind       | excluded       | wind_protection_status    | 18363 |       0
+(18 rows)
+

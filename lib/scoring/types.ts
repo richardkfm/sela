@@ -58,11 +58,23 @@ export type Confidence = "high" | "medium" | "low";
 export type OutcomeStatus = "modelled" | "not_modelled" | "not_applicable";
 
 /**
- * `not_considered` ("nicht vorgesehen"): a category criterion placed the unit
- * outside what the method scores — e.g. forest or water for ground-mounted PV
- * (ADR-0009). Unlike `excluded`, it cites sela's own classification, not a statute.
+ * `suitable`/`unsuitable`: a weighted score against a threshold — used only by
+ * the illustrative fixture. The classified states carry no score (ADR-0009):
+ * `excluded` cites a statute; `not_considered` ("nicht vorgesehen"),
+ * `restricted` ("eingeschränkt") and `unrestricted` ("ohne Einschränkung")
+ * cite the tier a category criterion placed the unit in — sela's own
+ * classification, never a planning or permission statement.
  */
-export type SuitabilityVerdictLabel = "suitable" | "unsuitable" | "excluded" | "not_considered";
+export type SuitabilityVerdictLabel =
+  | "suitable"
+  | "unsuitable"
+  | "excluded"
+  | "not_considered"
+  | "restricted"
+  | "unrestricted";
+
+/** The classes a category criterion can place a unit in (ADR-0009). */
+export type CategoryClass = "not_considered" | "restricted" | "unrestricted";
 
 /**
  * A `criterion_definition` row. Real rows (with a confirmed weight) are
@@ -107,9 +119,14 @@ export interface SuitabilityVerdict {
   readonly score: number | null;
   /** Null when excluded or not considered, and when no criterion falls clearly below the region's best (Q5). */
   readonly limitingCriterionId: string | null;
-  /** The criterion that decided an `excluded` or `not_considered` verdict. */
+  /** The criterion that decided a classified verdict (every state but suitable/unsuitable). */
   readonly excludedByCriterionId: string | null;
   readonly methodVersion: string;
+  /**
+   * Prüfhinweise on this unit for this technology (lib/scoring/protection-flags.ts),
+   * counted at materialisation; absent where the rule does not apply.
+   */
+  readonly protectionFlagCount?: number | null;
 }
 
 /**

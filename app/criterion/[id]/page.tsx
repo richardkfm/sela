@@ -1,14 +1,15 @@
 // Evidence view (roadmap §5.1) — flow F4: from any displayed criterion,
 // reach its source: dataset, licence, resolution, date, weight, direction,
 // confidence. Reachable from every criterion id shown elsewhere; no dead
-// ends. Phase 3 (0.3.0) fixture data — see IllustrativeBanner.
+// ends. Phase 3 (0.3.0) fixture data — see MethodNote.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { IllustrativeBanner } from "@/components/IllustrativeBanner";
+import { MethodNote } from "@/components/MethodNote";
 import { getCriterionDefinition, getSource } from "@/lib/db/queries/criteria";
 import { SourceAttribution } from "@/components/SourceAttribution";
 import { appliesToLabel } from "@/lib/scoring/labels";
+import { isMeasuredOnly } from "@/lib/scoring/verdict-text";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "40rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <IllustrativeBanner kind={criterion.id.startsWith("fixture_") ? "fixture" : "real"} />
+      <MethodNote kind={criterion.id.startsWith("fixture_") ? "fixture" : "real"} />
       <div>
         <Link href="/method">← Zur Methodenseite</Link>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>{criterion.nameDe}</h1>
@@ -46,6 +47,13 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
               keine – eine Kategorie, die nicht in die Punktzahl eingeht (<Link href="/method#pv-regeln">Stufen und
               Begründungen</Link>)
             </>
+          ) : isMeasuredOnly(criterion) ? (
+            <>
+              keine – ein Messwert, der nicht mit anderen Kriterien verrechnet wird (
+              <Link href="/method#pv-regeln">Methode</Link>)
+            </>
+          ) : criterion.isHardConstraint && !criterion.id.startsWith("fixture_") ? (
+            <>keine – ein Ausschlusskriterium, keine Gewichtung</>
           ) : (
             <>
               {criterion.weight} — <em>illustrativ, noch nicht bestätigt (CLAUDE.md §3)</em>
@@ -53,7 +61,7 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
           )}
         </dd>
 
-        <dt style={{ color: "var(--text-secondary)" }}>Harte Ausschlusskriterium?</dt>
+        <dt style={{ color: "var(--text-secondary)" }}>Hartes Ausschlusskriterium?</dt>
         <dd style={{ margin: 0 }}>{criterion.isHardConstraint ? "Ja (ADR-0004)" : "Nein"}</dd>
 
         <dt style={{ color: "var(--text-secondary)" }}>Gilt für</dt>

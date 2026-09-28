@@ -75,6 +75,7 @@ Two rules that keep the comparison honest:
 **F1 — Find a parcel.** Search by address, municipality, or coordinates, or click the map. → The parcel is identified with its land-cover class and current use.
 
 **F2 — Understand suitability.** For a selected parcel, see per technology whether it is suitable, and immediately *why*: the two or three criteria driving the verdict, and the single criterion that limits it most.
+*Amended 2026-09-28 (`docs/domain/decision-memo-pv-method.md`):* for real regions, PV is **classified, not scored** — the "why" is each criterion in its own class (protection, land-cover tier, irradiation by national quartile, slope as a measured value), and there is no single limiting criterion and no ranking within a class until a cited outcome (roadmap Step 3) can tell cells apart.
 
 **F3 — Compare scenarios.** See all four scenarios for the parcel across the shared outcome dimensions, with the trade-off — what is gained, what is given up — stated in words, not left for the reader to infer from a chart.
 

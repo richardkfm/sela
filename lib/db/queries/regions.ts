@@ -78,7 +78,7 @@ export async function countVerdicts(
      GROUP BY sv.verdict`,
     [pilotRegion, technology, methodVersion],
   );
-  const counts: VerdictCounts = { suitable: 0, unsuitable: 0, excluded: 0, not_considered: 0, unscored: 0 };
+  const counts: VerdictCounts = { suitable: 0, unsuitable: 0, excluded: 0, not_considered: 0, restricted: 0, unrestricted: 0, unscored: 0 };
   for (const row of rows) {
     const key = (row.verdict ?? "unscored") as keyof VerdictCounts;
     counts[key] = Number(row.n);
@@ -89,8 +89,9 @@ export async function countVerdicts(
 /**
  * One Mapbox Vector Tile of a region's units. Each feature carries, for every
  * technology, its verdict (`v_pv`, …) — so switching technology on the map is
- * a paint change, not a refetch — and from INTERACTIVE_MIN_ZOOM also its id and
- * scores (`s_pv`, …). A unit without a verdict has no `v_*` property; the map
+ * a paint change, not a refetch — and from INTERACTIVE_MIN_ZOOM also its id,
+ * scores (`s_pv`, …) and whether it carries a Prüfhinweis (`h_pv`, `h_agripv`;
+ * counted at materialisation by lib/scoring/protection-flags.ts, ADR-0009). A unit without a verdict has no `v_*` property; the map
  * draws it as "nicht bewertet".
  */
 export async function unitTile(
@@ -105,7 +106,12 @@ export async function unitTile(
     `WITH bounds AS (SELECT ST_TileEnvelope($2, $3, $4) AS env),
      features AS (
        SELECT ST_AsMVTGeom(su.geom_3857, bounds.env, 4096, 64, true) AS geom,
-              ${interactive ? "su.id::text AS id, pv.score::float8 AS s_pv, ag.score::float8 AS s_agripv, wi.score::float8 AS s_wind," : ""}
+              ${
+                interactive
+                  ? `su.id::text AS id, pv.score::float8 AS s_pv, ag.score::float8 AS s_agripv, wi.score::float8 AS s_wind,
+                     (pv.protection_flag_count > 0) AS h_pv, (ag.protection_flag_count > 0) AS h_agripv,`
+                  : ""
+              }
               pv.verdict AS v_pv, ag.verdict AS v_agripv, wi.verdict AS v_wind
        FROM spatial_unit su
        CROSS JOIN bounds

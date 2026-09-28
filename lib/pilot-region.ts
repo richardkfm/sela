@@ -10,7 +10,7 @@
 //     is still illustrative (lib/scoring/illustrative-weights.ts) until
 //     docs/domain/scoring-criteria.md's weights are confirmed.
 //
-// `components/IllustrativeBanner.tsx` words itself by this kind, so a screen
+// `components/MethodNote.tsx` words itself by this kind, so a screen
 // can never describe real measurements as synthetic, or synthetic ones as real.
 
 export type PilotRegionKind = "fixture" | "real";

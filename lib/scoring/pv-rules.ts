@@ -150,3 +150,17 @@ export function landCoverClassesOfTier(tier: LandCoverTier): { code: number; nam
     .filter(([, entry]) => entry.tier === tier)
     .map(([code, entry]) => ({ code: Number(code), nameDe: CLC_CLASS_NAME_DE[Number(code)] ?? code, reasonDe: entry.reasonDe }));
 }
+
+/**
+ * Step 2 (decided 2026-09-28, docs/domain/decision-memo-pv-method.md): slope is
+ * a measured value, not a class. DGM200 flattens slopes systematically at 200 m,
+ * no citable limit bites in the Uckermark (steepest cell 6.8°), and Brandenburg's
+ * own guidance names no number.
+ */
+export const SLOPE_NOTE_DE =
+  "Nur Messwert, nicht eingestuft: Das 200-m-Geländemodell glättet Neigungen. Brandenburg empfiehlt, Hanglagen " +
+  "zu vermeiden, nennt aber keinen Grenzwert (Gemeinsame Arbeitshilfe PV-FFA, 2023, S. 21).";
+
+/** Step 2: irradiation is classed by national quartile and never combined with other criteria. */
+export const IRRADIATION_NOTE_DE =
+  "Eingestuft nach Vierteln der Werte in Deutschland (DWD, Mittel 2016–2025), nicht mit anderen Kriterien verrechnet.";
