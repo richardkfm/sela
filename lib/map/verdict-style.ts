@@ -14,7 +14,30 @@ import type { MapPatternEncoding } from "./patterns";
 
 export type MapVerdict = SuitabilityVerdictLabel | "unscored";
 
-export const MAP_VERDICTS: readonly MapVerdict[] = ["suitable", "unsuitable", "not_considered", "excluded", "unscored"];
+export const MAP_VERDICTS: readonly MapVerdict[] = [
+  "unrestricted",
+  "restricted",
+  "suitable",
+  "unsuitable",
+  "not_considered",
+  "excluded",
+  "unscored",
+];
+
+/**
+ * The classes a region's legend shows. A real region is classified without a
+ * score (real-pv-v1, ADR-0009); only the synthetic fixture still has the
+ * illustrative geeignet/ungeeignet.
+ */
+export function mapVerdictsFor(regionKind: "real" | "fixture"): readonly MapVerdict[] {
+  return regionKind === "real"
+    ? ["unrestricted", "restricted", "not_considered", "excluded", "unscored"]
+    : ["suitable", "unsuitable", "excluded", "unscored"];
+}
+
+/** Legend line for real regions: what the four classes are, and what they are not. */
+export const CLASSIFICATION_NOTE_DE =
+  "Einordnung nach Bodenbedeckung und Schutzgebieten – keine Planungs- oder Genehmigungsaussage.";
 
 export const VERDICT_LABEL_DE: Record<MapVerdict, string> = {
   ...VERDICT_TEXT_LABEL_DE,
@@ -23,6 +46,8 @@ export const VERDICT_LABEL_DE: Record<MapVerdict, string> = {
 
 /** One sentence per class, for the legend — what the colour means, not just its name. */
 export const VERDICT_EXPLANATION_DE: Record<MapVerdict, string> = {
+  unrestricted: "Bodenbedeckung ohne Einschränkung, z. B. Acker; kein Ausschluss",
+  restricted: "Bodenbedeckung eingeschränkt, z. B. Grünland; kein Ausschluss",
   suitable: "erreicht die Schwelle",
   unsuitable: "unter der Schwelle",
   excluded: "Schutzgebiet (hartes Ausschlusskriterium)",
@@ -43,6 +68,13 @@ const EXCLUDED_COLOR = "#8a8a8a";
 // the method does not score (ADR-0009).
 const NOT_CONSIDERED_COLOR = "#b3b0a8";
 const UNSCORED_COLOR = "#eeece6";
+
+/** Half-way to white — "eingeschränkt" in the technology's own hue, lighter and unpatterned. */
+function tint(hex: string): string {
+  const v = Number.parseInt(hex.slice(1), 16);
+  const mix = (c: number) => Math.round((c + 255) / 2).toString(16).padStart(2, "0");
+  return `#${mix((v >> 16) & 0xff)}${mix((v >> 8) & 0xff)}${mix(v & 0xff)}`;
+}
 /** Near-white marks on coloured ground — what the CSS patterns draw too. */
 export const PATTERN_MARK_COLOR = "#fbfaf7";
 export const INK = surfaceTokens.textPrimary.light;
@@ -62,7 +94,10 @@ function technologyEncoding(technology: Technology): MapPatternEncoding {
 export function verdictAppearance(verdict: MapVerdict, technology: Technology): VerdictAppearance {
   switch (verdict) {
     case "suitable":
+    case "unrestricted":
       return { color: scenarioTokens[technologyToTokenKey[technology]].light, encoding: technologyEncoding(technology) };
+    case "restricted":
+      return { color: tint(scenarioTokens[technologyToTokenKey[technology]].light), encoding: null };
     case "unsuitable":
       return { color: UNSUITABLE_COLOR, encoding: null };
     case "excluded":

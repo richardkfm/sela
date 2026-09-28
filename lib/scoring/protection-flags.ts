@@ -50,6 +50,16 @@ export const CATEGORY_LABEL_DE: Record<ProtectionCategory, string> = {
   br: "Biosphärenreservat",
 };
 
+/** Dative, for "im …" / "in einem …". */
+const CATEGORY_DATIVE_DE: Record<ProtectionCategory, string> = {
+  nsg: "Naturschutzgebiet",
+  natp: "Nationalpark",
+  ffh: "FFH-Gebiet",
+  spa: "Europäischen Vogelschutzgebiet",
+  lsg: "Landschaftsschutzgebiet",
+  br: "Biosphärenreservat",
+};
+
 const PERCENT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
 
 /** Whole percent; a share that rounds to 100 but is not whole says "fast 100". */
@@ -73,7 +83,7 @@ function flagFor(overlap: ProtectionOverlap, strictShareOfCell: number): Protect
         legalRef: "§ 34 BNatSchG",
         shortDe: `${CATEGORY_LABEL_DE[overlap.category]} „${overlap.name}“ (${share}) – Verträglichkeitsprüfung erforderlich`,
         textDe:
-          `Liegt ${where} im ${CATEGORY_LABEL_DE[overlap.category]} „${overlap.name}“ (${overlap.areaCode}). ` +
+          `Liegt ${where} im ${CATEGORY_DATIVE_DE[overlap.category]} „${overlap.name}“ (${overlap.areaCode}). ` +
           "Ein Vorhaben ist vor seiner Zulassung auf seine Verträglichkeit mit den Erhaltungszielen zu prüfen (§ 34 BNatSchG).",
       };
     case "lsg":
@@ -90,7 +100,7 @@ function flagFor(overlap: ProtectionOverlap, strictShareOfCell: number): Protect
     case "natp": {
       // At or above the exclusion share the cell is excluded; the exclusion says so.
       if (strictShareOfCell >= PROTECTION_EXCLUSION_SHARE) return null;
-      const label = CATEGORY_LABEL_DE[overlap.category];
+      const label = CATEGORY_DATIVE_DE[overlap.category];
       const legalRef = overlap.category === "nsg" ? "§ 23 BNatSchG" : "§ 24 BNatSchG";
       return {
         ...base,

@@ -2,11 +2,12 @@
 // immediately *why* (the criterion excluding it, the land-cover class that
 // places it outside what is scored, or the criterion limiting it clearly
 // against the rest of the region), above the fold; then the Prüfhinweise and
-// every measured value. Weights stay illustrative — see IllustrativeBanner.
+// every measured value. Real regions are classified without a score
+// (real-pv-v1); the fixture keeps its illustrative score — see MethodNote.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { IllustrativeBanner } from "@/components/IllustrativeBanner";
+import { MethodNote } from "@/components/MethodNote";
 import { ConfidenceMark } from "@/components/ConfidenceMark";
 import { SourceAttribution } from "@/components/SourceAttribution";
 import {
@@ -17,13 +18,20 @@ import {
   type SourceRow,
 } from "@/lib/db/queries/criteria";
 import { listProtectionOverlapsForUnit } from "@/lib/db/queries/protection";
-import { protectionFlags, type ProtectionFlag } from "@/lib/scoring/protection-flags";
-import { irradiationNationalPositionDe } from "@/lib/scoring/pv-rules";
+import { formatShareDe, protectionFlags, type ProtectionFlag } from "@/lib/scoring/protection-flags";
+import {
+  IRRADIATION_NOTE_DE,
+  PROTECTION_EXCLUSION_SHARE,
+  SLOPE_NOTE_DE,
+  irradiationNationalPositionDe,
+} from "@/lib/scoring/pv-rules";
 import {
   LIMITING_EXPLANATION_DE,
   NO_LIMITING_CRITERION_DE,
   REASON_LEAD_DE,
   VERDICT_LABEL_DE,
+  isClassified,
+  isMeasuredOnly,
   readLandCover,
   type LandCoverReading,
 } from "@/lib/scoring/verdict-text";
@@ -34,7 +42,7 @@ import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
 import { scenarioTokens, scenarioTokenCssVar, technologyToTokenKey } from "@/lib/design/tokens";
 import { TECHNOLOGY_LABEL_DE, appliesToLabel } from "@/lib/scoring/labels";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
-import { TECHNOLOGIES, type SuitabilityVerdict } from "@/lib/scoring/types";
+import { TECHNOLOGIES, type CriterionValue, type SuitabilityVerdict } from "@/lib/scoring/types";
 
 // Reads live scored data — see app/(map)/page.tsx's dynamic export for why.
 export const dynamic = "force-dynamic";
@@ -87,7 +95,7 @@ function VerdictRow({
         {reason && (
           <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
             {REASON_LEAD_DE[verdict.verdict]}: <Link href={`/criterion/${reason.id}`}>{reason.nameDe}</Link>
-            {verdict.verdict === "not_considered" && landCover && (
+            {reason.isCategory && landCover && (
               <>
                 {" "}
                 – {landCover.classDe} ({landCover.reasonDe})
@@ -105,6 +113,106 @@ function VerdictRow({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * "Stufen je Kriterium" (roadmap Step 2, decided 2026-09-28): each criterion in
+ * its own class, side by side, never combined into a score. The reader sees
+ * which rule placed the cell and what the measured values are.
+ */
+function CriterionClasses({
+  values,
+  landCover,
+  strictShare,
+  flagCount,
+}: {
+  values: readonly CriterionValue[];
+  landCover: LandCoverReading | null;
+  strictShare: number | undefined;
+  flagCount: number;
+}) {
+  const irradiation = values.find((v) => v.criterionId === "pv_irradiation_annual");
+  const slope = values.find((v) => v.criterionId === "pv_slope");
+  const rows: { label: string; href: string; value: string; note: string }[] = [
+    {
+      label: "Schutzgebiete",
+      href: "/criterion/pv_protection_status",
+      value:
+        strictShare === undefined
+          ? "nicht geprüft"
+          : strictShare >= PROTECTION_EXCLUSION_SHARE
+            ? "ausgeschlossen"
+            : "kein Ausschluss",
+      note:
+        strictShare === undefined
+          ? ""
+          : `${formatShareDe(strictShare)} der Fläche in Naturschutzgebiet oder Nationalpark; ausgeschlossen ab ${formatShareDe(PROTECTION_EXCLUSION_SHARE)}. ` +
+            (flagCount > 0 ? `${flagCount} Prüfhinweis${flagCount === 1 ? "" : "e"} unten.` : "Keine Prüfhinweise."),
+    },
+    {
+      label: "Bodenbedeckung",
+      href: "/criterion/pv_land_cover",
+      value: landCover ? landCover.classLabelDe : "kein Wert",
+      note: landCover ? `${landCover.classDe} – ${landCover.reasonDe}` : "",
+    },
+    {
+      label: "Globalstrahlung",
+      href: "/criterion/pv_irradiation_annual",
+      value: irradiation ? irradiationNationalPositionDe(irradiation.value) : "kein Wert",
+      note: irradiation
+        ? `${formatCriterionValue(irradiation.criterionId, irradiation.value, irradiation.unit)}. ${IRRADIATION_NOTE_DE}`
+        : "",
+    },
+    {
+      label: "Geländeneigung",
+      href: "/criterion/pv_slope",
+      value: slope ? formatCriterionValue(slope.criterionId, slope.value, slope.unit) : "kein Wert",
+      note: SLOPE_NOTE_DE,
+    },
+  ];
+  return (
+    <section aria-labelledby="classes-heading" style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+      <h2 id="classes-heading" style={{ fontSize: "1.05rem", fontWeight: 600, margin: "0.5rem 0 0" }}>
+        Einordnung je Kriterium · Freiflächen- und Agri-PV
+      </h2>
+      <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+        Jedes Kriterium für sich, nicht zu einer Punktzahl verrechnet. Die Einordnung oben folgt aus Schutzgebiet und
+        Bodenbedeckung.
+      </p>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.9rem" }}>
+          <thead>
+            <tr>
+              {["Kriterium", "Stufe bzw. Wert", "Erläuterung"].map((label) => (
+                <th
+                  key={label}
+                  scope="col"
+                  style={{ textAlign: "left", padding: "0.4rem 0.6rem", borderBottom: "2px solid var(--text-secondary)" }}
+                >
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label}>
+                <th scope="row" style={{ textAlign: "left", fontWeight: 400, padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)", verticalAlign: "top" }}>
+                  <Link href={row.href}>{row.label}</Link>
+                </th>
+                <td style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)", fontWeight: 600, verticalAlign: "top" }}>
+                  {row.value}
+                </td>
+                <td style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--surface-1)", color: "var(--text-secondary)", fontSize: "0.85rem", verticalAlign: "top" }}>
+                  {row.note}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -185,7 +293,7 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <IllustrativeBanner kind={region.kind} />
+      <MethodNote kind={region.kind} />
       <div>
         <Link href="/">← Zur Karte</Link>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>
@@ -224,6 +332,10 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
         </p>
       )}
 
+      {region.kind === "real" && verdicts.some((v) => isClassified(v.verdict)) && (
+        <CriterionClasses values={values} landCover={landCover} strictShare={strictShare} flagCount={flags?.length ?? 0} />
+      )}
+
       {flags && <ProtectionFlags flags={flags} source={flagSource} />}
 
       {measured.length > 0 && (
@@ -253,7 +365,8 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
                       <Link href={`/criterion/${value.criterionId}`}>{definition?.nameDe ?? value.criterionId}</Link>
                       <span style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
                         {definition?.isHardConstraint ? "Ausschlusskriterium · " : ""}
-                        {definition?.isCategory ? "Kategorie, nicht im Score · " : ""}gilt für{" "}
+                        {definition?.isCategory ? "Kategorie · " : ""}
+                        {definition && isMeasuredOnly(definition) ? "Messwert, nicht verrechnet · " : ""}gilt für{" "}
                         {(definition?.appliesTo ?? []).map(appliesToLabel).join(", ")}
                       </span>
                     </th>
@@ -266,7 +379,7 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
                       )}
                       {value.criterionId === "pv_land_cover" && (
                         <span style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
-                          Stufe: {readLandCover(value.value).tierDe}
+                          Einordnung: {readLandCover(value.value).classLabelDe}
                         </span>
                       )}
                     </td>

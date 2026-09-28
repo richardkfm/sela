@@ -2,13 +2,13 @@
 // identical outcome dimensions, deltas against status_quo, always with a
 // reachable table view (design-language.md §9: a table view reachable from
 // every chart). Two kinds of rows share the table: the illustrative
-// placeholders (IllustrativeBanner) and the cited outcome methods of
+// placeholders (MethodNote) and the cited outcome methods of
 // ADR-0008, whose every number reaches its inputs and sources below the table.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfidenceMark } from "@/components/ConfidenceMark";
-import { IllustrativeBanner } from "@/components/IllustrativeBanner";
+import { MethodNote } from "@/components/MethodNote";
 import { NotApplicableBadge } from "@/components/NotApplicableBadge";
 import { NotModelledBadge } from "@/components/NotModelledBadge";
 import { SourceAttribution } from "@/components/SourceAttribution";
@@ -84,7 +84,7 @@ export default async function CompareScenariosPage({ params }: { params: Promise
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "64rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      {showsIllustrative && <IllustrativeBanner kind={region.kind} />}
+      {showsIllustrative && <MethodNote kind={region.kind} />}
       {citedLines.length > 0 && <CitedMethodsNote othersNotModelled={!showsIllustrative} />}
       <div>
         <Link href={`/unit/${id}`}>← Zur Fläche</Link>

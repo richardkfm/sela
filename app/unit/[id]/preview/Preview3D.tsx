@@ -10,7 +10,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IllustrativeBanner } from "@/components/IllustrativeBanner";
+import { MethodNote } from "@/components/MethodNote";
+import { isClassified } from "@/lib/scoring/verdict-text";
 import { TechnologySwitch } from "@/components/TechnologySwitch";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
 import {
@@ -150,7 +151,7 @@ export function Preview3D({
           <p className="muted">Wie groß wäre eine Anlage hier – im wahren Maßstab, auf dem Gelände.</p>
         </header>
 
-        <IllustrativeBanner compact kind={regionKind} />
+        <MethodNote compact kind={regionKind} />
 
         <section className="explorer-section" aria-labelledby="scenario-heading">
           <h2 id="scenario-heading" className="overline">
@@ -159,9 +160,11 @@ export function Preview3D({
           <TechnologySwitch value={technology} onChange={changeTechnology} options={OPTIONS} label="Szenario" />
           {verdict && (
             <p className="explorer-note">
-              Eignung für {TECHNOLOGY_LABEL_DE[verdict.technology]}: <strong>{VERDICT_LABEL_DE[verdict.verdict]}</strong>
+              {isClassified(verdict.verdict) ? "Einordnung" : "Eignung"} für {TECHNOLOGY_LABEL_DE[verdict.technology]}:{" "}
+              <strong>{VERDICT_LABEL_DE[verdict.verdict]}</strong>
               {verdict.score !== null && <span className="tabular-nums muted"> · {verdict.score.toFixed(2)}</span>}{" "}
-              <span className="muted">(illustrativ)</span> · <Link href={`/unit/${unitId}`}>Begründung</Link>
+              {!isClassified(verdict.verdict) && <span className="muted">(illustrativ) </span>}·{" "}
+              <Link href={`/unit/${unitId}`}>Begründung</Link>
             </p>
           )}
           {technology !== "status_quo" && !verdict && (

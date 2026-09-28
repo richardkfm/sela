@@ -1,0 +1,14 @@
+          q           |    verdict     | count 
+----------------------+----------------+-------
+ 1 unteres Viertel    | excluded       |   840
+ 1 unteres Viertel    | not_considered |   935
+ 1 unteres Viertel    | suitable       |   149
+ 1 unteres Viertel    | unsuitable     |     8
+ 2 unteres Mittelfeld | excluded       | 17493
+ 2 unteres Mittelfeld | not_considered | 26316
+ 2 unteres Mittelfeld | suitable       | 70984
+ 2 unteres Mittelfeld | unsuitable     |   415
+ 4 oberes Viertel     | excluded       |    30
+ 4 oberes Viertel     | suitable       |    21
+(10 rows)
+

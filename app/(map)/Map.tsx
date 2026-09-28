@@ -42,6 +42,7 @@ const SOURCE_ID = "units";
 const FILL_LAYER_ID = "units-fill";
 const PATTERN_LAYER_ID = "units-pattern";
 const EDGE_LAYER_ID = "units-edge";
+const FLAG_LAYER_ID = "units-flag";
 const HOVER_LAYER_ID = "units-hover";
 const SELECTED_HALO_LAYER_ID = "units-selected-halo";
 const SELECTED_LAYER_ID = "units-selected";
@@ -101,6 +102,11 @@ function patternExpression(technology: Technology): ExpressionSpecification {
 function patternFilter(technology: Technology): ExpressionSpecification {
   const patterned = MAP_VERDICTS.filter((v) => verdictAppearance(v, technology).encoding);
   return ["in", verdictOf(technology), ["literal", patterned]] as unknown as ExpressionSpecification;
+}
+
+/** Cells carrying at least one Prüfhinweis for this technology (ADR-0009); tiles carry `h_*` from z12. */
+function flagFilter(technology: Technology): ExpressionSpecification {
+  return ["==", ["get", `h_${technology}`], true] as unknown as ExpressionSpecification;
 }
 
 function readVerdict(properties: Record<string, unknown>, technology: Technology): { verdict: MapVerdict; score: number | null } {
@@ -231,6 +237,23 @@ export function Map({
         filter: patternFilter(t),
         paint: { "fill-pattern": patternExpression(t), "fill-opacity": fillOpacity },
       });
+      // Prüfhinweise (ADR-0009): a dashed ink contour on cells that carry at
+      // least one — a thing to check, drawn as a line so it never competes with
+      // the class fill and its pattern (design-language.md §8). From z12, where
+      // tiles carry the flag and a cell is large enough for a contour to read.
+      map.addLayer({
+        id: FLAG_LAYER_ID,
+        type: "line",
+        ...common,
+        minzoom: 12,
+        filter: flagFilter(t),
+        paint: {
+          "line-color": INK,
+          "line-opacity": 0.75,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.6, 16, 1.6],
+          "line-dasharray": [2, 1.5],
+        },
+      });
       // Paper-coloured seams: the grid reads as a mosaic of units, not as a
       // cartographic line layer competing with the data. Only once cells are
       // big enough for seams to mean anything.
@@ -344,6 +367,7 @@ export function Map({
     map.setPaintProperty(FILL_LAYER_ID, "fill-color", colorExpression(technology));
     map.setPaintProperty(PATTERN_LAYER_ID, "fill-pattern", patternExpression(technology));
     map.setFilter(PATTERN_LAYER_ID, patternFilter(technology));
+    map.setFilter(FLAG_LAYER_ID, flagFilter(technology));
   }, [technology]);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 # Scoring criteria catalogue
 
-**Version band:** `0.2.x`–`0.3.x` · **Status:** weights open; four criteria run with **illustrative** weights on real Uckermark data (§6); first real `preserve`/`restore` methods decided — climate and water (§4) · **Last updated:** 2026-09-24
+**Version band:** `0.2.x`–`0.3.x` · **Status:** **PV decided as a classification without weights** (`real-pv-v1`, §6.2); wind and agri-PV-specific criteria open; first real `preserve`/`restore` methods decided — climate and water (§4) · **Last updated:** 2026-09-28
 
 This is the document `docs/product/mvp.md` §4 names as the place nothing about technology
 suitability is settled until it is cited here, and the document `lib/db/migrations/0002_domain_schema.sql`'s
@@ -40,11 +40,11 @@ Criteria named in `docs/product/mvp.md` §4.1.
 
 | id | Name (EN / DE) | Direction | Hard constraint? | Weight | Candidate source |
 |---|---|---|---|---|---|
-| `pv_irradiation_annual` | Annual solar irradiation / Jährliche Sonneneinstrahlung | `higher_better` | No | open | DWD CDC radiation grids, 2016–2025 mean — **confirmed, ingested** (`sources.md` §2.3, §5.2) |
-| `pv_slope` | Terrain slope / Geländeneigung | `lower_better` | No | open | BKG DGM200 — **confirmed, ingested**; 200 m, so confidence `low` (`sources.md` §2.7) |
+| `pv_irradiation_annual` | Annual solar irradiation / Jährliche Sonneneinstrahlung | `higher_better` | No | **none** — classed by national quartile, not combined (§6.2) | DWD CDC radiation grids, 2016–2025 mean — **confirmed, ingested** (`sources.md` §2.3, §5.2) |
+| `pv_slope` | Terrain slope / Geländeneigung | `lower_better` | No | **none** — measured value only (§6.2) | BKG DGM200 — **confirmed, ingested**; 200 m, so confidence `low` (`sources.md` §2.7) |
 | `pv_aspect` | Terrain aspect / Hangausrichtung | `non_monotonic` | No | open | BKG DGM200 could supply it; not derived — at 200 m aspect is not meaningful per cell |
 | `pv_parcel_contiguity` | Contiguous usable area / Zusammenhängende nutzbare Fläche | `higher_better` | No | open | Derived from `spatial_unit` geometry itself once real parcel/grid geometry exists — no external source needed |
-| `pv_land_cover` | Current land-cover class / Aktuelle Bodenbedeckungsklasse | `non_monotonic` | No | open | BKG CORINE Land Cover 5 ha (CLC5-2018) — **confirmed, ingested**; the cell's dominant class (`sources.md` §2.2) |
+| `pv_land_cover` | Current land-cover class / Aktuelle Bodenbedeckungsklasse | `non_monotonic` | No | **none** — a category in three tiers (§6.1) | BKG CORINE Land Cover 5 ha (CLC5-2018) — **confirmed, ingested**; the cell's dominant class (`sources.md` §2.2) |
 | `pv_designated_corridor` | Eligible designated corridor (motorway/rail) / Förderfähiger Seitenrandstreifen | `non_monotonic` | No | open | Not yet identified — the EEG/state corridor-eligibility geometry has not been located as a dataset |
 | `pv_protection_status` | Protection-area exclusion / Schutzgebietsausschluss | — (exclusion only) | **Yes** | n/a — exclusion, not scored | BfN Schutzgebiete (WFS) — licence cleared, access blocked; **Brandenburg: LfU Schutzgebiete, confirmed, ingested** (`sources.md` §2.1, §2.8) |
 
@@ -387,6 +387,33 @@ assigned by analogy — to be confirmed before a second region is added.
 
 **Still open (Step 2 and beyond):** every weight, the slope bounds, the threshold — and whether a
 binary threshold is the right presentation at all, now that 99.4 % of scored cells pass it.
+
+### 6.2 `real-pv-v1` — the first confirmed PV method (2026-09-28)
+
+Roadmap Step 2; decided by the project owner through the `CLAUDE.md` §3 gate
+(`docs/domain/decision-memo-pv-method.md` D1–D5; ADR-0009 amendment 1; verdicts `0.3.2-dev`).
+
+**No weights, no threshold, no score for real regions.** The measurements showed that the
+unsuitable share moves between 0 % and 100 % with plausible weights, slope bounds and thresholds,
+and no source supports citable values for them (memo §1–§2). Instead each criterion is shown in
+its own class, never combined:
+
+| Criterion | Class | Enters the cell's class? |
+|---|---|---|
+| `pv_protection_status` | *ausgeschlossen* at a share ≥ 0.5 (§6.1) | yes, first |
+| `pv_land_cover` | tier → *nicht vorgesehen* / *eingeschränkt* / *ohne Einschränkung* (§6.1) | yes |
+| `pv_irradiation_annual` | national quartile of the DWD 2016–2025 mean (§6.1) | no — shown beside it |
+| `pv_slope` | none: measured value, confidence `low` (DGM200 flattens slopes; Brandenburg names no limit) | no — shown beside it |
+
+Irradiation and slope carry `weight = 0` in `criterion_definition`: measured, not scored. The
+Prüfhinweise (§6.1) are counted per cell and drawn as a contour on the map.
+
+**Uckermark:** *ohne Einschränkung* 59 438, *eingeschränkt* 12 139, *nicht vorgesehen* 27 251,
+*ausgeschlossen* 18 363 (`evidence/2026-09-28-pv-method/c_verdicts_real_pv_v1.out`).
+
+**What is still open for PV:** the energy outcome (Step 3); grid connection (U3); a finer DGM
+before slope can be classed; the criteria without a source (`pv_designated_corridor`,
+`pv_parcel_contiguity`, `pv_aspect`). The fixture's illustrative weights (§6) are unaffected.
 
 **Consequences stated in the interface rather than hidden:**
 

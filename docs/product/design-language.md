@@ -1,6 +1,6 @@
 # sela design language
 
-**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-09-27 (§4.2a verdict classes, §8 Prüfhinweis)
+**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-09-28 (§4.2a classified map, §8 Prüfhinweis)
 
 This document exists so that "it has to look good" is a standard someone can be held to, rather than a matter of taste re-argued in every session. Deviating from it triggers the confirmation gate in `CLAUDE.md` §3.
 
@@ -81,13 +81,26 @@ Suitability verdicts are not scenarios, so they have their own small set, define
 carries a pattern or a lightness step as well as its colour, and the legend names what it means,
 not only what it is called.
 
+**Real regions** (`real-pv-v1`, decided 2026-09-28): a classification, never a score.
+
 | Class | Meaning | Light | Encoding |
 |---|---|---|---|
-| *geeignet* | reaches the (illustrative) threshold | the technology's colour | the technology's hatch |
-| *ungeeignet* | below the threshold | `#d8d5cc` | plain, light |
-| *nicht vorgesehen* | a land-cover class the method does not score — forest, water, settlement, wetland (ADR-0009) | `#b3b0a8` | stipple |
+| *ohne Einschränkung* | land-cover tier *vorgesehen*, not excluded — none of the checked reasons speaks against it; **not** "geeignet" | the technology's colour | the technology's hatch |
+| *eingeschränkt* | land-cover tier *eingeschränkt* (e.g. grassland), not excluded | the technology's colour, half-way to white | plain |
+| *nicht vorgesehen* | a land-cover class the method does not consider — forest, water, settlement, wetland (ADR-0009) | `#b3b0a8` | stipple |
 | *ausgeschlossen* | a hard constraint — for PV, a Naturschutzgebiet or the Nationalpark | `#8a8a8a` | horizontal hatch |
 | *nicht bewertet* | no verdict for this technology | `#eeece6` | plain, lightest |
+
+A cell with at least one *Prüfhinweis* gets a **dashed ink contour** from zoom 12 (§8), over
+whatever its class — a line, so it never competes with the class fill and pattern. The legend
+names it and adds "keine Planungs- oder Genehmigungsaussage".
+
+**The name *vorgesehen* stays in the method, not on the map** (decided 2026-09-28): on a map of
+real land it would read as "im Plan vorgesehen". Screens outside the method say *ohne Einschränkung*.
+
+**The synthetic fixture** keeps the illustrative score: *geeignet* (the technology's colour and
+hatch), *ungeeignet* (`#d8d5cc`, plain), *ausgeschlossen*, *nicht bewertet*. *Geeignet* and *ohne
+Einschränkung* share an encoding; they never appear on the same map (`mapVerdictsFor`).
 
 *Nicht vorgesehen* and *ausgeschlossen* are deliberately different: an exclusion cites a statute,
 *nicht vorgesehen* cites sela's own classification. Merging them would make a classification

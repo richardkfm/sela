@@ -14,6 +14,7 @@ interface SuitabilityVerdictSqlRow {
   limiting_criterion_id: string | null;
   excluded_by_criterion_id: string | null;
   method_version: string;
+  protection_flag_count: number | null;
 }
 
 function toVerdict(row: SuitabilityVerdictSqlRow): SuitabilityVerdict {
@@ -25,11 +26,13 @@ function toVerdict(row: SuitabilityVerdictSqlRow): SuitabilityVerdict {
     limitingCriterionId: row.limiting_criterion_id,
     excludedByCriterionId: row.excluded_by_criterion_id,
     methodVersion: row.method_version,
+    protectionFlagCount: row.protection_flag_count,
   };
 }
 
 const VERDICT_COLUMNS = `
-  spatial_unit_id, technology, verdict, score, limiting_criterion_id, excluded_by_criterion_id, method_version
+  spatial_unit_id, technology, verdict, score, limiting_criterion_id, excluded_by_criterion_id, method_version,
+  protection_flag_count
 `;
 
 /** All three technologies' current verdicts for one spatial unit (parcel detail, flow F2). */
@@ -54,7 +57,7 @@ export async function listVerdictsForPilotRegion(
 ): Promise<SuitabilityVerdict[]> {
   const rows = await query<SuitabilityVerdictSqlRow>(
     `SELECT sv.spatial_unit_id, sv.technology, sv.verdict, sv.score,
-            sv.limiting_criterion_id, sv.excluded_by_criterion_id, sv.method_version
+            sv.limiting_criterion_id, sv.excluded_by_criterion_id, sv.method_version, sv.protection_flag_count
      FROM suitability_verdict sv
      JOIN spatial_unit su ON su.id = sv.spatial_unit_id
      WHERE su.pilot_region = $1 AND sv.technology = $2 AND sv.method_version = $3`,
@@ -117,8 +120,9 @@ export async function replaceVerdictsForPilotRegion(
       const batch = verdicts.slice(i, i + batchSize);
       await client.query(
         `INSERT INTO suitability_verdict
-           (spatial_unit_id, technology, verdict, score, limiting_criterion_id, excluded_by_criterion_id, method_version)
-         SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::numeric[], $5::text[], $6::text[], $7::text[])`,
+           (spatial_unit_id, technology, verdict, score, limiting_criterion_id, excluded_by_criterion_id, method_version,
+            protection_flag_count)
+         SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::numeric[], $5::text[], $6::text[], $7::text[], $8::int[])`,
         [
           batch.map((v) => v.spatialUnitId),
           batch.map((v) => v.technology),
@@ -127,6 +131,7 @@ export async function replaceVerdictsForPilotRegion(
           batch.map((v) => v.limitingCriterionId),
           batch.map((v) => v.excludedByCriterionId),
           batch.map((v) => v.methodVersion),
+          batch.map((v) => v.protectionFlagCount ?? null),
         ],
       );
     }

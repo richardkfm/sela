@@ -22,6 +22,8 @@ import { listCriterionDefinitions, listCriterionValuesForPilotRegion } from "../
 import { replaceOutcomesForPilotRegion, upsertOutcomeMethod, upsertOutcomeRow } from "../lib/db/queries/outcomes";
 import { listSpatialUnitIds } from "../lib/db/queries/spatial-units";
 import { replaceVerdictsForPilotRegion } from "../lib/db/queries/verdicts";
+import { listProtectionOverlapsForPilotRegion } from "../lib/db/queries/protection";
+import { protectionFlags, type ProtectionOverlap } from "../lib/scoring/protection-flags";
 import { CURRENT_METHOD_VERSION } from "../lib/scoring/method-version";
 import { CITED_OUTCOME_METHODS, methodOutcomeRows } from "../lib/scoring/nature";
 import { computeOutcomeRow } from "../lib/scoring/outcomes";
@@ -71,7 +73,8 @@ async function materializeCitedMethods(pilotRegion: string, unitIds: readonly st
 async function main() {
   const { pilotRegion, outcomes } = parseArgs(process.argv.slice(2));
   console.log(
-    `materializing scores for pilot_region "${pilotRegion}" using illustrative-weights.ts ` +
+    `materializing verdicts for pilot_region "${pilotRegion}" (criteria with weight > 0 are scored with the ` +
+      `illustrative weights; real PV is classified by the decided rules, real-pv-v1) ` +
       `(method_version=${CURRENT_METHOD_VERSION}, outcomes=${outcomes})`,
   );
 
@@ -112,6 +115,21 @@ async function main() {
     ]),
   );
 
+  // Prüfhinweise per unit, counted with the one rule that words them
+  // (lib/scoring/protection-flags.ts), so the map can mark flagged cells. Only
+  // where the strict-protection share exists — the rule reads it.
+  const overlapsByUnit = new Map<string, ProtectionOverlap[]>();
+  for (const overlap of await listProtectionOverlapsForPilotRegion(pilotRegion)) {
+    const list = overlapsByUnit.get(overlap.spatialUnitId) ?? [];
+    list.push(overlap);
+    overlapsByUnit.set(overlap.spatialUnitId, list);
+  }
+  const flagCount = (values: readonly CriterionValue[]): number | null => {
+    const strict = values.find((v) => v.criterionId === "pv_protection_status");
+    if (!strict) return null;
+    return protectionFlags(overlapsByUnit.get(strict.spatialUnitId) ?? [], strict.value).length;
+  };
+
   const verdicts: SuitabilityVerdict[] = [];
   let skippedVerdicts = 0;
   let outcomeCount = 0;
@@ -131,7 +149,7 @@ async function main() {
           methodVersion: CURRENT_METHOD_VERSION,
           limitingReference: limitingReference.get(technology),
         });
-        verdicts.push(verdict);
+        verdicts.push(technology === "wind" ? verdict : { ...verdict, protectionFlagCount: flagCount(values) });
       } catch (err) {
         if (err instanceof SelaScoringError) {
           // No scoreable criterion values for this unit/technology yet —

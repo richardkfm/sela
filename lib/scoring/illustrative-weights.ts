@@ -1,24 +1,26 @@
-// ILLUSTRATIVE, NOT REAL. Every real criterion weight, the slope bounds,
-// and the suitability threshold are deliberately left open in
-// docs/domain/scoring-criteria.md, pending the CLAUDE.md §3 confirmation
-// gate — this module does not close that gate or narrow it. It exists so
+// ILLUSTRATIVE, NOT REAL. The weights, bounds and suitability threshold here
+// were never confirmed through the CLAUDE.md §3 gate
+// (docs/domain/scoring-criteria.md) — this module does not close that gate or
+// narrow it. After roadmap Step 2 no real region reads them: real PV is
+// classified without a score (real-pv-v1). The module exists so
 // Phase 3's screens and exports (roadmap §5) have something to render
 // against the synthetic fixture dataset (ingest/fixtures/) while that gate
 // stays open, per the architecture-first split confirmed with the project
 // owner for this phase (see CHANGELOG.md [0.3.0]).
 //
-// The rules the project owner has decided (roadmap Step 1: irradiation bounds,
-// the exclusion share, land-cover tiers, the limiting-criterion rule) live in
-// lib/scoring/pv-rules.ts; this module only applies them next to the
-// placeholders. Every value this module adds is arbitrary by construction. Nothing
+// The rules the project owner has decided (roadmap Steps 1 and 2: irradiation
+// bounds, the exclusion share, land-cover tiers, the limiting-criterion rule,
+// and — Step 2 — classification without a score for real PV) live in
+// lib/scoring/pv-rules.ts; this module applies them next to the placeholders,
+// which after Step 2 only the synthetic fixture still reads. Every value this module adds is arbitrary by construction. Nothing
 // here may be read as, or silently become, a real scoring decision — any
 // screen or export that surfaces a number derived from this module MUST
 // show ILLUSTRATIVE_MARKER alongside it.
 
-import { IRRADIATION_BOUNDS, PROTECTION_EXCLUSION_SHARE, landCoverTier } from "./pv-rules";
+import { IRRADIATION_BOUNDS, PROTECTION_EXCLUSION_SHARE, landCoverTier, type LandCoverTier } from "./pv-rules";
 import type { Normalize } from "./suitability";
 import type { AggregatedOutcome } from "./outcomes";
-import type { CriterionValue, OutcomeDimension, Scenario } from "./types";
+import type { CategoryClass, CriterionValue, OutcomeDimension, Scenario } from "./types";
 
 export const ILLUSTRATIVE_MARKER = {
   en: "ILLUSTRATIVE — not yet confirmed",
@@ -46,9 +48,9 @@ const BOUNDS: Record<string, { min: number; max: number }> = {
   fixture_wind_resource: { min: 0, max: 1 },
   // Decided (memo Q4b): the national p1–p99 of the DWD 2016–2025 mean.
   pv_irradiation_annual: IRRADIATION_BOUNDS,
-  // Still a placeholder: 0° best, 10° and steeper worst. Arbitrary; no
-  // Uckermark cell reaches 10° (evidence.md §E). Step 2 of the roadmap.
-  pv_slope: { min: 0, max: 10 },
+  // pv_slope has no bounds: under real-pv-v1 slope is a measured value with
+  // weight 0, never scored (decided 2026-09-28 — DGM200 is too coarse and no
+  // citable limit bites in the Uckermark; docs/domain/decision-memo-pv-method.md).
 };
 
 /**
@@ -67,12 +69,20 @@ function clamp01(value: number): number {
   return Math.min(Math.max(value, 0), 1);
 }
 
+const TIER_CLASS: Record<LandCoverTier, CategoryClass> = {
+  vorgesehen: "unrestricted",
+  eingeschraenkt: "restricted",
+  nicht_vorgesehen: "not_considered",
+};
+
 /**
  * Caller-supplied `Normalize` for `computeSuitability` (lib/scoring/suitability.ts).
  * A hard constraint is violated once its raw value reaches its entry in
  * CONSTRAINT_THRESHOLD (default 1, the fixture's 0/1 flag). Land cover is a
- * category (memo Q3b and its follow-up): its tier decides whether the cell is
- * considered at all, and it never moves the score.
+ * category (memo Q3b and its follow-up): its tier places the cell, and it never
+ * moves a score. Under `real-pv-v1` the real PV criteria carry weight 0, so a
+ * real cell is classified by its tier and never scored (ADR-0009, amendment 1);
+ * the bounds below then only matter to the fixture and to evidence scripts.
  */
 export const illustrativeNormalize: Normalize = (value, definition) => {
   if (definition.isHardConstraint) {
@@ -80,7 +90,7 @@ export const illustrativeNormalize: Normalize = (value, definition) => {
     return { normalizedScore: 0, violatesConstraint: value.value >= threshold };
   }
   if (definition.id === "pv_land_cover") {
-    return { normalizedScore: 0, violatesConstraint: false, notConsidered: landCoverTier(value.value).tier === "nicht_vorgesehen" };
+    return { normalizedScore: 0, violatesConstraint: false, categoryClass: TIER_CLASS[landCoverTier(value.value).tier] };
   }
   const bounds = BOUNDS[definition.id] ?? { min: 0, max: 1 };
   const span = bounds.max - bounds.min;
