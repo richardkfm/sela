@@ -46,6 +46,10 @@ const FLAG_LAYER_ID = "units-flag";
 const HOVER_LAYER_ID = "units-hover";
 const SELECTED_HALO_LAYER_ID = "units-selected-halo";
 const SELECTED_LAYER_ID = "units-selected";
+const GROUP_FILL_LAYER_ID = "units-group-fill";
+const GROUP_LAYER_ID = "units-group";
+const OUTLINE_SOURCE_ID = "municipality-outline";
+const OUTLINE_LAYER_ID = "municipality-outline-line";
 const PILOT_SOURCE_ID = "pilot-boundary";
 const PILOT_LAYER_ID = "pilot-boundary-line";
 
@@ -71,8 +75,16 @@ export interface VisibleUnit {
 
 /** A request to frame something; `nonce` makes repeated requests for the same target still fire. */
 export type FocusRequest =
-  | { readonly kind: "bbox"; readonly bbox: BBox; readonly nonce: number }
+  | { readonly kind: "bbox"; readonly bbox: BBox; readonly nonce: number; readonly maxZoom?: number }
   | { readonly kind: "region"; readonly nonce: number };
+
+/** A Gemeinde outline found by search (flow F1), as /api/municipality/[ags] returns it. */
+export interface MapOutline {
+  readonly type: "Feature";
+  readonly id: string;
+  readonly properties: { readonly name: string; readonly attribution: string | null };
+  readonly geometry: unknown;
+}
 
 /** Padding that keeps a framed target clear of the floating panels. */
 export interface FramePadding {
@@ -124,7 +136,10 @@ export function Map({
   hoveredId,
   focus,
   framePadding,
+  groupIds,
+  outline,
   onSelect,
+  onToggleGroup,
   onHover,
   onVisibleUnits,
 }: {
@@ -137,7 +152,13 @@ export function Map({
   hoveredId: string | null;
   focus: FocusRequest | null;
   framePadding: FramePadding;
+  /** Cells chosen together (roadmap Step 5). */
+  groupIds: readonly string[];
+  /** The Gemeinde found by search, outlined; null for none. */
+  outline: MapOutline | null;
   onSelect: (id: string | null) => void;
+  /** Shift-click (or Ctrl/⌘-click) adds a cell to the group or removes it. */
+  onToggleGroup: (id: string) => void;
   onHover: (hover: HoverInfo | null) => void;
   /** `null` when zoomed out beyond the tiles' range — the units exist but are not drawn. */
   onVisibleUnits: (units: VisibleUnit[] | null) => void;
@@ -149,8 +170,8 @@ export function Map({
   // framing can never override a selection the reader already made.
   const framedByRequestRef = useRef(false);
   // Latest props for handlers registered once at load.
-  const latest = useRef({ technology, selectedId, hoveredId, framePadding, onSelect, onHover, onVisibleUnits, regionBBox });
-  latest.current = { technology, selectedId, hoveredId, framePadding, onSelect, onHover, onVisibleUnits, regionBBox };
+  const latest = useRef({ technology, selectedId, hoveredId, groupIds, framePadding, onSelect, onToggleGroup, onHover, onVisibleUnits, regionBBox });
+  latest.current = { technology, selectedId, hoveredId, groupIds, framePadding, onSelect, onToggleGroup, onHover, onVisibleUnits, regionBBox };
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -264,6 +285,23 @@ export function Map({
         minzoom: 13,
         paint: { "line-color": PATTERN_MARK_COLOR, "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.3, 16, 1.2] },
       });
+      // Cells chosen together: an ink wash under a solid ink edge — distinct
+      // from the single selection's paper halo and from the dashed Prüfhinweis
+      // contour, and legible in greyscale (design-language.md §4.3).
+      map.addLayer({
+        id: GROUP_FILL_LAYER_ID,
+        type: "fill",
+        ...common,
+        filter: groupFilter([]),
+        paint: { "fill-color": INK, "fill-opacity": 0.22 },
+      });
+      map.addLayer({
+        id: GROUP_LAYER_ID,
+        type: "line",
+        ...common,
+        filter: groupFilter([]),
+        paint: { "line-color": INK, "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1, 16, 2.5] },
+      });
       map.addLayer({
         id: HOVER_LAYER_ID,
         type: "line",
@@ -287,6 +325,7 @@ export function Map({
       });
       loadedRef.current = true;
       applySelection(map, latest.current.selectedId, latest.current.hoveredId);
+      applyGroup(map, latest.current.groupIds);
 
       // The real region's outline, fetched rather than bundled. Only drawn for
       // the region it outlines; the fixture sits at null island.
@@ -326,6 +365,11 @@ export function Map({
           // A one-pixel cell cannot be meant precisely; take the reader to
           // where cells can be told apart instead of guessing which one.
           map.easeTo({ center: e.lngLat, zoom: INTERACTIVE_MIN_ZOOM + 0.5 });
+          return;
+        }
+        const modified = e.originalEvent.shiftKey || e.originalEvent.ctrlKey || e.originalEvent.metaKey;
+        if (hit && modified) {
+          latest.current.onToggleGroup(String(hit.properties.id));
           return;
         }
         latest.current.onSelect(hit ? String(hit.properties.id) : null);
@@ -378,11 +422,41 @@ export function Map({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    applyGroup(map, groupIds);
+  }, [groupIds]);
+
+  // The Gemeinde found by search: one outline at a time, replaced on the next search.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const run = () => {
+      if (map.getLayer(OUTLINE_LAYER_ID)) map.removeLayer(OUTLINE_LAYER_ID);
+      if (map.getSource(OUTLINE_SOURCE_ID)) map.removeSource(OUTLINE_SOURCE_ID);
+      if (!outline) return;
+      map.addSource(OUTLINE_SOURCE_ID, {
+        type: "geojson",
+        data: outline as unknown as GeoJSON.Feature,
+        ...(outline.properties.attribution ? { attribution: outline.properties.attribution } : {}),
+      });
+      map.addLayer({
+        id: OUTLINE_LAYER_ID,
+        type: "line",
+        source: OUTLINE_SOURCE_ID,
+        paint: { "line-color": INK, "line-width": 2.25, "line-opacity": 0.9 },
+      });
+    };
+    if (loadedRef.current) run();
+    else map.once("load", run);
+  }, [outline]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !focus) return;
     framedByRequestRef.current = true;
     const run = () => {
       const bbox = focus.kind === "bbox" ? focus.bbox : latest.current.regionBBox;
-      if (bbox) frame(map, bbox, latest.current.framePadding, true, focus.kind === "bbox" ? 15.5 : undefined);
+      if (bbox) frame(map, bbox, latest.current.framePadding, true, focus.kind === "bbox" ? (focus.maxZoom ?? 15.5) : undefined);
     };
     if (loadedRef.current) run();
     else map.once("load", run);
@@ -403,6 +477,15 @@ function applySelection(map: MaplibreMap, selectedId: string | null, hoveredId: 
   map.setFilter(HOVER_LAYER_ID, ["==", ["get", "id"], hoveredId ?? ""]);
   map.setFilter(SELECTED_HALO_LAYER_ID, ["==", ["get", "id"], selectedId ?? ""]);
   map.setFilter(SELECTED_LAYER_ID, ["==", ["get", "id"], selectedId ?? ""]);
+}
+
+function groupFilter(ids: readonly string[]): ExpressionSpecification {
+  return ["in", ["get", "id"], ["literal", [...ids]]] as unknown as ExpressionSpecification;
+}
+
+function applyGroup(map: MaplibreMap, ids: readonly string[]) {
+  map.setFilter(GROUP_FILL_LAYER_ID, groupFilter(ids));
+  map.setFilter(GROUP_LAYER_ID, groupFilter(ids));
 }
 
 function frame(map: MaplibreMap, bbox: BBox, padding: FramePadding, animate: boolean, maxZoom?: number) {

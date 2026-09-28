@@ -4,6 +4,7 @@
 
 import { computeOutcomeRow } from "../outcomes";
 import { SCENARIOS } from "../types";
+import { PV_YIELD_CRITERIA, PV_YIELD_METHOD, pvYieldOutcomes } from "../energy/pv-yield";
 import type { CriterionValue, OutcomeRow, Scenario } from "../types";
 import type { OutcomeMethod } from "./method";
 import type { MetricOutcome } from "./peat-climate";
@@ -18,6 +19,7 @@ export interface CitedOutcomeMethod {
 }
 
 export const CITED_OUTCOME_METHODS: readonly CitedOutcomeMethod[] = [
+  { method: PV_YIELD_METHOD, criteria: PV_YIELD_CRITERIA, compute: pvYieldOutcomes },
   { method: PEAT_CLIMATE_METHOD, criteria: PEAT_CLIMATE_CRITERIA, compute: peatClimateOutcomes },
   { method: WATER_METHOD, criteria: WATER_CRITERIA, compute: waterOutcomes },
 ];

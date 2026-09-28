@@ -129,6 +129,25 @@ INSERT INTO source (
     'Landesamt für Umwelt Brandenburg, Wasserhaushaltsgrößen 1991–2020 (ArcEGMO), Stand 10.03.2023, dl-de/by-2-0',
     'https://www.govdata.de/dl-de/by-2-0',
     true
+  ),
+  (
+    'lfu-bb-biotopkataster',
+    'Kartierung von Biotopen, gesetzlich geschützten Biotopen (§ 30 BNatSchG i. V. m. § 18 BbgNatSchAG) und FFH-Lebensraumtypen im Land Brandenburg (Biotopkataster, BBK)',
+    'Landesamt für Umwelt Brandenburg (LfU); Bereitstellung: LGB',
+    'BBK-Gesamtdatenbestand, Stand 20.04.2026 (Dokumentversion 1.0); Einsatzmaßstab 1:10 000 – 1:50 000',
+    DATE '2026-09-28',
+    'dl-de/by-2-0',
+    true,
+    'https://data.geobasis-bb.de/geofachdaten/Natur_und_Landschaft/Biotope_und_Lebensraumtypen/biotope_lrt.zip',
+    -- Two licences are stated (docs/data/sources.md §2.12): dl-de/by-2-0 in the
+    -- WFS capabilities and MetaVer, CC BY 4.0 in the archive's own
+    -- documentation. Both ask for the provider's name and allow changed,
+    -- public use; this notice names the provider, the dataset and its URL as
+    -- the documentation's example does, under the licence the metadata states,
+    -- until LfU answers which one governs.
+    '© Landesamt für Umwelt Brandenburg <Jahr>, Biotopkataster Brandenburg, https://lfu.brandenburg.de, dl-de/by-2-0',
+    'https://www.govdata.de/dl-de/by-2-0',
+    true
   )
 ON CONFLICT (id) DO UPDATE SET
   dataset                = EXCLUDED.dataset,

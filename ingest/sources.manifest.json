@@ -130,6 +130,19 @@
         "pinnedLastModified": "Thu, 24 Jul 2025 11:37:19 GMT",
         "$comment": "Confirmed 2026-09-24 by the project owner's decision to model water balance (docs/domain/scoring-criteria.md §4.2). Pinned from a HEAD request on 2026-09-24; not yet fetched. Licence from the metadata record and the archive's own documentation (dok/doku_efl20_pscn.pdf §5): dl-de/by-2-0, 'Präsentation: mit Erlaubnisvermerk sowie Quelle und Stand der Daten'. Shapefile wh_efl20_pscn, EPSG:25833, 1 157 871 Elementarflächen statewide."
       }
+    },
+    "lfu-bb-biotopkataster": {
+      "status": "confirmed",
+      "docRow": "LfU Brandenburg Biotopkataster (BBK)",
+      "licence": "dl-de/by-2-0",
+      "fetch": {
+        "kind": "single-file",
+        "url": "https://data.geobasis-bb.de/geofachdaten/Natur_und_Landschaft/Biotope_und_Lebensraumtypen/biotope_lrt.zip",
+        "filename": "biotope_lrt.zip",
+        "pinnedBytes": 181214958,
+        "pinnedLastModified": "Fri, 12 Jun 2026 05:53:54 GMT",
+        "$comment": "Roadmap Step 4, docs/domain/decision-memo-habitat.md. Pinned from a HEAD request on 2026-09-28. Licence: the WFS capabilities and the MetaVer records state dl-de/by-2-0 ('© Landesamt für Umwelt Brandenburg'); the archive's own dok/doku_bbk_20260420.pdf states CC BY 4.0 with the attribution 'Landesamt für Umwelt Brandenburg'. Both allow public, changed use with attribution; the notice sela shows satisfies both, and the question is put to LfU (sources.md §2.12). The INSPIRE Art. 13(1)(e) note sits on the service records only and reads 'Rechte des geistigen Eigentums'; the dataset record carries no access restriction and the documentation says 'Zugriffsbeschränkung keine'. Shapefiles bbk_fl/bbk_li/bbk_pu, EPSG:25833, statewide."
+      }
     }
   }
 }

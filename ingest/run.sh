@@ -31,7 +31,7 @@ if [ "$MODE" = "real" ]; then
   echo "== real ingest run: $PILOT_REGION =="
   FETCHED=""
   SKIPPED=""
-  for source_id in bkg-vg25 bkg-clc5 dwd-cdc-radiation bkg-dgm200 lfu-bb-schutzgebiete lbgr-bb-moorbodenkarte \
+  for source_id in bkg-vg25 bkg-clc5 dwd-cdc-radiation bkg-dgm200 lfu-bb-schutzgebiete lbgr-bb-moorbodenkarte lfu-bb-biotopkataster \
       lfu-bb-wasserhaushalt bfn-schutzgebiete osm-geofabrik; do
     # `set -e` must not kill the run on a gated source: a blocked licence (1)
     # or a confirmed source whose fetch is not written yet (3) is an expected
@@ -63,11 +63,14 @@ if [ "$MODE" = "real" ]; then
   "$SCRIPT_DIR/real/14_protection.sh"
   "$SCRIPT_DIR/real/15_moorkarte.sh"
   "$SCRIPT_DIR/real/16_wasserhaushalt.sh"
+  "$SCRIPT_DIR/real/17_municipalities.sh"
+  "$SCRIPT_DIR/real/18_biotopkataster.sh"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/20_sample.sql"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/20b_sample_nature.sql"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -v method_version=real-v0 \
     -f "$SCRIPT_DIR/real/21_write_values.sql"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/22_protection_overlap.sql"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v pilot_region="$PILOT_REGION" -f "$SCRIPT_DIR/real/23_habitat_overlap.sql"
   echo "real ingest run complete for $PILOT_REGION."
   echo "Next: pnpm db:materialize -- --pilot-region=$PILOT_REGION   (illustrative weights; cited outcome methods)"
   exit 0

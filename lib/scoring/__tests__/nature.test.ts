@@ -163,6 +163,6 @@ test("methodOutcomeRows writes every scenario × metric, with inputs for each mo
 
 test("methodOutcomeRows refuses inputs without a database id", () => {
   const values: CriterionValue[] = [{ ...cv("peat_carbon_stock", 1), id: undefined }];
-  const peat = CITED_OUTCOME_METHODS[0]!;
+  const peat = CITED_OUTCOME_METHODS.find((m) => m.method.methodVersion === "peat-climate-ipcc2013-v1")!;
   assert.throws(() => [...methodOutcomeRows(peat, [UNIT], new Map([[UNIT, values]]))]);
 });

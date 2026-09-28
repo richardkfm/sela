@@ -7,6 +7,9 @@
 
 import { NextResponse } from "next/server";
 import { getCriterionDefinition, listCriterionValuesForUnit } from "@/lib/db/queries/criteria";
+import { listHabitatOverlapsForUnits, regionHasHabitatData } from "@/lib/db/queries/habitat";
+import { municipalitiesForUnits } from "@/lib/db/queries/municipalities";
+import { habitatFacts, habitatSummaryDe, summariseHabitat } from "@/lib/scoring/habitat";
 import { listProtectionOverlapsForUnit } from "@/lib/db/queries/protection";
 import { getPreviewUnit } from "@/lib/db/queries/preview";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
@@ -23,11 +26,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const unit = await getSpatialUnitById(id);
   if (!unit) return NextResponse.json({ error: "unit not found" }, { status: 404 });
 
-  const [verdicts, measured, values, overlaps] = await Promise.all([
+  const [verdicts, measured, values, overlaps, municipalities, habitat, hasHabitatData] = await Promise.all([
     listVerdictsForUnit(id, CURRENT_METHOD_VERSION),
     getPreviewUnit(id),
     listCriterionValuesForUnit(id),
     listProtectionOverlapsForUnit(id),
+    municipalitiesForUnits([id]),
+    listHabitatOverlapsForUnits([id]),
+    regionHasHabitatData(unit.pilotRegion),
   ]);
   const landCoverValue = values.find((v) => v.criterionId === "pv_land_cover");
   const strictShare = values.find((v) => v.criterionId === "pv_protection_status")?.value;
@@ -55,6 +61,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     verdicts: withReasons,
     landCover: landCoverValue ? readLandCover(landCoverValue.value) : null,
     // Prüfhinweise (ADR-0009), short form; the parcel page carries the full, cited text.
+    // The Gemeinde containing a point on the cell's surface (flow F1), or null outside every loaded Gemeinde.
+    municipality: municipalities.get(id) ?? null,
+    // Nature capital as categories (roadmap Step 4): one line; the parcel page lists the biotopes.
+    habitat: hasHabitatData ? habitatSummaryDe(summariseHabitat(habitatFacts(habitat))) : null,
     flags: strictShare === undefined ? [] : protectionFlags(overlaps, strictShare).map((f) => f.shortDe),
   });
 }

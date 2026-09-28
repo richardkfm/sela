@@ -25,6 +25,8 @@ interface Summary {
   })[];
   landCover: LandCoverReading | null;
   flags: string[];
+  municipality: { ags: string; name: string } | null;
+  habitat: string | null;
 }
 
 type SummaryVerdict = Summary["verdicts"][number];
@@ -46,11 +48,16 @@ export function SelectionPanel({
   id,
   technology,
   regionKind,
+  inGroup,
+  onToggleGroup,
   onClose,
 }: {
   id: string;
   technology: Technology;
   regionKind: PilotRegionKind;
+  /** Whether this cell is among the cells chosen together (roadmap Step 5). */
+  inGroup: boolean;
+  onToggleGroup: () => void;
   onClose: () => void;
 }) {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -83,6 +90,7 @@ export function SelectionPanel({
           </h2>
           <p className="muted selection-meta">
             {summary?.kind === "flurstueck" ? "Flurstück" : "Rastereinheit"}
+            {summary?.municipality && <> · {summary.municipality.name}</>}
             {summary?.areaHa != null && (
               <>
                 {" · "}
@@ -149,6 +157,15 @@ export function SelectionPanel({
         </>
       )}
 
+      {summary?.habitat && (
+        <>
+          <h3 className="overline">Naturkapital</h3>
+          <p className="explorer-note muted" style={{ marginTop: 0 }}>
+            {summary.habitat}.
+          </p>
+        </>
+      )}
+
       <div className="selection-actions">
         <Link className="btn btn-primary" href={`/unit/${id}/compare`}>
           Szenarien vergleichen →
@@ -160,6 +177,9 @@ export function SelectionPanel({
           <Link className="btn" href={`/unit/${id}`}>
             Begründung
           </Link>
+          <button type="button" className="btn" aria-pressed={inGroup} onClick={onToggleGroup}>
+            {inGroup ? "Aus mehreren Zellen entfernen" : "Zu mehreren Zellen hinzufügen"}
+          </button>
         </div>
       </div>
       {summary && (

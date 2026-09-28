@@ -1,0 +1,41 @@
+== develop_pv rows by metric and status ==
+        metric         |     status     | cells 
+-----------------------+----------------+-------
+ pv_annual_yield       | modelled       | 71556
+ pv_annual_yield       | not_applicable | 45614
+ pv_annual_yield       | not_modelled   |    21
+ pv_installed_capacity | modelled       | 71577
+ pv_installed_capacity | not_applicable | 45614
+
+== develop_pv yield status by PV class (verdicts 0.3.2-dev) ==
+    verdict     |     status     | cells 
+----------------+----------------+-------
+ excluded       | not_applicable | 18363
+ not_considered | not_applicable | 27251
+ restricted     | modelled       | 12137
+ restricted     | not_modelled   |     2
+ unrestricted   | modelled       | 59419
+ unrestricted   | not_modelled   |    19
+
+== yield spread over modelled cells, MWh/ha·a (central, low, high) ==
+ min_central | median_central | max_central | min_low | max_high | spread_pct 
+-------------+----------------+-------------+---------+----------+------------
+        1222 |           1248 |        1263 |    1001 |     1426 |        3.3
+
+== share of modelled cells whose range contains the region-best central value ==
+ contains_best | modelled 
+---------------+----------
+         71556 |    71556
+
+== other scenarios ==
+    scenario    |     status     |  rows  
+----------------+----------------+--------
+ develop_agripv | not_modelled   | 117191
+ develop_pv     | modelled       |  71556
+ develop_pv     | not_applicable |  45614
+ develop_pv     | not_modelled   |     21
+ develop_wind   | not_modelled   | 117191
+ preserve       | not_applicable | 117191
+ restore        | not_applicable | 117191
+ status_quo     | not_applicable | 117191
+

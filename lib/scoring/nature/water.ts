@@ -73,7 +73,7 @@ export const WATER_METHOD: OutcomeMethod = {
     direction: "not stated — deltas carry no gain/loss colouring",
   },
   metrics: [
-    { metric: "percolation", labelDe: "Versickerung", unit: "mm/a" },
-    { metric: "root_zone_soil_moisture", labelDe: "Bodenfeuchte im Wurzelraum", unit: "%nFK" },
+    { metric: "percolation", labelDe: "Versickerung", unit: "mm/a", siteAggregation: "area_mean" },
+    { metric: "root_zone_soil_moisture", labelDe: "Bodenfeuchte im Wurzelraum", unit: "%nFK", siteAggregation: "area_mean" },
   ],
 };

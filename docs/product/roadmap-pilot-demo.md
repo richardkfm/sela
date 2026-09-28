@@ -1,8 +1,10 @@
 # Roadmap — from illustrative scoring to a credible pilot demo
 
-**Version band:** `0.3.x` · **Status:** proposed — milestone chosen by the project owner
-2026-09-27; every step marked *gated* still needs its own `CLAUDE.md` §3 confirmation ·
-**Last updated:** 2026-09-28 (Steps 1 and 2 done)
+**Version band:** `0.3.x` · **Status:** milestone chosen by the project owner 2026-09-27; Steps 1
+and 2 decided through the `CLAUDE.md` §3 gate; Steps 3–6 implemented on 2026-09-28 under the
+owner's instruction to work through the whole roadmap at once, **pending the owner's confirmation
+in review** (each step's memo lists its decisions) · **Last updated:** 2026-09-28 (Steps 1–5
+done, Step 6 done except hosting)
 
 This document plans the next milestone after `docs/architecture/roadmap-to-first-deployment.md`,
 whose three phases are built. It refines `docs/product/mvp.md`; it does not widen it.
@@ -20,11 +22,11 @@ screenshot of it from being shown to a planning office as anything more than a m
 |---|---|---|
 | Every weight, bound, land-cover score and threshold is a placeholder | `scoring-criteria.md` §6 | *ILLUSTRATIV* banner on every verdict |
 | Four placeholder rules awaiting a decision — **resolved by Step 1** (weights, slope bounds, threshold remain) | `scoring-criteria.md` §6.1 | Irradiation is "limiting" almost everywhere — an artefact of the bounds |
-| No energy outcome | `scoring-criteria.md` §4 | *develop* shows what it costs, never what it gains — the second of sela's four questions goes unanswered |
+| No energy outcome — **addressed by Step 3** (`pv-yield-v1`) | `scoring-criteria.md` §4 | *develop* shows what it costs, never what it gains — the second of sela's four questions goes unanswered |
 | Wind never scored; agri-PV identical to PV | `scoring-criteria.md` §2–3, §6 | Two of three technologies are placeholders |
-| Habitat not shown | `scoring-criteria.md` §4.3 | *nature capital* is *noch nicht modelliert* on every cell |
-| No search, no multi-cell selection | `mvp.md` F1, F6 | A council member cannot find "their" land; a hex cell is not what a council names (ADR-0001) |
-| No CI; ingest image never built; nothing hosted | `CHANGELOG.md` *Open* | The demo exists only on a developer machine |
+| Habitat not shown — **addressed by Step 4** (categories) | `scoring-criteria.md` §4.3 | *nature capital* is *noch nicht modelliert* on every cell |
+| No search, no multi-cell selection — **addressed by Step 5** | `mvp.md` F1, F6 | A council member cannot find "their" land; a hex cell is not what a council names (ADR-0001) |
+| No CI; ingest image never built; nothing hosted — **CI and image by Step 6; hosting open** | `CHANGELOG.md` *Open* | The demo exists only on a developer machine |
 
 ## 2. The milestone
 
@@ -94,11 +96,27 @@ specific-yield method and a **cited** land-use density for ground-mounted PV. Ne
 chosen yet — the step starts with sourcing them, and ships as `not_modelled` if no citable method
 survives review (`CLAUDE.md` §4.3 applies to energy too). Follows ADR-0008's provenance pattern.
 
+**Status: done (2026-09-28), pending confirmation** — `docs/domain/decision-memo-energy-outcome.md`.
+`pv-yield-v1`: capacity and technical annual yield of a new plant, from GHI × transposition (1.15,
+Fraunhofer ISE) × PR (0.85, Fraunhofer ISE) ÷ 0.88 ha/MWp (ZSW 2025), always with its range
+(about 1 000–1 400 MWh/ha·a), only where the PV class allows a plant. **Finding:** it does not
+tell Uckermark cells apart — central values span 3.3 %, far inside the method's range. The
+question "where within a class" stays open; the energy outcome answers "how much", and sums
+usefully over a site (Step 5).
+
 ### Step 4 — Habitat as categories · gated (data)
 
 The LfU *Biotopkataster* view already scoped in `scoring-criteria.md` §4.3: protected biotope yes/no,
 FFH *Lebensraumtyp* and conservation status — facts, not a score. Blocked first on clarifying the
 INSPIRE Art. 13(1)(e) restriction note with LfU (`sources.md` §8).
+
+**Status: done (2026-09-28), pending confirmation** — `docs/domain/decision-memo-habitat.md`. Read
+at source, the note is Art. 13(1)(e) *intellectual property*, on the service records only; the
+dataset has *"Zugriffsbeschränkung keine"* and is an open download. The licence differs between
+metadata (`dl-de/by-2-0`) and documentation (CC BY 4.0) — both permit the use; the question is
+drafted for LfU. Shown as categories on every cell screen; not used by the PV class. **Left to the
+owner:** 16 519 PV-*ohne Einschränkung*/*eingeschränkt* cells contain a biotope recorded as
+protected — whether that becomes a Prüfhinweis (H4).
 
 ### Step 5 — Finding and grouping land · gated (user-visible behaviour)
 
@@ -109,12 +127,30 @@ INSPIRE Art. 13(1)(e) restriction note with LfU (`sources.md` §8).
   the practical answer to ADR-0001's admitted gap until *Flurstück* geometry is affordable.
 - **F6** parcel-vs-parcel comparison and the printable comparison of F5.
 
+**Status: done (2026-09-28), pending confirmation** — `docs/domain/decision-memo-finding-land.md`.
+*Gemeinde* search (VG25 `vg25_gem` carries the layer: 30 *Gemeinden*) and coordinate search
+(WGS84, ETRS89/UTM); no address search (geocoder gated). Several cells by Shift-click or a panel
+button, summarised at `/site` (counts, area sums stating their coverage) or side by side at
+`/compare` (2–6 cells, one scenario, no ranking); all three comparisons print with sources, date
+and advisory note.
+
 ### Step 6 — Demo operations · not gated unless noted
 
 - CI: typecheck, unit tests, and the Playwright suite (a11y, greyscale, keyboard) on every PR.
 - Build and run `docker/Dockerfile.ingest` once end to end (never built so far).
 - A hosted demo instance — **gated** (architecture: serving), and it raises U5 (anonymous access)
   and U10 (basemap.de 3D terrain is licensed *zu Testzwecken*) for decision, not by assumption.
+
+**Status (2026-09-28):**
+
+- **CI: done.** `.github/workflows/ci.yml` runs typecheck and unit tests, and the Playwright suite
+  against the fixture on a PostGIS service, on every pull request and on `main`.
+- **Ingest image: built and run end to end.** The first build showed the image could not work
+  (Alpine's PROJ broke GDAL); rebased on Ubuntu 24.04 (ADR-0010). The fixture pipeline and the
+  real Uckermark pipeline both ran in the container.
+- **Hosted demo: not done.** It needs decisions only the owner can take — where it runs (serving
+  architecture), U5 (anonymous access) and U10 (the 3D terrain's test-only licence, which rules
+  out a public preview as it stands). Nothing was deployed.
 
 ## 4. Research that runs alongside, recorded rather than assumed
 

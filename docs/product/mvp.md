@@ -73,6 +73,7 @@ Two rules that keep the comparison honest:
 ## 6. First user flows
 
 **F1 — Find a parcel.** Search by address, municipality, or coordinates, or click the map. → The parcel is identified with its land-cover class and current use.
+*Amended 2026-09-28 (roadmap Step 5, `docs/domain/decision-memo-finding-land.md`):* search by *Gemeinde* (BKG VG25) and by coordinates (WGS84, ETRS89/UTM) is built; **address search is not**, because it needs a geocoder, a new data source behind its own gate.
 
 **F2 — Understand suitability.** For a selected parcel, see per technology whether it is suitable, and immediately *why*: the two or three criteria driving the verdict, and the single criterion that limits it most.
 *Amended 2026-09-28 (`docs/domain/decision-memo-pv-method.md`):* for real regions, PV is **classified, not scored** — the "why" is each criterion in its own class (protection, land-cover tier, irradiation by national quartile, slope as a measured value), and there is no single limiting criterion and no ranking within a class until a cited outcome (roadmap Step 3) can tell cells apart.
@@ -82,8 +83,10 @@ Two rules that keep the comparison honest:
 **F4 — Inspect the evidence.** From any criterion or number, reach its source: dataset, licence, resolution, date, weight, direction, and confidence. This path must exist from every displayed value. It is the product.
 
 **F5 — Export and share.** Produce a scenario card (`docs/product/design-language.md` §7) or a printable comparison. Every export carries its sources, its date, and its advisory disclaimer — an export that cannot cite itself does not render.
+*Amended 2026-09-28:* the scenario comparison, the site summary and the side-by-side comparison print with a footer carrying the date, the method versions, every source's notice and the advisory note.
 
 **F6 — Compare parcels** *(v0.3, municipality flow).* Place several parcels side by side under one scenario to answer "where should this go" rather than "what should happen here".
+*Amended 2026-09-28:* built for 2 to 6 cells, one scenario at a time, with no ranking; several cells (up to 100) can also be summarised as one site, with counts and area sums that state their coverage.
 
 ## 7. First screens
 
