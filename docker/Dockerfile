@@ -14,9 +14,16 @@ ARG WITH_BASEMAP=true
 FROM node:22-alpine AS base
 WORKDIR /app
 
-FROM base AS deps
+# pnpm 10, the major CI uses (.github/workflows/ci.yml). A bare `corepack
+# enable` fetches the newest pnpm, which no longer reads package.json's
+# `pnpm.onlyBuiltDependencies` and fails the install with
+# ERR_PNPM_IGNORED_BUILDS. Its own stage, so the runtime image carries no pnpm.
+FROM base AS pnpm
+RUN npm install -g pnpm@10
+
+FROM pnpm AS deps
 COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable && pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # Basemap build (roadmap §5.2, ADR-0003): a separate stage so the JRE +
 # curl it needs never end up in the runtime image. ingest/basemap/build.sh
@@ -38,10 +45,10 @@ RUN mkdir -p /out
 
 FROM basemap-${WITH_BASEMAP} AS basemap
 
-FROM base AS builder
+FROM pnpm AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN corepack enable && pnpm build
+RUN pnpm build
 
 FROM base AS runner
 ENV NODE_ENV=production

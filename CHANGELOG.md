@@ -54,6 +54,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   command.
 - **`docker/Dockerfile` takes `WITH_BASEMAP`** (default `true`, the previous behaviour). The OSM
   basemap stage now writes to `/out`, so its `build.sh` no longer lands in the runtime image.
+- **`docker/Dockerfile` pins pnpm 10**, the major CI uses. `corepack enable` had started fetching
+  pnpm 12, which ignores `pnpm.onlyBuiltDependencies` in `package.json` and fails the install
+  with `ERR_PNPM_IGNORED_BUILDS`, so the app image no longer built. pnpm is installed in its own
+  stage and does not reach the runtime image.
 - **`ingest/run.sh` ignores a leading `--`**, so `docker compose run ingest -- --fixture` cannot
   start the real ≈ 1 GB run if Compose passes the `--` through. The docs now use the unambiguous
   `run --rm ingest --fixture`.
