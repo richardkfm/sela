@@ -7,7 +7,6 @@ set -eu
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-APP_URL="http://localhost:3000"
 REAL_REGION="uckermark-12073"
 DATA=""
 BUILD=0
@@ -28,6 +27,8 @@ Usage: scripts/install.sh [--data fixture|uckermark|none] [--build]
 
 Run it again to update to the newest images. SELA_VERSION=0.3.0 (in the
 environment or .env) pins a released version instead of `latest`.
+SELA_APP_PORT and SELA_DB_PORT move sela off ports 3000 and 5432 when
+something else already uses them.
 EOF
 }
 
@@ -101,6 +102,55 @@ if [ ! -f .env ]; then
   cp .env.example .env
   say "created .env from .env.example"
 fi
+
+# --- Ports ------------------------------------------------------------------
+# The host ports compose.yaml publishes: the shell's value wins over .env's,
+# as in Compose itself.
+env_value() { # NAME DEFAULT
+  eval "value=\${$1:-}"
+  if [ -z "$value" ]; then
+    value=$(sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .env | tail -n 1 \
+      | sed "s/[[:space:]]*\$//; s/^[\"']//; s/[\"']\$//")
+  fi
+  printf '%s' "${value:-$2}"
+}
+APP_PORT=$(env_value SELA_APP_PORT 3000)
+DB_PORT=$(env_value SELA_DB_PORT 5432)
+for port in "$APP_PORT" "$DB_PORT"; do
+  case "$port" in
+    "" | *[!0-9]*) die "SELA_APP_PORT and SELA_DB_PORT in .env must be port numbers, not '$port'" ;;
+  esac
+done
+APP_URL="http://localhost:$APP_PORT"
+
+# What holds a host port: a container publishing it, or any other listener.
+# Prints nothing when the port is free.
+port_holder() { # PORT
+  holder=$(docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -E ":$1->" | cut -d' ' -f1 | head -n 1)
+  if [ -n "$holder" ]; then
+    printf 'container %s' "$holder"
+  elif command -v ss >/dev/null 2>&1; then
+    if ss -ltn "sport = :$1" 2>/dev/null | tail -n +2 | grep -q .; then printf 'another program'; fi
+  elif command -v lsof >/dev/null 2>&1; then
+    if lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; then printf 'another program'; fi
+  fi
+  return 0
+}
+
+# Fails before anything starts when a port is taken — unless sela itself holds
+# it (a re-run to update).
+check_port() { # VARIABLE SERVICE CONTAINER_PORT HOST_PORT WHAT
+  if docker compose port "$2" "$3" 2>/dev/null | grep -q ":$4\$"; then
+    return 0
+  fi
+  holder=$(port_holder "$4")
+  [ -z "$holder" ] || die "port $4, which sela's $5 publishes, is already in use on this machine ($holder).
+Pick another one: add a line such as
+  $1=$(($4 + 1))
+to .env (or change the one there), then run this again."
+}
+check_port SELA_APP_PORT app 3000 "$APP_PORT" app
+check_port SELA_DB_PORT db 5432 "$DB_PORT" database
 
 # --- Images -----------------------------------------------------------------
 if [ "$BUILD" -eq 1 ]; then

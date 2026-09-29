@@ -5,6 +5,9 @@
 #     instead. Plain `up` may use a previously pulled image rather than your
 #     working tree — pass `--build` when you mean the source.
 # SELA_VERSION picks the published tag: `latest` (main) or a release, e.g. 0.3.0.
+# SELA_APP_PORT and SELA_DB_PORT move the host ports (default 3000 and 5432)
+# when something else on the machine already uses them. The app reaches the
+# database inside Docker, so SELA_DB_PORT matters only to tools on the host.
 
 services:
   db:
@@ -16,7 +19,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${SELA_DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sela} -d ${POSTGRES_DB:-sela}"]
       interval: 5s
@@ -63,7 +66,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     ports:
-      - "3000:3000"
+      - "${SELA_APP_PORT:-3000}:3000"
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://sela:sela@db:5432/sela}
     depends_on:
