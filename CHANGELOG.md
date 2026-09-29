@@ -58,6 +58,18 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   pnpm 12, which ignores `pnpm.onlyBuiltDependencies` in `package.json` and fails the install
   with `ERR_PNPM_IGNORED_BUILDS`, so the app image no longer built. pnpm is installed in its own
   stage and does not reach the runtime image.
+- **The installer picks ports itself** (owner's choice, 2026-09-29, after a second collision on
+  port 3000 on a server full of containers):
+  - app: without `SELA_APP_PORT`, the first run takes the first free port from 3000 up (or the
+    one sela already runs on) and appends it to `.env`; a port set by hand is only checked;
+  - database: no fixed host port by default. `compose.yaml` publishes
+    `127.0.0.1:${SELA_DB_PORT:-}:5432`, so Docker assigns a free loopback port unless
+    `SELA_DB_PORT` asks for one. **BREAKING** for source development: the `pnpm` lines in the
+    README need `SELA_DB_PORT=5432` in `.env`, and the port now listens on 127.0.0.1 only;
+  - the port check now asks Docker whether it can publish the port: a throwaway container with
+    the same mapping, which fails exactly when sela's start would;
+  - the cheaper holder lookup reads `/proc/net/tcp` instead of `ss`, so it also works where
+    `ss` is missing; this covers host-network containers, which `docker ps` shows without ports.
 - **Host ports are configurable and checked:**
   - `compose.yaml` publishes `${SELA_APP_PORT:-3000}` and `${SELA_DB_PORT:-5432}`;
   - `scripts/install.sh` checks both before anything starts, and ports sela already holds pass
