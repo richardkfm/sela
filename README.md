@@ -145,9 +145,9 @@ scripts/install.sh               Docker installer — prebuilt GHCR images, asks
 ## Install
 
 You need Docker with Compose v2 (Docker Desktop, or Docker Engine with the Compose plugin), on
-Linux, macOS or Windows via WSL 2. sela uses ports 3000 (app) and 5432 (database). If either is
-taken, set `SELA_APP_PORT` or `SELA_DB_PORT` in `.env`; the installer checks both before it
-starts.
+Linux, macOS or Windows via WSL 2. The installer takes the first free port from 3000 for the app,
+saves it to `.env` as `SELA_APP_PORT` (set it yourself to choose one), and gives the database no
+fixed host port, so a machine already running other containers is fine.
 
 ```
 git clone https://github.com/richardkfm/sela.git
@@ -156,7 +156,8 @@ cd sela
 ```
 
 The installer pulls the prebuilt images from GitHub Container Registry (`ghcr.io/richardkfm/sela`,
-`sela-tools`, `sela-ingest`), starts sela on <http://localhost:3000> and asks which data to load:
+`sela-tools`, `sela-ingest`), starts sela, prints its address (<http://localhost:3000> unless that
+port is taken) and asks which data to load:
 
 - the synthetic test data (small and quick, not a real place);
 - the real Landkreis Uckermark (a ≈ 1 GB download from the publishers, several minutes);
@@ -171,7 +172,8 @@ emulation. See ADR-0011.
 
 ```
 cp .env.example .env
-docker compose up --build                           # app on :3000, PostGIS on :5432, migrations applied automatically
+echo SELA_DB_PORT=5432 >> .env                      # PostGIS on 127.0.0.1:5432, for the pnpm lines below
+docker compose up --build                           # app on :3000, migrations applied automatically
 docker compose --profile ingest run --rm ingest --fixture   # synthetic data, proves the pipeline
 docker compose --profile ingest run --rm materialize        # populates suitability_verdict/outcome from it
 SELA_MATERIALIZE_REGION=uckermark-12073 docker compose --profile ingest run --rm materialize   # after a real ingest run
