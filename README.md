@@ -163,8 +163,8 @@ port is taken) and asks which data to load:
 
 - the synthetic test data (small and quick, not a real place);
 - the real Landkreis Uckermark (a ≈ 1 GB download from the publishers, several minutes);
-- the whole Land Brandenburg or the whole Freistaat Sachsen (≈ 1.5 GB, about a million cells, an
-  hour or more — ADR-0012);
+- the whole Freistaat Sachsen (≈ 1.4 GB, 706 488 cells, about an hour — measured) or the whole
+  Land Brandenburg (≈ 1.5 GB, about 1.1 million cells, about two hours — estimated; ADR-0012);
 - none.
 
 `--data fixture|uckermark|brandenburg|sachsen|none` answers without asking, and `--build` builds

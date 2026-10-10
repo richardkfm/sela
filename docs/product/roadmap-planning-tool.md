@@ -190,14 +190,20 @@ has no Docker daemon, so the tools were installed natively).
 | Protection overlaps (Prüfhinweise evidence) | 510 387 rows: LSG 247 090, SPA 115 926, FFH 101 600, NSG 29 796, BR 12 064, Nationalpark 3 911 |
 | Verdicts (`07_materialize_scores.ts`, chunks of 50 000) | about 25 min for 706 488 × 3 technologies; PV: *ohne Einschränkung* 295 665 · *eingeschränkt* 114 714 · *nicht vorgesehen* 270 710 · *ausgeschlossen* 25 399; wind: 25 399 excluded, the rest *nicht bewertet* |
 | Overview and per-region counts (`08_materialize_overview.sql`) | 3 min 15 s: 7 431 hexagons of 1 km and 352 of 5 km for the Land, plus each Kreis's own (Bautzen 92 113 cells … Chemnitz 8 518) |
-| Cited outcomes (`pv-yield-v1`) | see below |
+| Cited outcomes (`--steps=outcomes`, after the writer fix) | **12 min 48 s** for the three methods: 8 477 856 rows each (706 488 cells × 6 scenarios × 2 metrics); `pv-yield-v1` modelled on 410 005 cells under `develop_pv` (820 011 rows) from 2 118 107 criterion values, *trifft nicht zu* elsewhere, *noch nicht modelliert* for agri-PV and wind; peat climate and water *noch nicht modelliert* throughout (no Saxon source); 3 235 584 `outcome_input` links, no modelled row without one. The first form of the writer managed 117 rows/s (ADR-0012, `CHANGELOG.md`) |
+
+So a Land of Sachsen's size takes about **55 minutes** from fetch to a complete explorer (14 min
+ingest, 25 min verdicts, 13 min outcomes, 3 min overview) on four cores.
 
 **What that implies for Brandenburg** (29 697 km², about 1.1 million cells, not run here): roughly
-1.6 × Sachsen on every step — an ingest of about 25 min, a verdict pass of about 40 min, and the
-Brandenburg-only steps (Moorbodenkarte, ArcEGMO water balance, Biotopkataster) on top, which the
-Uckermark run has measured only for a tenth of the Land. The installer says "an hour or more".
+1.6 × Sachsen on every step — about 90 minutes — plus the Brandenburg-only steps (Moorbodenkarte,
+ArcEGMO water balance, Biotopkataster), which the Uckermark run has measured only for a tenth of
+the Land. The installer says "an hour or more"; for Brandenburg read "two".
 
-**Found on the way, and fixed:** the materialiser could not be resumed when a run was cut short
+**Found on the way, and fixed:** the outcome writer linked inputs by joining back onto `outcome`,
+which inside the transaction planned on stale statistics and went quadratic (117 rows/s — a day for
+Sachsen; now from `RETURNING` ids); the materialiser could not be resumed when a run was cut short
 after its verdict pass (`--steps=verdicts,outcomes,overview` now runs the named parts); the Kreis
 ids transliterated umlauts one letter to one (`gorlitz`), now the German way (`goerlitz-14626`,
-`meissen-14627`); the region registration appended to its staging table without the schema.
+`meissen-14627`); the region registration appended to its staging table without the schema; the
+overview's per-hexagon counts had no index on their temp table.
