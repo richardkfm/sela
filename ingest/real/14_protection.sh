@@ -28,10 +28,13 @@ load() {
   # load <file> <category> <sql field list ending in AS name, AS area_code> [where]
   file="$1"; category="$2"; fields="$3"; where="${4:-}"
   table=$(ogrinfo -ro -q "$file" | sed -n 's/^1: \([^ ]*\).*/\1/p')
+  # The geometry column is named by the file: `the_geom` in the LfU GeoPackages,
+  # `geometry` in a shapefile. Read it rather than assume it.
+  geomcol=$(ogrinfo -ro -so -al "$file" | sed -n 's/^Geometry Column = //p' | head -1)
   ogr2ogr -f PostgreSQL "PG:$DATABASE_URL" "$file" \
     -lco GEOMETRY_NAME=geom -nln staging.protection -append -update \
     -t_srs EPSG:25832 -nlt CONVERT_TO_LINEAR -nlt PROMOTE_TO_MULTI -makevalid \
-    -dialect sqlite -sql "SELECT geometry AS the_geom, '$category' AS category, $fields FROM \"$table\" $where"
+    -dialect sqlite -sql "SELECT \"${geomcol:-geometry}\", '$category' AS category, $fields FROM \"$table\" $where"
   echo "  protection: $category loaded from $(basename "$file")"
 }
 
