@@ -93,7 +93,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   `countVerdicts`, `listRegionSources` and `unitTile` take a `RegionScope`;
   `resolvePilotRegion`/`getRegionSummary` are `resolveRegion`/`getRegionSummary` over the
   `region` table; `PilotRegionInfo` carries `level`, `ags` and `land`.
-- `04_generate_grid.sql` checks `&&` before `ST_Equals`, so the dedupe uses the index.
+- `04_generate_grid.sql` decides "covered" against the boundary subdivided into small pieces (the
+  pieces' intersections must add up to the whole hexagon) instead of `ST_CoveredBy` against the
+  whole polygon, which detoasted a 75 000-vertex Land boundary per hexagon and did not finish for
+  Sachsen in 26 minutes; the same cells result. The dedupe checks `&&` before `ST_Equals`.
 - `02b_extract_pilot_boundary.sh` wrote a null geometry (OGR's SQL dialect drops a GeoPackage's
   geometry column when it is not named) — it had never been run; corrected and run, its Uckermark
   output matches the committed boundary point for point.
