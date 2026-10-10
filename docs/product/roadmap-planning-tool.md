@@ -165,9 +165,39 @@ confirmation in review (A6).
 
 ## 7. What was verified here, and what was not
 
-Recorded as the work completed; see `CHANGELOG.md` for the final state.
+Recorded as the work completed; see `CHANGELOG.md` for the final state. Everything below ran
+against a local PostgreSQL 16 / PostGIS 3.4 / GDAL 3.8 on four cores and 15 GB (this environment
+has no Docker daemon, so the tools were installed natively).
 
-- Unit tests and the fixture pipeline run against a local PostGIS (this environment has no
-  Docker daemon; PostgreSQL 16, PostGIS 3.4 and GDAL 3.8 were installed natively).
-- The Saxon protected-area archives were fetched and read (§2.13).
-- VG25 was fetched; the Land and Kreis boundaries were cut from it with the committed script.
+- 142 unit tests; the fixture pipeline (migrate, ingest, materialise with the overview); the
+  Playwright suite (31 existing and 8 new tests for the overview tiles and the export) — all pass.
+- The Saxon protected-area archives were fetched and read (`sources.md` §2.13); the licence read
+  at the GDI-DE record of the service.
+- VG25 was fetched; the Land boundaries were cut from it with the committed script, whose first
+  real run showed it had written null geometries before (fixed; the Uckermark output is identical
+  to the committed file).
+
+**Sachsen, ingested end to end on 2026-10-10** (`REGION=sachsen-14 ingest/run.sh`):
+
+| Step | Result |
+|---|---|
+| Whole ingest (fetch verification, boundary, grid, loads, sampling, overlaps, stamp) | **13 min 43 s** |
+| Grid (`04_generate_grid.sql`, set-based) | **706 488** cells; 18 713 of them covered across several boundary pieces; under 3 min. The first form — `ST_CoveredBy` against the whole 74 390-vertex boundary — did not finish in 26 min (ADR-0012) |
+| CLC5 inside the extent | 44 202 polygons |
+| LfULG protected areas | 366 NSG, 2 Nationalpark parts, 273 LSG, 1 Biosphärenreservat, 756 FFH, 172 SPA |
+| *Gemeinden* / Kreise | 418 / 13; every cell stamped, none outside a *Gemeinde* |
+| Criterion values | 3 531 083 (irradiation on 705 131 cells — the 1 km grid has no value at 1 357 cell centres —, slope, land cover and both protection shares on all) |
+| Protection overlaps (Prüfhinweise evidence) | 510 387 rows: LSG 247 090, SPA 115 926, FFH 101 600, NSG 29 796, BR 12 064, Nationalpark 3 911 |
+| Verdicts (`07_materialize_scores.ts`, chunks of 50 000) | about 25 min for 706 488 × 3 technologies; PV: *ohne Einschränkung* 295 665 · *eingeschränkt* 114 714 · *nicht vorgesehen* 270 710 · *ausgeschlossen* 25 399; wind: 25 399 excluded, the rest *nicht bewertet* |
+| Overview and per-region counts (`08_materialize_overview.sql`) | 3 min 15 s: 7 431 hexagons of 1 km and 352 of 5 km for the Land, plus each Kreis's own (Bautzen 92 113 cells … Chemnitz 8 518) |
+| Cited outcomes (`pv-yield-v1`) | see below |
+
+**What that implies for Brandenburg** (29 697 km², about 1.1 million cells, not run here): roughly
+1.6 × Sachsen on every step — an ingest of about 25 min, a verdict pass of about 40 min, and the
+Brandenburg-only steps (Moorbodenkarte, ArcEGMO water balance, Biotopkataster) on top, which the
+Uckermark run has measured only for a tenth of the Land. The installer says "an hour or more".
+
+**Found on the way, and fixed:** the materialiser could not be resumed when a run was cut short
+after its verdict pass (`--steps=verdicts,outcomes,overview` now runs the named parts); the Kreis
+ids transliterated umlauts one letter to one (`gorlitz`), now the German way (`goerlitz-14626`,
+`meissen-14627`); the region registration appended to its staging table without the schema.
