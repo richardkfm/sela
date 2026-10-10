@@ -32,32 +32,37 @@ ANALYZE cells;
 CREATE TEMP TABLE centres_gk3 AS
 SELECT id, ST_Transform(centre, 31467) AS pt FROM cells;
 
-INSERT INTO staging.raw_sample (spatial_unit_id, criterion_id, source_id, raw_value, unit)
-SELECT c.id, 'pv_irradiation_annual', 'dwd-cdc-radiation', avg(v.value), 'kWh/m²·a'
+-- The pixel values are materialised before the aggregate. Written as one
+-- query, the planner flattened the lateral read and sorted the join output
+-- with the raster tile still attached to every row (about 1 KB each): on a
+-- whole Land that spilled more temp space than the disk had. The temp table
+-- holds just (cell, year, value).
+CREATE TEMP TABLE irradiation_read AS
+SELECT c.id, r.year, ST_Value(r.rast, c.pt) AS value
 FROM centres_gk3 c
-CROSS JOIN LATERAL (
-  SELECT ST_Value(r.rast, c.pt) AS value, r.year
-  FROM staging.dwd_radiation r
-  WHERE ST_ConvexHull(r.rast) && c.pt
-) v
-WHERE v.value IS NOT NULL
-GROUP BY c.id
-HAVING count(DISTINCT v.year) = 10
+JOIN staging.dwd_radiation r ON ST_ConvexHull(r.rast) && c.pt;
+
+INSERT INTO staging.raw_sample (spatial_unit_id, criterion_id, source_id, raw_value, unit)
+SELECT id, 'pv_irradiation_annual', 'dwd-cdc-radiation', avg(value), 'kWh/m²·a'
+FROM irradiation_read
+WHERE value IS NOT NULL
+GROUP BY id
+HAVING count(DISTINCT year) = 10
 ON CONFLICT (spatial_unit_id, criterion_id) DO UPDATE
   SET raw_value = EXCLUDED.raw_value, unit = EXCLUDED.unit, source_id = EXCLUDED.source_id;
 
--- Slope in degrees from gdaldem (13_dgm200.sh).
-INSERT INTO staging.raw_sample (spatial_unit_id, criterion_id, source_id, raw_value, unit)
-SELECT c.id, 'pv_slope', 'bkg-dgm200', avg(v.value), '°'
+-- Slope in degrees from gdaldem (13_dgm200.sh); read first for the same reason.
+CREATE TEMP TABLE slope_read AS
+SELECT c.id, ST_Value(s.rast, c.centre) AS value
 FROM cells c
-CROSS JOIN LATERAL (
-  SELECT ST_Value(s.rast, c.centre) AS value
-  FROM staging.dgm200_slope s
-  WHERE ST_ConvexHull(s.rast) && c.centre
-) v
-WHERE v.value IS NOT NULL
+JOIN staging.dgm200_slope s ON ST_ConvexHull(s.rast) && c.centre;
+
+INSERT INTO staging.raw_sample (spatial_unit_id, criterion_id, source_id, raw_value, unit)
+SELECT id, 'pv_slope', 'bkg-dgm200', avg(value), '°'
+FROM slope_read
+WHERE value IS NOT NULL
 -- A centre exactly on a tile edge touches two tiles; both read the same pixel.
-GROUP BY c.id
+GROUP BY id
 ON CONFLICT (spatial_unit_id, criterion_id) DO UPDATE
   SET raw_value = EXCLUDED.raw_value, unit = EXCLUDED.unit, source_id = EXCLUDED.source_id;
 
