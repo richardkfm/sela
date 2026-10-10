@@ -62,10 +62,13 @@ full: Brandenburg is 29 697 km² and Sachsen 18 478 km² (VG25, 2026-10-10), abo
    sources follow from the AGS (`run.sh`). Boundaries for both Länder and the Uckermark are
    committed in `ingest/regions/`; any other Landkreis is cut from the VG25 archive on the fly by
    the same script. The grid step decides "covered" against the boundary cut into pieces of at most
-   256 vertices (`ST_Subdivide`): a hex is kept when the pieces' intersections add up to its whole
-   area — the same cells `ST_CoveredBy` against the whole polygon gives, without detoasting a
-   75 000-vertex Land boundary for each of a million hexagons (the Sachsen run spent 26 minutes in
-   that step without finishing). The dedupe gained a `&&` so the GiST index answers before `ST_Equals`.
+   256 vertices (`ST_Subdivide`), set-based: every hexagon is paired with the pieces it touches; one
+   wholly inside a piece is covered (a predicate, nearly every interior cell); for the rest the
+   pieces' intersections must add up to the whole area — the same cells `ST_CoveredBy` against the
+   whole polygon gives, without detoasting a 75 000-vertex Land boundary for each of a million
+   hexagons (the Sachsen run spent 26 minutes in that step without finishing; correlated subqueries
+   over the pieces planned badly too). The Uckermark: 117 191 cells either way, in 6 seconds. The
+   dedupe gained a `&&` so the GiST index answers before `ST_Equals`.
 7. **The materialiser runs in chunks** of 50 000 units (`07_materialize_scores.ts`): a Land's
    criterion values do not fit in memory at once. Only the fixture's weighted criteria need every
    value up front (the limiting-criterion reference); real regions are classified cell by cell.
