@@ -103,6 +103,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 - `02b_extract_pilot_boundary.sh` wrote a null geometry (OGR's SQL dialect drops a GeoPackage's
   geometry column when it is not named) — it had never been run; corrected and run, its Uckermark
   output matches the committed boundary point for point.
+- `replaceOutcomesForPilotRegion` writes the `outcome_input` links from the ids `RETURNING` gives,
+  not by joining back onto `outcome`: inside the transaction the table's statistics predate the
+  delete, and the join re-hashed everything inserted so far on every batch — quadratic, 117 rows/s
+  on Sachsen's 8.5 million outcome rows.
 - `MethodNote` takes `authorityDe`; `Legend` takes `overview` and `hasOverview`; `Map` takes
   `showBoundary`, `initialView`, `filter` and reports `onViewChange`.
 

@@ -247,12 +247,19 @@ export async function replaceOutcomesForPilotRegion(
 
   const flush = async (batch: readonly OutcomeWithInputs[]) => {
     const rows = batch.map((o) => o.row);
-    await client.query(
+    // RETURNING gives each new row's id, so the input links below are written
+    // from the ids in hand rather than by joining back onto `outcome`: inside
+    // this transaction the table's statistics still describe it as it was
+    // before the DELETE, and a join planned on them re-hashed everything
+    // inserted so far on every batch — quadratic, 117 rows/s on a Land
+    // (the Sachsen run of 2026-10-10 would have taken a day).
+    const inserted = await client.query<{ id: string; spatial_unit_id: string; scenario: string; dimension: string; metric: string }>(
       `INSERT INTO outcome
          (spatial_unit_id, scenario, dimension, metric, value, value_low, value_high, unit, confidence, status,
           method_version)
        SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::float8[], $6::float8[],
-                            $7::float8[], $8::text[], $9::text[], $10::text[], $11::text[])`,
+                            $7::float8[], $8::text[], $9::text[], $10::text[], $11::text[])
+       RETURNING id, spatial_unit_id, scenario, dimension, metric`,
       [
         rows.map((r) => r.spatialUnitId),
         rows.map((r) => r.scenario),
@@ -268,25 +275,22 @@ export async function replaceOutcomesForPilotRegion(
       ],
     );
 
-    const links = batch.flatMap(({ row, criterionValueIds }) => criterionValueIds.map((id) => ({ row, id })));
+    const idByKey = new Map(
+      inserted.rows.map((r) => [`${r.spatial_unit_id}|${r.scenario}|${r.dimension}|${r.metric}`, r.id]),
+    );
+    const links = batch.flatMap(({ row, criterionValueIds }) => {
+      const outcomeId = idByKey.get(`${row.spatialUnitId}|${row.scenario}|${row.dimension}|${row.metric}`);
+      if (outcomeId === undefined) {
+        throw new Error(`outcome ${row.dimension}/${row.metric} for ${row.spatialUnitId} was not returned after insert`);
+      }
+      return criterionValueIds.map((id) => ({ outcomeId, id }));
+    });
     if (links.length > 0) {
       await client.query(
         `INSERT INTO outcome_input (outcome_id, criterion_value_id)
-         SELECT o.id, i.criterion_value_id
-         FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::bigint[])
-              AS i(spatial_unit_id, scenario, dimension, metric, criterion_value_id)
-         JOIN outcome o
-           ON o.spatial_unit_id = i.spatial_unit_id AND o.scenario = i.scenario AND o.dimension = i.dimension
-          AND o.metric = i.metric AND o.method_version = $6
+         SELECT * FROM unnest($1::bigint[], $2::bigint[])
          ON CONFLICT DO NOTHING`,
-        [
-          links.map((l) => l.row.spatialUnitId),
-          links.map((l) => l.row.scenario),
-          links.map((l) => l.row.dimension),
-          links.map((l) => l.row.metric),
-          links.map((l) => l.id),
-          methodVersion,
-        ],
+        [links.map((l) => l.outcomeId), links.map((l) => l.id)],
       );
     }
     written += batch.length;
