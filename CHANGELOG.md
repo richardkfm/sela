@@ -77,7 +77,9 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   - the advisory note names the Land's authority (LfU Brandenburg, LfULG Sachsen); copy that
     said "LfU" or "Uckermark" where a Land is meant now says "Landesamt" or names the region.
 - `scripts/install.sh --data brandenburg|sachsen` beside `uckermark`; `SELA_REGION` for the ingest
-  and the explorer's default; `pnpm db:materialize -- --region=` (`--pilot-region=` still works).
+  and the explorer's default; `pnpm db:materialize -- --region=` (`--pilot-region=` still works)
+  and `--steps=verdicts,outcomes,overview` to run only the named parts — a Land takes tens of
+  minutes, and a run cut short is resumed, not restarted.
 - Docs: ADR-0012; `sources.md` §2.13, §2.14, §3, §6; `design-language.md` §3, §4.2b, §7b; `mvp.md`
   F1, U11; `scoring-criteria.md` protection rows and §6; `ingest/regions/README.md`; the status
   lines in `CLAUDE.md` and `README.md`.

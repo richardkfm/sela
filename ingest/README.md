@@ -131,6 +131,7 @@ For the real region the same step runs the same illustrative weighting on real m
 
 ```sh
 pnpm db:materialize -- --region=uckermark-12073
+pnpm db:materialize -- --region=sachsen-14 --steps=outcomes,overview   # resume a run cut short after its verdicts
 ```
 
 `--outcomes=illustrative|none` decides whether the illustrative *outcome* generator runs. It
