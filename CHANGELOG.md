@@ -118,6 +118,10 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   lateral join aggregated in one query, which the planner sorted with the raster tile attached to
   every row and spilled more temp space than the disk had — the pixel values are read into a temp
   table first, the written values unchanged.
+- Found on the first Land-sized explorer: every page took 7–20 s because the region summary asked
+  per region, with a correlated `EXISTS` on `spatial_unit.pilot_region`, whether it has a grid of
+  its own, and the planner scanned all cells for each Kreis that has none. `regions.ts` lists the
+  grid regions once by walking that index one distinct value at a time (a recursive skip scan).
 
 
 ### Added — Docker installer and prebuilt images

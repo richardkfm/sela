@@ -193,7 +193,9 @@ has no Docker daemon, so the tools were installed natively).
 | Cited outcomes (`--steps=outcomes`, after the writer fix) | **12 min 48 s** for the three methods: 8 477 856 rows each (706 488 cells × 6 scenarios × 2 metrics); `pv-yield-v1` modelled on 410 005 cells under `develop_pv` (820 011 rows) from 2 118 107 criterion values, *trifft nicht zu* elsewhere, *noch nicht modelliert* for agri-PV and wind; peat climate and water *noch nicht modelliert* throughout (no Saxon source); 3 235 584 `outcome_input` links, no modelled row without one. The first form of the writer managed 117 rows/s (ADR-0012, `CHANGELOG.md`) |
 
 So a Land of Sachsen's size takes about **55 minutes** from fetch to a complete explorer (14 min
-ingest, 25 min verdicts, 13 min outcomes, 3 min overview) on four cores.
+ingest, 25 min verdicts, 13 min outcomes, 3 min overview) on four cores. The Sachsen verdict
+figure was not timed in isolation (that run was interrupted and resumed); Brandenburg's 1.6 ×
+larger verdict pass took 3 min timed on its own, so read the Sachsen figure as an upper bound.
 
 **Brandenburg, ingested end to end on 2026-10-10** (`REGION=brandenburg-12 ingest/run.sh`, the
 whole Land, 29 697 km²), run after Sachsen into the same database:
@@ -209,7 +211,9 @@ whole Land, 29 697 km²), run after Sachsen into the same database:
 | Criterion values | 10 496 488 (irradiation on 1 136 918 cells; slope, land cover, both protection shares, both peat shares and both water values on all; carbon stock on 260 802) |
 | Protection overlaps (Prüfhinweise evidence) | 1 117 945 rows: LSG 468 992, SPA 267 145, FFH 169 885, NSG 116 784, BR 90 884, Nationalpark 4 255 |
 | Habitat overlaps | 1 655 769 area, 345 518 line, 28 365 point biotope–cell pairs; 530 287 cells touch an area biotope, 504 533 of them a protected one |
-| Verdicts, overview, outcomes | not yet recorded — the materialiser was still running when this was written |
+| Verdicts (`--steps=verdicts`) | **3 min 0 s** for 1 137 346 × 3 technologies (2 367 767 verdicts; 1 044 271 wind cells *nicht bewertet*); PV: *ohne Einschränkung* 409 629 · *eingeschränkt* 160 860 · *nicht vorgesehen* 473 782 · *ausgeschlossen* 93 075 — 8.2 % of the Land, against 15.8 % in the Uckermark seen as its sector and 3.6 % in Sachsen (`region_verdict_count`) |
+| Overview and per-region counts (`--steps=overview`) | **2 min 59 s**: 11 849 hexagons of 1 km and 541 of 5 km for the Land, plus each of the 18 Kreise's own (Uckermark 117 822 cells as a sector of the Land — 631 more than its own grid had, at the boundary, as §6 R3 predicted; Potsdam-Mittelmark 99 359 … Frankfurt (Oder) 5 658) |
+| Cited outcomes (`--steps=outcomes`) | **not run here**: at 10 GB per million cells (below) Brandenburg's outcomes need about 12 GB, and this environment's disk had 6 GB left with Sachsen's outcomes and the loaded sources in place. Running it means first dropping Sachsen's local outcome rows (recomputable in 13 min), which is the owner's call; the estimate from Sachsen's measured rate is about 20 min |
 
 **Found on the way, at the Land's scale, and fixed:** the protection loader (rewritten for two
 Länder) selected the geometry column by the shapefile's name, which the LfU GeoPackages do not
@@ -218,12 +222,19 @@ slope) were a lateral join aggregated in one query, and on 1.14 million cells th
 the join output with the raster tile on every row and spilled more temp space than the disk had —
 the pixel values are now read into a temp table first (the values written are unchanged).
 
+**Found on the first Land-sized explorer, and fixed:** every page took 7–20 s. The region summary
+asked, per region, whether it has a grid of its own with a correlated `EXISTS` on
+`spatial_unit.pilot_region`; the planner expected an early match and scanned all 1.8 million
+cells for each of the 18 Kreise that have none (7.5 s), and the region switch asked the same of
+all 34 regions (14 s). The grid regions are now listed once by walking the index one distinct
+value at a time (under 1 ms); the pages render in well under a second.
+
 **Sizing, measured:** the `outcome` table holds 36 rows per cell (3 methods × 6 scenarios × 2
 metrics) and took 7.2 GB for Sachsen's 706 488 cells — about **10 GB per million cells**, half of
 it the unique key index over four text columns. The whole-Land pair therefore needs about 20 GB
 for outcomes alone; this is the number `ADR-0011`'s deployment sizing should use. The working
 environment here has a 40 GB disk budget, which the two Länder's outcomes do not fit together with
-the loaded sources; what was done about it is recorded below.
+the loaded sources (the table above).
 
 **Found on the way, and fixed:** the outcome writer linked inputs by joining back onto `outcome`,
 which inside the transaction planned on stale statistics and went quadratic (117 rows/s — a day for
