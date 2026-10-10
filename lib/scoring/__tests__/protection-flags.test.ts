@@ -46,7 +46,7 @@ test("Biosphärenreservate are stored but not flagged (§ 25 BNatSchG not read a
 test("every text names the LfU overview data and never a permission outcome", () => {
   const flags = protectionFlags([overlap("ffh", 0.5), overlap("spa", 0.5), overlap("lsg", 0.5), overlap("nsg", 0.2)], 0.2);
   for (const flag of flags) {
-    assert.match(flag.textDe, /Übersichtsdaten des LfU/);
+    assert.match(flag.textDe, /Übersichtsdaten des Landesamts/);
     assert.doesNotMatch(flag.textDe, /genehmig|zulässig ist hier|unzulässig|verboten ist hier/i);
   }
 });

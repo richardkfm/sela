@@ -90,12 +90,12 @@
           "app:br"
         ],
         "bbox4326": [
-          13.2,
-          52.8,
-          14.5,
+          11.2,
+          51.3,
+          15.0,
           53.6
         ],
-        "$comment": "Substitute for BfN, which still returns 403 (2026-09-23). Licence read from the service's own GetCapabilities AccessConstraints: dl-de/by-2-0, provider credit '© Landesamt für Umwelt Brandenburg'. The service states its data is for overview only and not legally binding (digitised at 1:10 000). bbox covers Landkreis Uckermark with margin; features are clipped to the pilot boundary at load time."
+        "$comment": "Substitute for BfN, which still returns 403 (2026-09-23). Licence read from the service's own GetCapabilities AccessConstraints: dl-de/by-2-0, provider credit '© Landesamt für Umwelt Brandenburg'. The service states its data is for overview only and not legally binding (digitised at 1:10 000). bbox covers the whole Land Brandenburg with margin (ADR-0012, 2026-10-10; it covered the Uckermark until then); features are clipped to the region at load time."
       }
     },
     "lbgr-bb-moorbodenkarte": {
@@ -110,12 +110,12 @@
           "app:kohlenstoff_2021"
         ],
         "bbox4326": [
-          13.2,
-          52.8,
-          14.5,
+          11.2,
+          51.3,
+          15.0,
           53.6
         ],
-        "$comment": "Confirmed 2026-09-24 by the project owner's decision to model peat climate (docs/domain/scoring-criteria.md §4.1). Licence read from the service's own GetCapabilities AccessConstraints: dl-de/by-2-0, provider credit '© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg'. Native EPSG:25833. The 2021 layers are a modelled state derived from a 10 m grid (docs/data/sources.md §2.9). Same bbox as lfu-bb-schutzgebiete; clipped to the pilot boundary at load time."
+        "$comment": "Confirmed 2026-09-24 by the project owner's decision to model peat climate (docs/domain/scoring-criteria.md §4.1). Licence read from the service's own GetCapabilities AccessConstraints: dl-de/by-2-0, provider credit '© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg'. Native EPSG:25833. The 2021 layers are a modelled state derived from a 10 m grid (docs/data/sources.md §2.9). Same bbox as lfu-bb-schutzgebiete (the whole Land since 2026-10-10, ADR-0012); clipped to the region at load time."
       }
     },
     "lfu-bb-wasserhaushalt": {
@@ -142,6 +142,42 @@
         "pinnedBytes": 181214958,
         "pinnedLastModified": "Fri, 12 Jun 2026 05:53:54 GMT",
         "$comment": "Roadmap Step 4, docs/domain/decision-memo-habitat.md. Pinned from a HEAD request on 2026-09-28. Licence: the WFS capabilities and the MetaVer records state dl-de/by-2-0 ('© Landesamt für Umwelt Brandenburg'); the archive's own dok/doku_bbk_20260420.pdf states CC BY 4.0 with the attribution 'Landesamt für Umwelt Brandenburg'. Both allow public, changed use with attribution; the notice sela shows satisfies both, and the question is put to LfU (sources.md §2.12). The INSPIRE Art. 13(1)(e) note sits on the service records only and reads 'Rechte des geistigen Eigentums'; the dataset record carries no access restriction and the documentation says 'Zugriffsbeschränkung keine'. Shapefiles bbk_fl/bbk_li/bbk_pu, EPSG:25833, statewide."
+      }
+    },
+    "lfulg-sn-schutzgebiete": {
+      "status": "confirmed",
+      "docRow": "LfULG Sachsen Schutzgebiete (LUIS-Download)",
+      "licence": "dl-de/by-2-0",
+      "fetch": {
+        "kind": "multi-file",
+        "baseUrl": "https://luis.sachsen.de/natur/download/",
+        "files": [
+          {
+            "filename": "nsg.zip",
+            "pinnedBytes": 956280
+          },
+          {
+            "filename": "nlp.zip",
+            "pinnedBytes": 83868
+          },
+          {
+            "filename": "lsg.zip",
+            "pinnedBytes": 4592216
+          },
+          {
+            "filename": "br.zip",
+            "pinnedBytes": 51197
+          },
+          {
+            "filename": "FFH_GrundschutzVO.zip",
+            "pinnedBytes": 4614417
+          },
+          {
+            "filename": "SPA_Okt_2006_Dez_2009.zip",
+            "pinnedBytes": 2405665
+          }
+        ],
+        "$comment": "Confirmed 2026-10-10 under the owner's instruction to add Sachsen (docs/product/roadmap-planning-tool.md A6), pending confirmation in review. Licence read at source from the GDI-DE catalogue record of the LfULG service that serves the same data (9490f0e1-331d-4dd7-81b4-398f07fb64ab, dateStamp 2026-06-01): dl-de/by-2-0, 'Quelle: Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie', 'Es gelten keine Zugriffsbeschränkungen'. Each archive's own note says 'Nutzungsanmerkung: öffentlich zugänglich' and asks for the publisher to be cited on publication; the download page itself names no licence (docs/data/sources.md §2.13). Shapefiles, EPSG:25833; NSG/NLP/LSG/BR Stand 01.01.2026, FFH Stand 06/2025 (Grundschutzverordnungen 2011), SPA Meldestand 10/2006 (updated 12/2009). Pinned by byte count from the files fetched 2026-10-10; LUIS sends no Last-Modified."
       }
     }
   }

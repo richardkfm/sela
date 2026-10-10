@@ -54,8 +54,10 @@ services:
     # --fixture` (or a confirmed real ingest run); not part of `up` by
     # default since it depends on data the ingest step must produce first.
     # SELA_MATERIALIZE_REGION names the region to score — fixture-region by
-    # default, uckermark-12073 after a real ingest run.
-    command: ["pnpm", "db:materialize", "--", "--pilot-region=${SELA_MATERIALIZE_REGION:-fixture-region}"]
+    # default; uckermark-12073, brandenburg-12 or sachsen-14 after a real
+    # ingest run (ADR-0012). Writes the verdicts, the cited outcomes and the
+    # overview pyramid the explorer reads below the cell zoom.
+    command: ["pnpm", "db:materialize", "--", "--region=${SELA_MATERIALIZE_REGION:-fixture-region}"]
     profiles: ["ingest"]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://sela:sela@db:5432/sela}
@@ -86,6 +88,10 @@ services:
     profiles: ["ingest"]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://sela:sela@db:5432/sela}
+      # Which region the real pipeline ingests (ADR-0012): uckermark-12073
+      # (default), brandenburg-12, sachsen-14, or any <slug>-<ags> whose Land
+      # is configured in lib/pilot-region.ts.
+      REGION: ${SELA_REGION:-uckermark-12073}
     depends_on:
       db:
         condition: service_healthy

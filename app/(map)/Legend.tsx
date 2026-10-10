@@ -2,6 +2,12 @@
 // count of units in each class, so the legend is also the first, smallest
 // table view of the map (design-language.md §6: "a table view is always
 // reachable"). The bars share one axis: the total number of units.
+//
+// Below the cell zoom the map shows the overview pyramid (ADR-0012): each
+// hexagon in the colour of its *most frequent* class. The counts stay the
+// region's cell counts; the legend says what the hexagons are, so a 5 km
+// hexagon in amber is never read as "this area is buildable" (design-
+// language.md §4.2b).
 
 import {
   CLASSIFICATION_NOTE_DE,
@@ -14,23 +20,33 @@ import {
   verdictAppearance,
   type MapVerdict,
 } from "@/lib/map/verdict-style";
+import { CELL_MIN_ZOOM, INTERACTIVE_MIN_ZOOM } from "@/lib/map/tiles";
 import type { PilotRegionKind } from "@/lib/pilot-region";
 import type { Technology } from "@/lib/scoring/types";
 import Link from "next/link";
 
 const COUNT = new Intl.NumberFormat("de-DE");
 
+/** The legend's line for the overview, shared with the design language and the method page. */
+export const OVERVIEW_NOTE_DE = `Übersicht (unter Zoomstufe ${CELL_MIN_ZOOM}): jede Wabe von 1 km oder 5 km trägt die Farbe der häufigsten Einordnung ihrer Zellen; der Anteil erscheint beim Zeigen. Keine Zelle ist hier einzeln sichtbar.`;
+
 export function Legend({
   technology,
   counts,
   total,
   regionKind,
+  overview,
+  hasOverview,
 }: {
   technology: Technology;
   regionKind: PilotRegionKind;
   /** Undefined while this technology's counts are loading. */
   counts: Record<MapVerdict, number> | undefined;
   total: number;
+  /** Whether the map is currently below the cell zoom. */
+  overview: boolean;
+  /** Whether the overview pyramid exists for this region (materialised). */
+  hasOverview: boolean;
 }) {
   return (
     <section aria-labelledby="legend-heading" className="explorer-section">
@@ -79,12 +95,19 @@ export function Legend({
           })}
         </tbody>
       </table>
+      {overview && (
+        <p className="explorer-note muted legend-overview" role="status">
+          {hasOverview
+            ? OVERVIEW_NOTE_DE
+            : `Für dieses Gebiet ist die Übersicht noch nicht berechnet (pnpm db:materialize). Zellen erscheinen ab Zoomstufe ${CELL_MIN_ZOOM}.`}
+        </p>
+      )}
       {regionKind === "real" ? (
         <>
           {technology !== "wind" && (
             <p className="explorer-note muted legend-flag">
               <span aria-hidden className="legend-flag-swatch" style={{ borderColor: INK }} />
-              <span>Gestrichelt umrandet: mindestens ein Prüfhinweis zu Schutzgebieten (ab Zoomstufe 12 sichtbar).</span>
+              <span>Gestrichelt umrandet: mindestens ein Prüfhinweis zu Schutzgebieten (ab Zoomstufe {INTERACTIVE_MIN_ZOOM} sichtbar).</span>
             </p>
           )}
           <p className="explorer-note muted">

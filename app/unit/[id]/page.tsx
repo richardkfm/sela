@@ -39,6 +39,8 @@ import {
   type LandCoverReading,
 } from "@/lib/scoring/verdict-text";
 import { pilotRegionInfo } from "@/lib/pilot-region";
+import { PageShell, regionCrumbs } from "@/components/PageShell";
+import { municipalitiesForUnits } from "@/lib/db/queries/municipalities";
 import { formatCriterionValue } from "@/lib/scoring/format-value";
 import { getSpatialUnitById } from "@/lib/db/queries/spatial-units";
 import { listVerdictsForUnit } from "@/lib/db/queries/verdicts";
@@ -232,7 +234,7 @@ function ProtectionFlags({ flags, source }: { flags: readonly ProtectionFlag[]; 
       </h2>
       {flags.length === 0 ? (
         <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-          Nach den Übersichtsdaten des LfU überschneidet sich diese Fläche mit keinem FFH-, Vogelschutz- oder
+          Nach den Übersichtsdaten des Landesamts überschneidet sich diese Fläche mit keinem FFH-, Vogelschutz- oder
           Landschaftsschutzgebiet und nur zu weniger als der Hälfte bzw. gar nicht mit einem Naturschutzgebiet
           (Überschneidungen unter 1 % der Fläche nicht gezählt).
         </p>
@@ -252,7 +254,7 @@ function ProtectionFlags({ flags, source }: { flags: readonly ProtectionFlag[]; 
       <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.8rem" }}>
         Die Schutzgebietsgrenzen sind Übersichtsdaten (digitalisiert im Maßstab 1:10 000, nicht rechtsverbindlich).
         Ein Hinweis ersetzt keine Prüfung durch die zuständige Behörde. Quelle:{" "}
-        {source ? <SourceAttribution source={source} /> : "LfU Brandenburg"}
+        {source ? <SourceAttribution source={source} /> : "Landesumweltbehörde"}
       </p>
     </section>
   );
@@ -283,8 +285,11 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
   const landCover = landCoverValue ? readLandCover(landCoverValue.value) : null;
   const strictShare = values.find((v) => v.criterionId === "pv_protection_status")?.value;
   const flags = strictShare === undefined ? null : protectionFlags(overlaps, strictShare);
-  const flagSource = flags ? await getSource("lfu-bb-schutzgebiete") : null;
   const region = pilotRegionInfo(unit.pilotRegion);
+  const municipality = (await municipalitiesForUnits([id])).get(id) ?? null;
+  const crumbs = await regionCrumbs(unit.pilotRegion, { municipality, unitId: id });
+  // The Land's own protected-area source (ADR-0012), which the Prüfhinweise cite.
+  const flagSource = flags && region.land ? await getSource(region.land.protectionSourceId) : null;
   // Every value behind the verdicts, with its criterion, confidence and source
   // — CLAUDE.md §4.1: a headline must decompose into named, sourced criteria
   // on screen, not only in the database.
@@ -298,17 +303,17 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
   measured.sort((a, b) => (a.definition?.nameDe ?? "").localeCompare(b.definition?.nameDe ?? "", "de"));
 
   return (
-    <main style={{ padding: "1.5rem", maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <MethodNote kind={region.kind} />
-      <div>
-        <Link href="/">← Zur Karte</Link>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>
+    <PageShell
+      crumbs={crumbs}
+      current="Begründung"
+      title={
+        <>
           Fläche <span className="tabular-nums">{id.slice(0, 8)}</span>
-        </h1>
-        <p style={{ color: "var(--text-secondary)", margin: 0 }}>
-          {region.nameDe} · {unit.kind === "hex_grid" ? "Rastereinheit" : "Flurstück"}
-        </p>
-      </div>
+        </>
+      }
+      lead={`${unit.kind === "hex_grid" ? "Rasterzelle, 100 m" : "Flurstück"}${municipality ? ` · ${municipality.name}` : ""}`}
+    >
+      <MethodNote kind={region.kind} authorityDe={region.land?.protectionAuthorityDe} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         {verdicts.length === 0 ? (
@@ -421,6 +426,6 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
       >
         Szenarien vergleichen →
       </Link>
-    </main>
+    </PageShell>
   );
 }

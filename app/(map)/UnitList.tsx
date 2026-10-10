@@ -32,7 +32,7 @@ export function UnitList({
 }) {
   const listed = units?.slice(0, MAX_LISTED) ?? [];
   return (
-    <nav aria-label="Flächen in der Pilotregion" className="explorer-section explorer-list">
+    <nav aria-label="Flächen im Ausschnitt" className="explorer-section explorer-list">
       <h2 className="overline">
         Flächen im Ausschnitt{" "}
         <span className="tabular-nums">
@@ -41,8 +41,8 @@ export function UnitList({
       </h2>
       {units === null && (
         <p className="explorer-note muted">
-          Hineinzoomen oder in die Karte klicken, um einzelne Flächen auszuwählen. In dieser Übersicht ist jede Fläche
-          kleiner als ein Bildpunkt.
+          Hineinzoomen oder in die Karte klicken, um einzelne Flächen auszuwählen. In dieser Übersicht ist eine
+          einzelne Fläche nicht anwählbar.
         </p>
       )}
       {units && units.length === 0 && <p className="explorer-note muted">Im Ausschnitt liegen keine Flächen.</p>}

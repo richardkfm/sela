@@ -17,10 +17,13 @@ interface SearchResult {
 
 export function SearchBox({
   region,
+  regionLabel,
   onMunicipality,
   onUnit,
 }: {
   region: string;
+  /** How the region is named in the status line, e.g. "Landkreis Uckermark". */
+  regionLabel: string;
   onMunicipality: (municipality: Municipality) => void;
   onUnit: (id: string) => void;
 }) {
@@ -67,7 +70,7 @@ export function SearchBox({
         setStatus(`Koordinate ${data.coordinate.readAsDe}. Fläche ausgewählt.`);
         onUnit(data.coordinate.unitId);
       } else {
-        setStatus(`Koordinate ${data.coordinate.readAsDe} – dieser Punkt liegt in keiner Fläche der Pilotregion.`);
+        setStatus(`Koordinate ${data.coordinate.readAsDe} – dieser Punkt liegt in keiner Fläche von ${regionLabel}.`);
       }
       return;
     }
@@ -98,7 +101,8 @@ export function SearchBox({
         </button>
       </form>
       <p id="search-help" className="explorer-note muted">
-        Zum Beispiel „Prenzlau“, „53,31 13,86“ oder „33U 412345 5881234“ (ETRS89/UTM). Adresssuche gibt es noch nicht.
+        Eine Gemeinde in {regionLabel}, z. B. „Prenzlau“ oder „Görlitz“, oder Koordinaten wie „53,31 13,86“ oder „33U 412345
+        5881234“ (ETRS89/UTM). Adresssuche gibt es noch nicht.
       </p>
       {result && result.municipalities.length > 0 && (
         <ul className="search-results">

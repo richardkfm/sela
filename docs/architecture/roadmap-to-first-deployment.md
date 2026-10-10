@@ -89,8 +89,8 @@ project owner and chosen on these grounds:
 - **Its boundary is simple** — one polygon, one ring, no exclaves and no holes, so no edge case in
   grid clipping is hiding in the pilot itself.
 
-The boundary lives in `ingest/pilot/uckermark-12073.geojson` (BKG VG25, CC BY 4.0, Produktstand
-31.12.2025); see `ingest/pilot/README.md` and `docs/data/sources.md` §2.5.
+The boundary lives in `ingest/regions/uckermark-12073.geojson` (BKG VG25, CC BY 4.0, Produktstand
+31.12.2025); see `ingest/regions/README.md` and `docs/data/sources.md` §2.5. Since ADR-0012 the same directory holds the boundaries of both Länder.
 
 **Not yet verified — stated as the reason for the choice, not as fact.** The claims about wind
 build-out, protected-area coverage and peatland extent in the Uckermark are the *rationale*, and

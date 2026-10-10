@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { MethodNote } from "@/components/MethodNote";
+import { PageShell } from "@/components/PageShell";
 import { listCriterionDefinitions, listSources } from "@/lib/db/queries/criteria";
 import { listOutcomeMethods, type OutcomeMethodRow } from "@/lib/db/queries/outcomes";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
@@ -44,17 +45,16 @@ export default async function MethodPage() {
   const sourceById = new Map(sources.map((s) => [s.id, s]));
 
   return (
-    <main style={{ padding: "1.5rem", maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <PageShell crumbs={[{ label: "Karte", href: "/" }]} current="Methode" title="Methode">
       <MethodNote kind={definitions.some((d) => !d.id.startsWith("fixture_")) ? "real" : "fixture"} />
       <div>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 600 }}>Methode</h1>
         <p style={{ color: "var(--text-secondary)" }}>
           Diese Seite listet exakt die <code>criterion_definition</code>-Zeilen, die die
           Bewertungs-Engine (<code>lib/scoring/</code>, Methodenversion{" "}
           <span className="tabular-nums">{CURRENT_METHOD_VERSION}</span>) tatsächlich liest — sie kann
           daher nicht vom aktiven Code abweichen. Kriterien mit dem Präfix <code>fixture_</code> gehören
           zum synthetischen Beispieldatensatz und tragen eine willkürliche Beispiel-Gewichtung. Alle
-          anderen lesen echte Messwerte der Pilotregion Uckermark und werden nicht gewichtet, sondern nach
+          anderen lesen echte Messwerte der eingelesenen Regionen (Brandenburg, Sachsen; ADR-0012) und werden nicht gewichtet, sondern nach
           den unten beschriebenen Regeln eingeordnet (Methode <code>real-pv-v1</code>, siehe{" "}
           <code>docs/domain/scoring-criteria.md</code>).
         </p>
@@ -157,7 +157,7 @@ export default async function MethodPage() {
           gegenüber dem Ist-Zustand wird nur genannt, wo beide Summen dieselben Zellen umfassen.
         </p>
       </section>
-    </main>
+    </PageShell>
   );
 }
 
@@ -193,7 +193,7 @@ function PvRulesSection() {
       <ol style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
         <li>
           <strong>Ausgeschlossen</strong>, wenn mindestens {PCT.format(PROTECTION_EXCLUSION_SHARE * 100)} % der Fläche nach
-          den Übersichtsdaten des LfU in einem Naturschutzgebiet oder dem Nationalpark liegen – dort verbietet das Gesetz
+          den Übersichtsdaten des Landesamts (LfU Brandenburg, LfULG Sachsen) in einem Naturschutzgebiet oder einem Nationalpark liegen – dort verbietet das Gesetz
           nach Maßgabe der Verordnung Veränderungen (§§ 23, 24 BNatSchG).
         </li>
         <li>
@@ -213,7 +213,7 @@ function PvRulesSection() {
           <strong>Globalstrahlung</strong>, eingestuft nach Vierteln der Werte in Deutschland (DWD-Mittel 2016–2025 aller
           Rasterzellen; Grenzen {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p25)},{" "}
           {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p50)} und {KWH.format(IRRADIATION_NATIONAL_QUARTILES.p75)} kWh/m²·a).
-          Die ganze Uckermark liegt im unteren Mittelfeld; innerhalb der Region unterscheidet die Strahlung Flächen kaum.
+          Die ganze Uckermark liegt im unteren Mittelfeld; innerhalb eines Landkreises unterscheidet die Strahlung Flächen kaum.
           Ihre eigentliche Aufgabe ist der Energieertrag (unten, <code>pv-yield-v1</code>).
         </li>
         <li>

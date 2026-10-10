@@ -2,7 +2,7 @@
 
 **Spatial decision-support for land-use trade-offs — comparing what is built, what is preserved, and what is restored.**
 
-> **Status: `0.3.x` — first real pilot region, illustrative weights.** The map explorer shows the **Landkreis Uckermark** (Brandenburg) as 117 191 hex cells, each with **real measured values** — land cover (BKG CLC5), slope (BKG DGM200), irradiation (DWD, 2016–2025 mean) and protected areas (LfU Brandenburg) — scored with an **explicitly arbitrary illustrative weighting**. The values are real; the weights, thresholds and therefore the verdicts are placeholders, and every screen says so. Every weight in [`docs/domain/scoring-criteria.md`](docs/domain/scoring-criteria.md) is still open pending the `CLAUDE.md` §3 confirmation gate; outcomes for *preserve* and *restore* are not yet modelled for real land. The synthetic fixture remains available at `/?region=fixture-region`. See [`CHANGELOG.md`](CHANGELOG.md) `[Unreleased]`.
+> **Status: `0.3.x` — two Länder, classified without a score.** The map explorer serves **Brandenburg** and **Sachsen** as a whole, every Landkreis as a sector view, and the **Landkreis Uckermark** as the region that shipped first (ADR-0012) — 100 m hex cells with **real measured values**: land cover (BKG CLC5), slope (BKG DGM200), irradiation (DWD, 2016–2025 mean) and protected areas (LfU Brandenburg, LfULG Sachsen). Ground-mounted PV is **classified by decided rules, never scored** (`real-pv-v1`): *ohne Einschränkung*, *eingeschränkt*, *nicht vorgesehen*, *ausgeschlossen*, with Prüfhinweise; the energy outcome gives capacity and yield with its range; Brandenburg's cells carry peat climate, water balance and Biotopkataster categories, Sachsen's not yet ([`docs/data/sources.md`](docs/data/sources.md) §2.14). Below zoom 11 the map shows an overview of each hexagon's most frequent class; from zoom 12 single cells. A view is a link; a site exports as GeoJSON or CSV. The two-Länder milestone was implemented on 2026-10-10 under the owner's instruction and awaits confirmation ([`docs/product/roadmap-planning-tool.md`](docs/product/roadmap-planning-tool.md)). The synthetic fixture remains available at `/?region=fixture-region`. See [`CHANGELOG.md`](CHANGELOG.md) `[Unreleased]`.
 
 ---
 
@@ -115,6 +115,7 @@ docs/architecture/               ADRs and system design
   adr-0006-3d-parcel-preview.md  2D explorer + a literal-3D parcel preview (deck.gl over MapLibre)
   adr-0007-unit-vector-tiles.md  Units served as vector tiles cut by PostGIS (ST_AsMVT)
   adr-0011-prebuilt-images-and-installer.md  Prebuilt images on GHCR and the Docker installer
+  adr-0012-regions-and-overview.md  Regions as Land › Landkreis, cells stamped with their AGS, the overview pyramid
 docs/domain/glossary.md          DE/EN vocabulary
 docs/domain/scoring-criteria.md  Criteria catalogue per technology — weights deliberately left open
 docs/data/sources.md             Dataset inventory and verification log — the licence gate on real ingestion
@@ -131,10 +132,11 @@ lib/scoring/                     Pure scoring engine — suitability, outcomes, 
 lib/basemap/                     Basemap and terrain sources (basemap.de, DGM5 terrain), PMTiles reader
 lib/map/                         Verdict colours + map patterns, shared by explorer, legend and preview
 lib/preview/                     3D preview: reference dimensions, cited rings, procedural meshes
-ingest/                          GDAL + SQL pipeline, gated on sources.md; real/ ingests the
-                                  Uckermark end to end; fixtures/ proves the mechanics;
-                                  basemap/ builds the self-hosted PMTiles archive;
-                                  07_materialize_scores.ts bridges criterion values to scored rows
+ingest/                          GDAL + SQL pipeline, gated on sources.md; real/ ingests a Land or
+                                  a Landkreis end to end; regions/ holds the committed boundaries;
+                                  fixtures/ proves the mechanics; basemap/ builds the self-hosted
+                                  PMTiles archive; 07_materialize_scores.ts bridges criterion values
+                                  to scored rows and 08_materialize_overview.sql builds the overview
 tests/e2e/                       Playwright: WCAG 2.2 AA, keyboard-only navigation, greyscale
 docker/                          Dockerfile (app + basemap build stage) and Dockerfile.ingest
 compose.yaml                     app · db (PostGIS) · ingest (profile) · materialize (profile)
@@ -161,10 +163,12 @@ port is taken) and asks which data to load:
 
 - the synthetic test data (small and quick, not a real place);
 - the real Landkreis Uckermark (a ≈ 1 GB download from the publishers, several minutes);
+- the whole Land Brandenburg or the whole Freistaat Sachsen (≈ 1.5 GB, about a million cells, an
+  hour or more — ADR-0012);
 - none.
 
-`--data fixture|uckermark|none` answers without asking, and `--build` builds the images from your
-checkout instead of pulling them. Run it again to update. `docker compose down` stops sela; add
+`--data fixture|uckermark|brandenburg|sachsen|none` answers without asking, and `--build` builds
+the images from your checkout instead of pulling them. Run it again to update. `docker compose down` stops sela; add
 `-v` to delete the database as well. The images are amd64 only, so Apple Silicon runs them under
 emulation. See ADR-0011.
 
@@ -177,6 +181,8 @@ docker compose up --build                           # app on :3000, migrations a
 docker compose --profile ingest run --rm ingest --fixture   # synthetic data, proves the pipeline
 docker compose --profile ingest run --rm materialize        # populates suitability_verdict/outcome from it
 SELA_MATERIALIZE_REGION=uckermark-12073 docker compose --profile ingest run --rm materialize   # after a real ingest run
+SELA_REGION=sachsen-14 docker compose --profile ingest run --rm ingest                        # a whole Land (ADR-0012)
+SELA_MATERIALIZE_REGION=sachsen-14 docker compose --profile ingest run --rm materialize
 docker compose down -v                               # tear down, including the database volume
 
 pnpm install
@@ -185,16 +191,18 @@ DATABASE_URL=postgresql://sela:sela@localhost:5432/sela pnpm db:migrate
 DATABASE_URL=postgresql://sela:sela@localhost:5432/sela ./ingest/run.sh --fixture     # synthetic data
 DATABASE_URL=postgresql://sela:sela@localhost:5432/sela pnpm db:materialize          # score it
 DATABASE_URL=postgresql://sela:sela@localhost:5432/sela ./ingest/run.sh               # real Uckermark (≈ 1 GB download; needs GDAL, raster2pgsql)
-DATABASE_URL=postgresql://sela:sela@localhost:5432/sela pnpm db:materialize -- --pilot-region=uckermark-12073
+DATABASE_URL=postgresql://sela:sela@localhost:5432/sela pnpm db:materialize -- --region=uckermark-12073
+DATABASE_URL=postgresql://sela:sela@localhost:5432/sela REGION=sachsen-14 ./ingest/run.sh   # a whole Land; brandenburg-12 likewise
+DATABASE_URL=postgresql://sela:sela@localhost:5432/sela pnpm db:materialize -- --region=sachsen-14
 PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm test:e2e   # against a running `pnpm dev`
 ```
 
-The explorer opens on the Uckermark once it has been ingested, and on the synthetic fixture
-otherwise (`SELA_PILOT_REGION`, `/?region=`). Both are scored with an explicitly arbitrary
-illustrative weighting (`lib/scoring/illustrative-weights.ts`) — never real scoring weights. Each
-dataset enters ingestion only once `docs/data/sources.md` records it as Confirmed, and real
-scoring weights are gated on the `CLAUDE.md` §3 confirmation process against
-`docs/domain/scoring-criteria.md`. The self-hosted PMTiles basemap
+The explorer opens on the Uckermark once it has been ingested, and on whatever region has cells
+otherwise (`SELA_REGION`, `/?region=`; the fixture at `/?region=fixture-region`). Real regions
+are classified by the decided rules (`real-pv-v1`), the fixture by an explicitly arbitrary
+illustrative weighting (`lib/scoring/illustrative-weights.ts`). Each dataset enters ingestion
+only once `docs/data/sources.md` records it as Confirmed, and every scoring rule is gated on the
+`CLAUDE.md` §3 confirmation process against `docs/domain/scoring-criteria.md`. The self-hosted PMTiles basemap
 (`ingest/basemap/build.sh`) is built from a small real OSM extract chosen only for build
 tractability, not the (still unpinned) real pilot region — see `ingest/basemap/README.md`.
 

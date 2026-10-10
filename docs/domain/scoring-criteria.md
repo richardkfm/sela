@@ -46,7 +46,7 @@ Criteria named in `docs/product/mvp.md` §4.1.
 | `pv_parcel_contiguity` | Contiguous usable area / Zusammenhängende nutzbare Fläche | `higher_better` | No | open | Derived from `spatial_unit` geometry itself once real parcel/grid geometry exists — no external source needed |
 | `pv_land_cover` | Current land-cover class / Aktuelle Bodenbedeckungsklasse | `non_monotonic` | No | **none** — a category in three tiers (§6.1) | BKG CORINE Land Cover 5 ha (CLC5-2018) — **confirmed, ingested**; the cell's dominant class (`sources.md` §2.2) |
 | `pv_designated_corridor` | Eligible designated corridor (motorway/rail) / Förderfähiger Seitenrandstreifen | `non_monotonic` | No | open | Not yet identified — the EEG/state corridor-eligibility geometry has not been located as a dataset |
-| `pv_protection_status` | Protection-area exclusion / Schutzgebietsausschluss | — (exclusion only) | **Yes** | n/a — exclusion, not scored | BfN Schutzgebiete (WFS) — licence cleared, access blocked; **Brandenburg: LfU Schutzgebiete, confirmed, ingested** (`sources.md` §2.1, §2.8) |
+| `pv_protection_status` | Protection-area exclusion / Schutzgebietsausschluss | — (exclusion only) | **Yes** | n/a — exclusion, not scored | BfN Schutzgebiete (WFS) — licence cleared, access blocked; **Brandenburg: LfU Schutzgebiete, confirmed, ingested** (`sources.md` §2.1, §2.8); **Sachsen: LfULG Schutzgebiete, confirmed 2026-10-10 pending review** (§2.13) |
 
 **Excluded from this catalogue, not silently assumed:** grid-connection proximity (*Netzverknüpfungspunkt*)
 is named in `mvp.md` §4.1 as a suitability driver, but its MVP scope is open (**U3**) and no public
@@ -73,7 +73,7 @@ Criteria named in `docs/product/mvp.md` §4.3.
 |---|---|---|---|---|---|
 | `wind_resource_hub_height` | Wind resource at hub height / Windressource in Nabenhöhe | `higher_better` | No | open | Not yet identified — candidate: DWD wind atlas / TrassenCheck-class data, not yet added to `docs/data/sources.md` |
 | `wind_settlement_setback` | Statutory settlement setback distance / Gesetzlicher Siedlungsabstand | — (exclusion only) | **Yes** | n/a — exclusion, not scored | OpenStreetMap via Geofabrik (settlement geometry) for the geometry input; the setback *distance* itself is a state-specific statutory value not yet catalogued per *Bundesland* |
-| `wind_protection_status` | Protection-area and species-sensitivity exclusion / Schutzgebiets- und Artenschutzausschluss | — (exclusion only) | **Yes** | n/a — exclusion, not scored | BfN Schutzgebiete (WFS) for protection areas — Brandenburg: LfU Schutzgebiete, ingested (§6); raptor/bat species-sensitivity layer not yet identified (tracked against U2) |
+| `wind_protection_status` | Protection-area and species-sensitivity exclusion / Schutzgebiets- und Artenschutzausschluss | — (exclusion only) | **Yes** | n/a — exclusion, not scored | BfN Schutzgebiete (WFS) for protection areas — Brandenburg: LfU Schutzgebiete, ingested; Sachsen: LfULG Schutzgebiete (§6); raptor/bat species-sensitivity layer not yet identified (tracked against U2) |
 | `wind_terrain_access` | Terrain and access suitability / Gelände- und Erschließungseignung | `higher_better` | No | open | Same DEM candidate as `pv_slope`, not yet identified |
 
 **Excluded from this catalogue, not silently assumed:** grid-connection proximity, same basis as
@@ -392,7 +392,10 @@ module; verdicts materialised as `0.3.1-dev`; ADR-0009). Decisions: memo Q1–Q5
 **In this order, for PV and agri-PV:**
 
 1. **ausgeschlossen** — `pv_protection_status` ≥ 0.5: at least half the cell inside a
-   Naturschutzgebiet or the Nationalpark, per the LfU overview data (Q1c, Q2d).
+   Naturschutzgebiet or the Nationalpark, per the Land's overview data (Q1c, Q2d) — the LfU's for
+   Brandenburg, the LfULG's for Sachsen since 2026-10-10 (ADR-0012; `sources.md` §2.13). The rule names
+   BNatSchG categories; Sachsen's data carries the same categories (`KATEGORIE` nach BNatSchG) and the
+   rule was not re-read against SächsNatSchG. Sachsen's one Nationalpark is the *Sächsische Schweiz*.
 2. **nicht vorgesehen** — `pv_land_cover`, now a **category criterion** (`is_category`, weight 0),
    places the dominant CLC class in the tier *nicht vorgesehen* (F2, F3). No score.
 3. **scored** — equal-weight mean of `pv_irradiation_annual` (linear on the national p1–p99,

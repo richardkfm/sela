@@ -33,3 +33,17 @@ test("an empty tile is 204 without a body, and a malformed request is refused", 
   expect((await request.get("/api/units/tiles/3/0/0?region=fixture-region")).status()).toBe(400);
   expect((await request.get("/api/units/tiles/12/2048/2047")).status()).toBe(400);
 });
+
+// z8 tile containing the fixture at null island: x = 128, y = 127.
+test("below the cell zoom a tile carries the overview pyramid (ADR-0012)", async ({ request }) => {
+  const response = await request.get("/api/units/tiles/8/128/127?region=fixture-region");
+  expect(response.status()).toBe(200);
+  const text = (await response.body()).toString("latin1");
+  // Hexagons under the cells' own verdict keys, with their level, cell count and the dominant share.
+  for (const key of ["v_pv", "v_agripv", "v_wind", "lvl", "n", "p_pv"]) expect(text).toContain(key);
+  expect(text).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+});
+
+test("an unknown region has no tiles", async ({ request }) => {
+  expect((await request.get("/api/units/tiles/12/2048/2047?region=nowhere-99")).status()).toBe(204);
+});

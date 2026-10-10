@@ -149,8 +149,8 @@ export const PV_YIELD_METHOD: OutcomeMethod = {
     "Ratio ÷ Flächenbedarf je MWp. Es ist der technische Ertrag einer heute gebauten Anlage im Jahresmittel, vor " +
     "Abregelung bei Netzengpässen oder negativen Preisen; die Netzbetreiber rechnen für Freiflächenanlagen " +
     "mit rund 900 Volllaststunden, also weniger. Gezeigt wird nur, wo Freiflächen-PV nach der Einordnung weder " +
-    "ausgeschlossen noch nicht vorgesehen ist, und immer als Spanne. Innerhalb der Uckermark unterscheidet der " +
-    "Ertrag die Zellen kaum: Die Globalstrahlung schwankt dort um etwa 3 %, die Spanne der Methode ist viel breiter. " +
+    "ausgeschlossen noch nicht vorgesehen ist, und immer als Spanne. Innerhalb eines Landkreises unterscheidet der " +
+    "Ertrag die Zellen kaum: In der Uckermark schwankt die Globalstrahlung um etwa 3 %, die Spanne der Methode ist viel breiter. " +
     "Keine Aussage über Netzanschluss, Wirtschaftlichkeit oder Genehmigung.",
   parameters: {
     formula:

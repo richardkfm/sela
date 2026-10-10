@@ -239,7 +239,7 @@ export interface OutcomeWithInputs {
 export async function replaceOutcomesForPilotRegion(
   pilotRegion: string,
   methodVersion: string,
-  outcomes: Iterable<OutcomeWithInputs>,
+  outcomes: Iterable<OutcomeWithInputs> | AsyncIterable<OutcomeWithInputs>,
   batchSize = 5000,
 ): Promise<number> {
   const client = await getPool().connect();
@@ -300,7 +300,7 @@ export async function replaceOutcomesForPilotRegion(
       [pilotRegion, methodVersion],
     );
     let batch: OutcomeWithInputs[] = [];
-    for (const outcome of outcomes) {
+    for await (const outcome of outcomes) {
       const { row, criterionValueIds } = outcome;
       if (row.methodVersion !== methodVersion) {
         throw new Error(`outcome for ${row.spatialUnitId} has method ${row.methodVersion}, expected ${methodVersion}`);

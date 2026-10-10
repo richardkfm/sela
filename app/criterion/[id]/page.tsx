@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MethodNote } from "@/components/MethodNote";
+import { PageShell } from "@/components/PageShell";
 import { getCriterionDefinition, getSource } from "@/lib/db/queries/criteria";
 import { SourceAttribution } from "@/components/SourceAttribution";
 import { appliesToLabel } from "@/lib/scoring/labels";
@@ -28,13 +29,13 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
   const source = await getSource(criterion.sourceId);
 
   return (
-    <main style={{ padding: "1.5rem", maxWidth: "40rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <PageShell
+      crumbs={[{ label: "Karte", href: "/" }, { label: "Methode", href: "/method" }]}
+      current="Kriterium"
+      title={criterion.nameDe}
+      lead={criterion.nameEn}
+    >
       <MethodNote kind={criterion.id.startsWith("fixture_") ? "fixture" : "real"} />
-      <div>
-        <Link href="/method">← Zur Methodenseite</Link>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>{criterion.nameDe}</h1>
-        <p style={{ color: "var(--text-secondary)", margin: 0 }}>{criterion.nameEn}</p>
-      </div>
 
       <dl style={{ display: "grid", gridTemplateColumns: "12rem 1fr", rowGap: "0.5rem", margin: 0 }}>
         <dt style={{ color: "var(--text-secondary)" }}>Richtung</dt>
@@ -108,6 +109,6 @@ export default async function CriterionEvidencePage({ params }: { params: Promis
           <p style={{ color: "var(--text-secondary)" }}>Keine Quelle gefunden.</p>
         )}
       </section>
-    </main>
+    </PageShell>
   );
 }

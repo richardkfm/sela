@@ -1,8 +1,10 @@
-// Vector tiles of a region's units (ADR-0007). `/api/units/tiles/{z}/{x}/{y}?region=…`
-// returns one Mapbox Vector Tile, layer `units`, with every technology's verdict
-// on each feature. Cut and encoded by PostGIS (lib/db/queries/regions.ts).
+// Vector tiles of a region (ADR-0007, ADR-0012). `/api/units/tiles/{z}/{x}/{y}?region=…`
+// returns one Mapbox Vector Tile, layer `units`: the cells with every
+// technology's verdict from the cell zoom, the overview hexagons with their
+// most frequent class below it. Cut and encoded by PostGIS
+// (lib/db/queries/regions.ts).
 
-import { unitTile } from "@/lib/db/queries/regions";
+import { resolveScope, unitTile } from "@/lib/db/queries/regions";
 import { MAX_UNIT_TILE_ZOOM, MIN_UNIT_TILE_ZOOM } from "@/lib/map/tiles";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 
@@ -30,13 +32,17 @@ export async function GET(
     return new Response("invalid tile request", { status: 400 });
   }
 
-  const tile = await unitTile(region, zoom, col, row, CURRENT_METHOD_VERSION);
   const headers = {
     "Content-Type": "application/vnd.mapbox-vector-tile",
     // Verdicts change when scores are re-materialised; a minute of caching
     // takes the load off panning without holding stale colours for long.
     "Cache-Control": "public, max-age=60",
   };
+  const scope = await resolveScope(region);
+  // An unknown region has no tiles — empty, like a tile outside the region.
+  if (!scope) return new Response(null, { status: 204, headers });
+
+  const tile = await unitTile(scope, zoom, col, row, CURRENT_METHOD_VERSION);
   // A tile outside the region is empty: 204, which must not carry a body.
   if (tile.length === 0) return new Response(null, { status: 204, headers });
   return new Response(new Uint8Array(tile), { status: 200, headers });

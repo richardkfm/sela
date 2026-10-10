@@ -1,9 +1,10 @@
 // Map explorer — the map-first primary surface (design-language.md §3).
-// Shows one pilot region: `?region=` if given and present, otherwise the
-// default (the real Uckermark once ingested, else the synthetic fixture).
-// Units reach the map as vector tiles (ADR-0007); this page only loads what
-// the panel needs up front — the region, the legend's counts and the notices
-// of every source the tiles carry.
+// Shows one region (ADR-0012): `?region=` if given and present — a Land, a
+// Landkreis of it, or the synthetic fixture — otherwise the default (the
+// Uckermark once ingested, else whatever region has cells). Units reach the
+// map as vector tiles (ADR-0007); this page only loads what the panel needs
+// up front — the region and where it sits, the legend's counts and the
+// notices of every source the tiles carry.
 
 import { renderAttribution } from "@/lib/attribution";
 import {
@@ -11,7 +12,7 @@ import {
   getRegionSummary,
   listAvailableRegions,
   listRegionSources,
-  resolvePilotRegion,
+  resolveRegion,
 } from "@/lib/db/queries/regions";
 import { DEFAULT_PILOT_REGION } from "@/lib/pilot-region";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
@@ -32,6 +33,9 @@ const SOURCE_ROLE_DE: Record<string, string> = {
   "bkg-dgm200": "Neigung",
   "dwd-cdc-radiation": "Globalstrahlung",
   "lfu-bb-schutzgebiete": "Schutzgebiete",
+  "lfulg-sn-schutzgebiete": "Schutzgebiete",
+  "lbgr-bb-moorbodenkarte": "Moorböden",
+  "lfu-bb-wasserhaushalt": "Wasserhaushalt",
 };
 
 function escapeHtml(text: string): string {
@@ -45,12 +49,24 @@ export default async function MapExplorerPage({
 }) {
   const query = await searchParams;
   const requested = typeof query.region === "string" ? query.region : null;
-  const regionId = await resolvePilotRegion(requested, DEFAULT_PILOT_REGION);
+  const regionId = await resolveRegion(requested, DEFAULT_PILOT_REGION);
+  const region = regionId ? await getRegionSummary(regionId) : null;
 
-  const [region, counts, sources, available] = await Promise.all([
-    getRegionSummary(regionId),
-    countVerdicts(regionId, "pv", CURRENT_METHOD_VERSION),
-    listRegionSources(regionId),
+  if (!region) {
+    return (
+      <main className="page-shell">
+        <h1>Noch keine Daten</h1>
+        <p className="muted">
+          In dieser Datenbank ist noch keine Region eingelesen. <code>ingest/run.sh --fixture</code> lädt den
+          Beispieldatensatz, <code>REGION=uckermark-12073 ingest/run.sh</code> eine echte Region.
+        </p>
+      </main>
+    );
+  }
+
+  const [counts, sources, available] = await Promise.all([
+    countVerdicts(region.scope, "pv", CURRENT_METHOD_VERSION),
+    listRegionSources(region.scope),
     listAvailableRegions(),
   ]);
 
@@ -68,8 +84,9 @@ export default async function MapExplorerPage({
   return (
     <main>
       <Explorer
+        key={region.id}
         region={region}
-        otherRegions={available.filter((r) => r.id !== region.id)}
+        regions={available}
         initialTechnology="pv"
         initialCounts={counts}
         dataAttribution={dataAttribution}

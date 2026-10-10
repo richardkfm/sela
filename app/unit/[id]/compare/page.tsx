@@ -20,6 +20,8 @@ import { listHabitatOverlapsForUnits, regionHasHabitatData } from "@/lib/db/quer
 import { habitatFacts, habitatSummaryDe, summariseHabitat } from "@/lib/scoring/habitat";
 import { listOutcomeInputsForUnit, listOutcomesForUnit, type OutcomeInputRow } from "@/lib/db/queries/outcomes";
 import { pilotRegionInfo } from "@/lib/pilot-region";
+import { PageShell, regionCrumbs } from "@/components/PageShell";
+import { municipalitiesForUnits } from "@/lib/db/queries/municipalities";
 import { scenarioTokenCssVar, scenarioTokens } from "@/lib/design/tokens";
 import { formatCriterionValue } from "@/lib/scoring/format-value";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
@@ -78,6 +80,8 @@ export default async function CompareScenariosPage({ params }: { params: Promise
     regionHasHabitatData(unit.pilotRegion),
   ]);
   const region = pilotRegionInfo(unit.pilotRegion);
+  const municipality = (await municipalitiesForUnits([id])).get(id) ?? null;
+  const crumbs = await regionCrumbs(unit.pilotRegion, { municipality, unitId: id });
   const lines = buildComparisonLines(rows.map((r) => r.outcome));
   const citedLines = lines.filter((l) => l.methodVersion !== null);
   const showsIllustrative = region.kind === "fixture" || lines.some((l) => l.methodVersion === null && SCENARIOS.some((s) => l.cells[s].kind !== "not_modelled"));
@@ -99,18 +103,20 @@ export default async function CompareScenariosPage({ params }: { params: Promise
   const energyMax = Math.max(1, ...energyByScenario.values(), ...[...energyRangeByScenario.values()].map(([, high]) => high));
 
   return (
-    <main style={{ padding: "1.5rem", maxWidth: "64rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      {showsIllustrative && <MethodNote kind={region.kind} />}
-      {citedLines.length > 0 && <CitedMethodsNote othersNotModelled={!showsIllustrative} />}
-      <div>
-        <p className="no-print" style={{ margin: 0, display: "flex", gap: "0.75rem", alignItems: "center" }}>
-          <Link href={`/unit/${id}`}>← Zur Fläche</Link>
-          <PrintButton />
-        </p>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>
+    <PageShell
+      crumbs={[...crumbs, { label: `Fläche ${id.slice(0, 8)}`, href: `/unit/${id}` }]}
+      current="Szenarienvergleich"
+      wide
+      title={
+        <>
           Szenarienvergleich — Fläche <span className="tabular-nums">{id.slice(0, 8)}</span>
-        </h1>
-      </div>
+        </>
+      }
+      lead={municipality ? `${municipality.name} · vier Zukünfte auf denselben Achsen` : "Vier Zukünfte auf denselben Achsen"}
+      actions={<PrintButton />}
+    >
+      {showsIllustrative && <MethodNote kind={region.kind} authorityDe={region.land?.protectionAuthorityDe} />}
+      {citedLines.length > 0 && <CitedMethodsNote othersNotModelled={!showsIllustrative} />}
 
       {/* Decorative headline visual — energy output per scenario. The table
           below is the authoritative, screen-reader- and keyboard-reachable
@@ -268,7 +274,7 @@ export default async function CompareScenariosPage({ params }: { params: Promise
         sources={sources.filter((s) => inputs.some((i) => i.sourceId === s.id))}
         methodVersions={versions}
       />
-    </main>
+    </PageShell>
   );
 }
 
