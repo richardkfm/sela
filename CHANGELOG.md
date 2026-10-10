@@ -80,6 +80,9 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   and the explorer's default; `pnpm db:materialize -- --region=` (`--pilot-region=` still works)
   and `--steps=verdicts,outcomes,overview` to run only the named parts — a Land takes tens of
   minutes, and a run cut short is resumed, not restarted.
+- `lfu-bb-biotopkataster` re-pinned to the archive LfU republished on 2026-10-07 (Stand 16.09.2026;
+  same licence, layers and fields; 319 016 / 88 434 / 28 845 features) — the pin guard stopped the
+  whole-Brandenburg run on the size change, as designed (`sources.md` §2.12, §6).
 - Docs: ADR-0012; `sources.md` §2.13, §2.14, §3, §6; `design-language.md` §3, §4.2b, §7b; `mvp.md`
   F1, U11; `scoring-criteria.md` protection rows and §6; `ingest/regions/README.md`; the status
   lines in `CLAUDE.md` and `README.md`.
