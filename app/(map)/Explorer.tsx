@@ -219,7 +219,13 @@ export function Explorer({
         <Intro regionKind={region.kind} />
 
         {region.kind === "real" && (
-          <SearchBox region={region.id} regionLabel={regionTitle(region)} onMunicipality={showMunicipality} onUnit={selectFromList} />
+          <SearchBox
+            region={region.id}
+            regionLabel={regionTitle(region)}
+            exampleDe={region.land?.searchExampleDe ?? "Prenzlau"}
+            onMunicipality={showMunicipality}
+            onUnit={selectFromList}
+          />
         )}
 
         <RegionSwitch region={region} regions={regions} />

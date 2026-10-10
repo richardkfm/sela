@@ -18,12 +18,15 @@ interface SearchResult {
 export function SearchBox({
   region,
   regionLabel,
+  exampleDe,
   onMunicipality,
   onUnit,
 }: {
   region: string;
   /** How the region is named in the status line, e.g. "Landkreis Uckermark". */
   regionLabel: string;
+  /** A Gemeinde of the region's Land, for the hint. */
+  exampleDe: string;
   onMunicipality: (municipality: Municipality) => void;
   onUnit: (id: string) => void;
 }) {
@@ -101,7 +104,7 @@ export function SearchBox({
         </button>
       </form>
       <p id="search-help" className="explorer-note muted">
-        Eine Gemeinde in {regionLabel}, z. B. „Prenzlau“ oder „Görlitz“, oder Koordinaten wie „53,31 13,86“ oder „33U 412345
+        Eine Gemeinde in {regionLabel}, z. B. „{exampleDe}“, oder Koordinaten wie „53,31 13,86“ oder „33U 412345
         5881234“ (ETRS89/UTM). Adresssuche gibt es noch nicht.
       </p>
       {result && result.municipalities.length > 0 && (
