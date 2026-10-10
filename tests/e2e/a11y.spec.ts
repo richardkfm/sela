@@ -31,7 +31,7 @@ for (const colorScheme of ["light", "dark"] as const) {
 
     test("map explorer with a unit selected", async ({ page }) => {
       await page.goto(FIXTURE_EXPLORER);
-      await page.locator('nav[aria-label="Flächen in der Pilotregion"] button').first().click();
+      await page.locator('nav[aria-label="Flächen im Ausschnitt"] button').first().click();
       await page.getByRole("region", { name: /Fläche/ }).getByText(/geeignet|ausgeschlossen/).first().waitFor();
       await assertNoViolations(page);
     });

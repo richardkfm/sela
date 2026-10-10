@@ -7,7 +7,7 @@ import { FIXTURE_EXPLORER, getSampleUnitId } from "./helpers";
 
 test("select a unit from the list with the keyboard alone, then follow it to its detail page", async ({ page }) => {
   await page.goto(FIXTURE_EXPLORER);
-  const firstUnit = page.locator('nav[aria-label="Flächen in der Pilotregion"] button').first();
+  const firstUnit = page.locator('nav[aria-label="Flächen im Ausschnitt"] button').first();
   await firstUnit.waitFor();
   await firstUnit.focus();
   await expect(firstUnit).toBeFocused();

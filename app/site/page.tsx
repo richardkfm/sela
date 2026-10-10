@@ -16,6 +16,7 @@ import { SourceAttribution } from "@/components/SourceAttribution";
 import { scenarioToTokenKey, scenarioTokens } from "@/lib/design/tokens";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE, mapVerdictsFor } from "@/lib/map/verdict-style";
 import { pilotRegionInfo } from "@/lib/pilot-region";
+import { PageShell, regionCrumbs } from "@/components/PageShell";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import { CITED_OUTCOME_METHODS } from "@/lib/scoring/nature";
 import { DIMENSION_LABEL_DE } from "@/lib/scoring/outcome-display";
@@ -79,6 +80,7 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
     );
   }
   const regionKind = pilotRegionInfo(first.unit.pilotRegion).kind;
+  const crumbs = await regionCrumbs(first.unit.pilotRegion, { municipality: set.units[0]?.municipality ?? null });
   const cellIds = set.units.map((u) => u.unit.id);
   const areaHa = new Map(set.units.map((u) => [u.unit.id, u.unit.areaHa]));
   const totalHa = set.units.reduce((sum, u) => sum + u.unit.areaHa, 0);
@@ -161,21 +163,36 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
   const methodVersions = [CURRENT_METHOD_VERSION, ...CITED_OUTCOME_METHODS.map((c) => c.method.methodVersion)];
 
   return (
-    <main style={{ padding: "1.5rem", maxWidth: "72rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-      <MethodNote kind={regionKind} />
-      <div>
-        <p className="no-print">
-          <Link href="/">← Zur Karte</Link>
-        </p>
-        <p className="overline">Fläche aus mehreren Zellen</p>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>
+    <PageShell
+      crumbs={crumbs}
+      current="Fläche aus mehreren Zellen"
+      wide
+      title={
+        <>
           <span className="tabular-nums">{COUNT.format(set.units.length)}</span> Zellen ·{" "}
           <span className="tabular-nums">{HA.format(totalHa)}&nbsp;ha</span>
-        </h1>
-        <p className="muted" style={{ margin: 0 }}>
-          {municipalities.length > 0 ? `Gemeinde${municipalities.length > 1 ? "n" : ""}: ${municipalities.join(", ")}` : "Ohne Gemeindezuordnung"}
-          {" · "}Zusammengefasst sind die Werte der einzelnen Zellen; die Fläche ist kein Flurstück und kein Plangebiet.
-        </p>
+        </>
+      }
+      lead={`${municipalities.length > 0 ? `Gemeinde${municipalities.length > 1 ? "n" : ""}: ${municipalities.join(", ")}` : "Ohne Gemeindezuordnung"} · Zusammengefasst sind die Werte der einzelnen Zellen; die Fläche ist kein Flurstück und kein Plangebiet.`}
+      actions={
+        <>
+          <PrintButton />
+          <a className="btn btn-small" href={`/api/site/export?ids=${cellIds.join(",")}&format=geojson`} download>
+            GeoJSON herunterladen
+          </a>
+          <a className="btn btn-small" href={`/api/site/export?ids=${cellIds.join(",")}&format=csv`} download>
+            CSV herunterladen
+          </a>
+          {set.units.length >= 2 && set.units.length <= MAX_SIDE_BY_SIDE && (
+            <Link className="btn btn-small" href={`/compare?ids=${cellIds.join(",")}&scenario=develop_pv`}>
+              Zellen nebeneinander vergleichen
+            </Link>
+          )}
+        </>
+      }
+    >
+      <MethodNote kind={regionKind} authorityDe={pilotRegionInfo(first.unit.pilotRegion).land?.protectionAuthorityDe} />
+      <div>
         {set.missing.length > 0 && (
           <p role="note">{set.missing.length} der angegebenen Zellen gibt es nicht; sie sind nicht enthalten.</p>
         )}
@@ -185,14 +202,6 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
             {set.otherRegion.length === 1 ? " ist" : " sind"} nicht enthalten.
           </p>
         )}
-        <div className="explorer-views no-print" style={{ marginTop: "0.6rem" }}>
-          <PrintButton />
-          {set.units.length >= 2 && set.units.length <= MAX_SIDE_BY_SIDE && (
-            <Link className="btn btn-small" href={`/compare?ids=${cellIds.join(",")}&scenario=develop_pv`}>
-              Zellen nebeneinander vergleichen
-            </Link>
-          )}
-        </div>
       </div>
 
       <section aria-labelledby="classes-heading">
@@ -236,12 +245,12 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
           Prüfhinweise · Schutzgebiete
         </h2>
         {flagsByArea.size === 0 ? (
-          <p className="muted">Keine Zelle berührt nach den Übersichtsdaten des LfU ein Schutzgebiet, das einen Prüfhinweis auslöst.</p>
+          <p className="muted">Keine Zelle berührt nach den Übersichtsdaten des Landesamts ein Schutzgebiet, das einen Prüfhinweis auslöst.</p>
         ) : (
           <>
             <p className="muted" style={{ marginTop: 0 }}>
               {COUNT.format(flagCells)} von {COUNT.format(set.units.length)} Zellen tragen mindestens einen Prüfhinweis
-              (nach den Übersichtsdaten des LfU). Was er für ein Vorhaben bedeutet, steht bei der einzelnen Zelle.
+              (nach den Übersichtsdaten des Landesamts). Was er für ein Vorhaben bedeutet, steht bei der einzelnen Zelle.
             </p>
             <ul className="flag-list">
               {[...flagsByArea.values()].map((f) => (
@@ -426,6 +435,6 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
       </section>
 
       <PrintFooter sources={sources} methodVersions={methodVersions} />
-    </main>
+    </PageShell>
   );
 }

@@ -55,7 +55,10 @@ export async function listVerdictsForUnits(ids: readonly string[], methodVersion
   }));
 }
 
-export async function listCriterionValuesForUnits(ids: readonly string[]): Promise<CriterionValue[]> {
+export async function listCriterionValuesForUnits(
+  ids: readonly string[],
+  criterionIds?: readonly string[],
+): Promise<CriterionValue[]> {
   const rows = await query<{
     id: string;
     criterion_id: string;
@@ -67,8 +70,9 @@ export async function listCriterionValuesForUnits(ids: readonly string[]): Promi
     method_version: string;
   }>(
     `SELECT id, criterion_id, spatial_unit_id, value, unit, confidence, source_id, method_version
-     FROM criterion_value WHERE spatial_unit_id = ANY($1::uuid[])`,
-    [ids],
+     FROM criterion_value
+     WHERE spatial_unit_id = ANY($1::uuid[]) AND ($2::text[] IS NULL OR criterion_id = ANY($2::text[]))`,
+    [ids, criterionIds ?? null],
   );
   return rows.map((r) => ({
     id: Number(r.id),
@@ -138,4 +142,14 @@ export async function listOutcomesForUnits(ids: readonly string[], methodVersion
     status: r.status,
     methodVersion: r.method_version,
   }));
+}
+
+/** Each unit's polygon in EPSG:4326 and its Gemeinde AGS, for exports (roadmap-planning-tool.md Phase 3). */
+export async function listUnitGeometries(ids: readonly string[]): Promise<Map<string, { geometry: unknown; ags: string | null }>> {
+  if (ids.length === 0) return new Map();
+  const rows = await query<{ id: string; ags: string | null; geometry: string }>(
+    `SELECT id, ags, ST_AsGeoJSON(ST_Transform(geom, 4326), 7) AS geometry FROM spatial_unit WHERE id = ANY($1::uuid[])`,
+    [ids],
+  );
+  return new Map(rows.map((r) => [r.id, { geometry: JSON.parse(r.geometry) as unknown, ags: r.ags }]));
 }

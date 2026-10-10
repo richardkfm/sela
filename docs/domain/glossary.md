@@ -1,6 +1,6 @@
 # Glossary
 
-**Version band:** `0.2.x`–`0.3.x` · **Status:** first draft · **Last updated:** 2026-09-27
+**Version band:** `0.2.x`–`0.3.x` · **Status:** first draft · **Last updated:** 2026-10-10 (region, AGS, overview, LfULG)
 
 Shared vocabulary for sela's domain. English is the working language of documentation and code;
 German terms are kept where they are the precise legal or technical term, per `CLAUDE.md` §5.
@@ -20,6 +20,10 @@ meet in schema, code, or UI — not just a definition.
 | **Landschaftsschutzgebiet** | A landscape protection area — a lighter statutory protection category than *Naturschutzgebiet*, still a relevant constraint or exclusion input for `develop` suitability. |
 | **Naturschutzgebiet** | A nature reserve — a strict statutory protection category. Distinguished from *Landschaftsschutzgebiet* because the two carry different constraint weight (U4). |
 | **Schutzgebiet** | Protection area, used as the general term when a source (e.g. BfN's dataset) covers several protection categories together. |
+| **Region** (`region`) | A Land, a Landkreis or the synthetic fixture (ADR-0012): what the explorer shows and what the ingest runs for, by id `<slug>-<ags>` — `brandenburg-12`, `sachsen-14`, `uckermark-12073`. A region with its own cells is a *grid region*; a Landkreis of a Land grid is a *sector view* over the parent's cells by AGS prefix. |
+| **AGS** (*Amtlicher Gemeindeschlüssel*, `spatial_unit.ags`) | The official 8-digit municipality key: 2 digits Land, 1 Regierungsbezirk, 2 Kreis, 3 Gemeinde. Each cell is stamped with its *Gemeinde*'s AGS at ingest; `left(ags, 5)` is its Landkreis, `left(ags, 2)` its Land. |
+| **Overview** / **Wabe** (`unit_overview`) | The display pyramid below the cell zoom: 1 km and 5 km hexagons, each in the colour and pattern of the *most frequent* class of its cells, with the share on hover. Never a unit, never computed on (`design-language.md` §4.2b). |
+| **LfU** / **LfULG** | The Länder's environment agencies whose protected areas the exclusion reads: *Landesamt für Umwelt Brandenburg* (LfU) and *Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie* (LfULG). Screens that may show either say "Landesamt". |
 | **Netzverknüpfungspunkt** | Grid connection point — where a generation asset physically connects to the electricity network. Referenced in `docs/product/mvp.md` §4 as a strong real-world suitability driver; in-scope status is open (U3). |
 
 ## Scenarios

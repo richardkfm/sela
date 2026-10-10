@@ -3,7 +3,8 @@
 --   psql "$DATABASE_URL" -v pilot_region='...' -v cell_size=100 -f 04_generate_grid.sql
 --
 -- Idempotent: a hex already present for this pilot_region (by exact
--- geometry) is not re-inserted. Cells only partially covered by the
+-- geometry) is not re-inserted. ST_HexagonGrid is anchored at the origin of
+-- the CRS, so a Landkreis's cells coincide with its Land's (ADR-0012). Cells only partially covered by the
 -- boundary are excluded (ST_CoveredBy) rather than clipped — a clipped
 -- edge cell would not be a hexagon and spatial_unit.geom is typed
 -- geometry(Polygon, 25832); this is a stated v1 simplification, not a bug.
@@ -26,6 +27,9 @@ WHERE boundary.pilot_region = :'pilot_region'
     SELECT 1 FROM spatial_unit su
     WHERE su.pilot_region = :'pilot_region'
       AND su.kind = 'hex_grid'
+      -- && first, so the GiST index answers before ST_Equals runs: without it a
+      -- Land's million cells would each be compared with every other.
+      AND su.geom && hex.geom
       AND ST_Equals(su.geom, hex.geom)
   );
 

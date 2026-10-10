@@ -86,7 +86,7 @@ async function sampleSelectedUnit(page: import("@playwright/test").Page): Promis
 
 async function selectUnit(page: import("@playwright/test").Page, unitId: string): Promise<void> {
   await page.goto(FIXTURE_EXPLORER);
-  await page.locator('nav[aria-label="Flächen in der Pilotregion"] button', { hasText: unitId.slice(0, 8) }).click();
+  await page.locator('nav[aria-label="Flächen im Ausschnitt"] button', { hasText: unitId.slice(0, 8) }).click();
   await page.getByRole("region", { name: new RegExp(unitId.slice(0, 8)) }).waitFor();
 }
 

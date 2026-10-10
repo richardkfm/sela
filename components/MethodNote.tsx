@@ -1,5 +1,6 @@
 // The note every screen that shows a verdict carries, worded by the kind of
-// region the numbers belong to (lib/pilot-region.ts).
+// region the numbers belong to and the Land whose protected areas it reads
+// (lib/pilot-region.ts).
 //
 // On the synthetic fixture, every number comes from lib/scoring/illustrative-
 // weights.ts, so the note is the ILLUSTRATIV banner (ILLUSTRATIVE_MARKER). On a
@@ -15,17 +16,17 @@ import Link from "next/link";
 import type { PilotRegionKind } from "@/lib/pilot-region";
 import { ILLUSTRATIVE_MARKER } from "@/lib/scoring/illustrative-weights";
 
-function message(kind: PilotRegionKind, compact: boolean) {
+function message(kind: PilotRegionKind, compact: boolean, authorityDe: string) {
   if (kind === "real") {
     return compact ? (
       <>
-        Einordnung nach veröffentlichten Regeln auf echten Messwerten (DWD, BKG, LfU Brandenburg) – beratend,
+        Einordnung nach veröffentlichten Regeln auf echten Messwerten (DWD, BKG, {authorityDe}) – beratend,
         keine Planungs- oder Genehmigungsaussage.
       </>
     ) : (
       <>
-        Diese Einordnung folgt veröffentlichten, entschiedenen Regeln auf echten Messwerten (DWD, BKG, LfU
-        Brandenburg). Sie ist beratend: keine Planungs-, Eignungs- oder Genehmigungsaussage. Wind ist noch nicht
+        Diese Einordnung folgt veröffentlichten, entschiedenen Regeln auf echten Messwerten (DWD, BKG,{" "}
+        {authorityDe}). Sie ist beratend: keine Planungs-, Eignungs- oder Genehmigungsaussage. Wind ist noch nicht
         bewertet, nur auf Ausschlüsse geprüft.
       </>
     );
@@ -66,12 +67,26 @@ function Tail({ kind }: { kind: PilotRegionKind }) {
   );
 }
 
-export function MethodNote({ compact = false, kind = "fixture" }: { compact?: boolean; kind?: PilotRegionKind }) {
+/**
+ * `authorityDe` names the Land's environment agency whose protected areas the
+ * classification reads (lib/pilot-region.ts LAENDER) — LfU Brandenburg, LfULG
+ * Sachsen; without one the note names the role instead of guessing a Land.
+ */
+export function MethodNote({
+  compact = false,
+  kind = "fixture",
+  authorityDe,
+}: {
+  compact?: boolean;
+  kind?: PilotRegionKind;
+  authorityDe?: string;
+}) {
+  const authority = authorityDe ?? "Landesumweltbehörde";
   if (compact) {
     return (
       <div role="note" className="illustrative-note">
         <Lead kind={kind} />
-        {message(kind, true)}
+        {message(kind, true, authority)}
         <Tail kind={kind} />
       </div>
     );
@@ -89,7 +104,7 @@ export function MethodNote({ compact = false, kind = "fixture" }: { compact?: bo
       }}
     >
       <Lead kind={kind} />
-      {message(kind, false)}
+      {message(kind, false, authority)}
       <Tail kind={kind} />
     </div>
   );

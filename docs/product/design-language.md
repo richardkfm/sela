@@ -1,6 +1,6 @@
 # sela design language
 
-**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-09-28 (§4.2a classified map, several cells, Gemeinde outline; §7a print; §8 Prüfhinweis, habitat)
+**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-10-10 (§3 where you are, the link is the view; §4.2b the overview below the cell zoom; §7b exports) — taken under the owner's instruction of 2026-10-10, pending confirmation in review
 
 This document exists so that "it has to look good" is a standard someone can be held to, rather than a matter of taste re-argued in every session. Deviating from it triggers the confirmation gate in `CLAUDE.md` §3.
 
@@ -50,6 +50,9 @@ The explorer remains a plan view: pitch is locked at 0 there.
 - **Generous whitespace, tight information.** Space between groups; no space wasted inside them. Density is fine where it is legible — sparse is not the same as shallow.
 - **One accent action per screen.** The primary action is obvious; everything else is secondary or tertiary.
 - **Map surfaces:** the map fills the screen; panels float over it, paper-white with a hairline edge and a short, soft shadow — enough to lift them off a busy basemap, never glass. On the explorer the basemap is further muted so the data leads; the legend doubles as the first table view (counts per class, one shared axis).
+- **Where you are, always** *(added 2026-10-10, ADR-0012)*: the panel names the region as Land › Landkreis, each a link; the Länder are buttons, the Landkreise of a Land one select; the synthetic fixture is a tertiary link, never beside the real regions as if it were one. Every page below the map carries the same trail (Land › Landkreis › Gemeinde › this page) and "back to the map" returns to the same region and cell.
+- **The link is the view** *(added 2026-10-10)*: region, technology, map position, the selected cell and the cells chosen together live in the URL, so a view can be pasted into an e-mail or a council paper and opens the same way for the next reader. A "Link kopieren" button says so; nothing else about sharing is added to the chrome.
+- **Showing less is a filter on the paint, never on the count** *(added 2026-10-10)*: "nur Zellen ohne Ausschluss", "nur ohne Prüfhinweis" hide cells; the legend's numbers stay the region's, and the panel says so beside the switches.
 
 ## 4. Colour
 
@@ -112,8 +115,41 @@ encoding (§4.2); the two never share a surface, because verdict maps show no sc
 paper halo and from the dashed Prüfhinweis contour, and legible in greyscale because it is a
 lightness change plus a line, not a hue. The list swatch repeats it.
 
-**A *Gemeinde* found by search** is outlined with a solid ink line (2.25 px); the pilot boundary
+**A *Gemeinde* found by search** is outlined with a solid ink line (2.25 px); the region boundary
 stays dashed. One outline at a time.
+
+### 4.2b The overview below the cell zoom
+
+*Added 2026-10-10 under the owner's instruction to add both Länder (ADR-0012), pending
+confirmation in review.*
+
+A Land is a million 100 m cells; below zoom 11 the map shows **aggregated hexagons** instead —
+1 km from zoom 8 to 10, 5 km at zoom 7 and below — each in the colour **and pattern of the most
+frequent class of its cells**. The encoding is the cells' own (§4.2a), so nothing new has to be
+learned, and the classes keep their meaning: an amber 5 km hexagon means "most of these cells are
+*ohne Einschränkung*", never "this area is buildable".
+
+Three rules keep that honest, because this is the most likely misreading on a projector:
+
+- **The legend says what the hexagons are** whenever the map is below the cell zoom — one line,
+  on a left rule like the method note: most frequent class per hexagon, share on hover, no cell
+  visible here. The legend's counts stay the region's cell counts; a hexagon is never counted.
+- **Hovering a hexagon gives the share** ("5-km-Wabe · 2 480 Zellen · am häufigsten ohne
+  Einschränkung (61 %)"); a tie between classes goes to the more restrictive one in the data.
+- **Nothing is computed on a hexagon.** It is a display pyramid over the cells
+  (`unit_overview`), not a unit; no outcome, no site, no export reads one.
+
+From zoom 11 the cells themselves are drawn (as a texture of two to four pixels each) and from
+zoom 12 they are addressable, as before. The sector view — a Landkreis with every cell visible —
+is unchanged.
+
+## 7b. Exports for other tools
+
+*Added 2026-10-10.* A site (cells chosen together) downloads as GeoJSON (EPSG:4326 polygons,
+every class, measured value and Prüfhinweis as properties, the sources and the advisory note at
+the collection level) or as CSV (one row per cell, units in the column names, every row citing its
+sources). §7's binding rule applies to files as to cards: an export that cannot cite itself does
+not render.
 
 ### 4.3 Validation — measured, not asserted
 

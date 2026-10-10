@@ -96,19 +96,40 @@ export async function upsertVerdict(verdict: SuitabilityVerdict): Promise<void> 
 }
 
 /**
- * Replaces every verdict for one pilot region and method version in one
- * transaction, writing in batches. The region-scale counterpart of
- * upsertVerdict: at ~117 000 units × 3 technologies, one statement per row is
- * minutes of round trips. Deleting first means a unit whose verdict can no
- * longer be computed loses its stale row instead of keeping an outdated one.
+ * Replaces every verdict for one grid region and method version in one
+ * transaction, streaming the rows in batches — a Land is a million units × 3
+ * technologies, too many to hold at once (ADR-0012), and one statement per
+ * row would be hours of round trips. Deleting first means a unit whose
+ * verdict can no longer be computed loses its stale row instead of keeping an
+ * outdated one. Returns the number of rows written.
  */
 export async function replaceVerdictsForPilotRegion(
   pilotRegion: string,
   methodVersion: string,
-  verdicts: readonly SuitabilityVerdict[],
+  verdicts: Iterable<SuitabilityVerdict> | AsyncIterable<SuitabilityVerdict>,
   batchSize = 5000,
-): Promise<void> {
+): Promise<number> {
   const client = await getPool().connect();
+  let written = 0;
+  const flush = async (batch: readonly SuitabilityVerdict[]) => {
+    await client.query(
+      `INSERT INTO suitability_verdict
+         (spatial_unit_id, technology, verdict, score, limiting_criterion_id, excluded_by_criterion_id, method_version,
+          protection_flag_count)
+       SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::numeric[], $5::text[], $6::text[], $7::text[], $8::int[])`,
+      [
+        batch.map((v) => v.spatialUnitId),
+        batch.map((v) => v.technology),
+        batch.map((v) => v.verdict),
+        batch.map((v) => v.score),
+        batch.map((v) => v.limitingCriterionId),
+        batch.map((v) => v.excludedByCriterionId),
+        batch.map((v) => v.methodVersion),
+        batch.map((v) => v.protectionFlagCount ?? null),
+      ],
+    );
+    written += batch.length;
+  };
   try {
     await client.query("BEGIN");
     await client.query(
@@ -116,26 +137,17 @@ export async function replaceVerdictsForPilotRegion(
        WHERE su.id = sv.spatial_unit_id AND su.pilot_region = $1 AND sv.method_version = $2`,
       [pilotRegion, methodVersion],
     );
-    for (let i = 0; i < verdicts.length; i += batchSize) {
-      const batch = verdicts.slice(i, i + batchSize);
-      await client.query(
-        `INSERT INTO suitability_verdict
-           (spatial_unit_id, technology, verdict, score, limiting_criterion_id, excluded_by_criterion_id, method_version,
-            protection_flag_count)
-         SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::numeric[], $5::text[], $6::text[], $7::text[], $8::int[])`,
-        [
-          batch.map((v) => v.spatialUnitId),
-          batch.map((v) => v.technology),
-          batch.map((v) => v.verdict),
-          batch.map((v) => v.score),
-          batch.map((v) => v.limitingCriterionId),
-          batch.map((v) => v.excludedByCriterionId),
-          batch.map((v) => v.methodVersion),
-          batch.map((v) => v.protectionFlagCount ?? null),
-        ],
-      );
+    let batch: SuitabilityVerdict[] = [];
+    for await (const verdict of verdicts) {
+      batch.push(verdict);
+      if (batch.length >= batchSize) {
+        await flush(batch);
+        batch = [];
+      }
     }
+    if (batch.length > 0) await flush(batch);
     await client.query("COMMIT");
+    return written;
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -143,4 +155,3 @@ export async function replaceVerdictsForPilotRegion(
     client.release();
   }
 }
-

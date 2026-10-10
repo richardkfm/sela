@@ -1,5 +1,6 @@
 -- Step 20: sample the real sources onto the pilot region's cells.
--- Invoke with: psql "$DATABASE_URL" -v pilot_region='uckermark-12073' -f 20_sample.sql
+-- Invoke with: psql "$DATABASE_URL" -v pilot_region='uckermark-12073' -v protection_source='lfu-bb-schutzgebiete' -f 20_sample.sql
+-- (protection_source: the Land's protected-area source, lib/pilot-region.ts LAENDER — ADR-0012)
 --
 -- One staging.raw_sample row per cell and criterion. Idempotent via ON CONFLICT.
 -- The reading method per criterion is chosen to match each source's resolution
@@ -117,7 +118,7 @@ SELECT c.id,
 FROM cells c;
 
 INSERT INTO staging.raw_sample (spatial_unit_id, criterion_id, source_id, raw_value, unit)
-SELECT id, criterion, 'lfu-bb-schutzgebiete', least(share, 1), 'Flächenanteil'
+SELECT id, criterion, :'protection_source', least(share, 1), 'Flächenanteil'
 FROM protected_share CROSS JOIN (VALUES ('pv_protection_status'), ('wind_protection_status')) AS k(criterion)
 ON CONFLICT (spatial_unit_id, criterion_id) DO UPDATE
   SET raw_value = EXCLUDED.raw_value, unit = EXCLUDED.unit, source_id = EXCLUDED.source_id;

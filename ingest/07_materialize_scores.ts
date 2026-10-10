@@ -5,10 +5,11 @@
 // the GDAL ingest container (which has no Node runtime). See
 // ingest/README.md "Materializing scores (Phase 3, 0.3.0)".
 //
-// Usage: pnpm db:materialize -- --pilot-region=fixture-region [--outcomes=illustrative|methods|none]
+// Usage: pnpm db:materialize -- --region=fixture-region [--outcomes=illustrative|methods|none]
+//        (--pilot-region= is accepted as the older spelling)
 //
 // Outcomes default to `illustrative` for the synthetic fixture and `methods`
-// for every real pilot region. The illustrative outcome shapes invent energy,
+// for every real region. The illustrative outcome shapes invent energy,
 // climate and nature-capital figures from a "site quality" scalar; on the
 // fixture that exercises the comparison screen, on real land it would put
 // made-up MWh/a on real fields. `methods` writes only the cited outcome
@@ -16,16 +17,30 @@
 // §4), each under its own method_version, with outcome_input rows linking
 // every number to its criterion values; every other dimension stays
 // "noch nicht modelliert" (mvp.md §8.3). `none` writes no outcomes.
+//
+// A region is processed in chunks of units (ADR-0012): a Land is a million
+// cells, and their criterion values do not fit in memory at once. Only the
+// fixture's weighted criteria need every value up front (the limiting-
+// criterion reference, decision memo Q5); real regions are classified cell
+// by cell and never need it.
+//
+// After the verdicts, ingest/08_materialize_overview.sql writes the per-region
+// aggregates the explorer reads (the overview pyramid, the legend's counts,
+// the sources credited), for the grid region and each Landkreis in it.
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getPool } from "../lib/db/client";
 import { listCriterionDefinitions, listCriterionValuesForPilotRegion } from "../lib/db/queries/criteria";
 import { replaceOutcomesForPilotRegion, upsertOutcomeMethod, upsertOutcomeRow } from "../lib/db/queries/outcomes";
 import { listSpatialUnitIds } from "../lib/db/queries/spatial-units";
+import { listCriterionValuesForUnits } from "../lib/db/queries/unit-set";
 import { replaceVerdictsForPilotRegion } from "../lib/db/queries/verdicts";
 import { listProtectionOverlapsForPilotRegion } from "../lib/db/queries/protection";
 import { protectionFlags, type ProtectionOverlap } from "../lib/scoring/protection-flags";
 import { CURRENT_METHOD_VERSION } from "../lib/scoring/method-version";
-import { CITED_OUTCOME_METHODS, methodOutcomeRows } from "../lib/scoring/nature";
+import { CITED_OUTCOME_METHODS, methodOutcomeRows, type OutcomeRowWithInputs } from "../lib/scoring/nature";
 import { computeOutcomeRow } from "../lib/scoring/outcomes";
 import { LIMITING_MIN_GAP } from "../lib/scoring/pv-rules";
 import { computeLimitingReference, computeSuitability, type LimitingReference } from "../lib/scoring/suitability";
@@ -39,9 +54,14 @@ import {
 
 type OutcomeMode = "illustrative" | "methods" | "none";
 
+/** Units per chunk: ~100 000 cells × a dozen values is a few hundred MB of rows, well inside a 2 GB heap. */
+const CHUNK_UNITS = 50_000;
+
+const OVERVIEW_SQL = path.join(path.dirname(fileURLToPath(import.meta.url)), "08_materialize_overview.sql");
+
 function parseArgs(argv: readonly string[]): { pilotRegion: string; outcomes: OutcomeMode } {
-  const flag = argv.find((a) => a.startsWith("--pilot-region="));
-  const pilotRegion = flag ? flag.slice("--pilot-region=".length) : "fixture-region";
+  const flag = argv.find((a) => a.startsWith("--region=") || a.startsWith("--pilot-region="));
+  const pilotRegion = flag ? flag.slice(flag.indexOf("=") + 1) : "fixture-region";
   const outcomesFlag = argv.find((a) => a.startsWith("--outcomes="))?.slice("--outcomes=".length);
   if (outcomesFlag !== undefined && !["illustrative", "methods", "none"].includes(outcomesFlag)) {
     throw new Error(`--outcomes must be "illustrative", "methods" or "none", got "${outcomesFlag}"`);
@@ -50,30 +70,41 @@ function parseArgs(argv: readonly string[]): { pilotRegion: string; outcomes: Ou
   return { pilotRegion, outcomes: (outcomesFlag as OutcomeMode | undefined) ?? fallback };
 }
 
-/** The cited outcome methods (ADR-0008): each method's rows replace its previous run in one transaction. */
+function* chunks<T>(items: readonly T[], size: number): Generator<readonly T[]> {
+  for (let i = 0; i < items.length; i += size) yield items.slice(i, i + size);
+}
+
+function groupByUnit(values: readonly CriterionValue[]): Map<string, CriterionValue[]> {
+  const byUnit = new Map<string, CriterionValue[]>();
+  for (const value of values) {
+    const list = byUnit.get(value.spatialUnitId) ?? [];
+    list.push(value);
+    byUnit.set(value.spatialUnitId, list);
+  }
+  return byUnit;
+}
+
+/** The cited outcome methods (ADR-0008): each method's rows replace its previous run in one transaction, chunk by chunk. */
 async function materializeCitedMethods(pilotRegion: string, unitIds: readonly string[]): Promise<void> {
   for (const cited of CITED_OUTCOME_METHODS) {
     await upsertOutcomeMethod(cited.method);
-    const values = await listCriterionValuesForPilotRegion(pilotRegion, cited.criteria);
-    const valuesByUnit = new Map<string, CriterionValue[]>();
-    for (const value of values) {
-      const list = valuesByUnit.get(value.spatialUnitId) ?? [];
-      list.push(value);
-      valuesByUnit.set(value.spatialUnitId, list);
+    let valueCount = 0;
+    async function* rows(): AsyncGenerator<OutcomeRowWithInputs> {
+      for (const chunk of chunks(unitIds, CHUNK_UNITS)) {
+        const values = await listCriterionValuesForUnits(chunk, cited.criteria);
+        valueCount += values.length;
+        yield* methodOutcomeRows(cited, chunk, groupByUnit(values));
+      }
     }
-    const written = await replaceOutcomesForPilotRegion(
-      pilotRegion,
-      cited.method.methodVersion,
-      methodOutcomeRows(cited, unitIds, valuesByUnit),
-    );
-    console.log(`  ${cited.method.methodVersion}: ${written} outcome rows from ${values.length} criterion values`);
+    const written = await replaceOutcomesForPilotRegion(pilotRegion, cited.method.methodVersion, rows());
+    console.log(`  ${cited.method.methodVersion}: ${written} outcome rows from ${valueCount} criterion values`);
   }
 }
 
 async function main() {
   const { pilotRegion, outcomes } = parseArgs(process.argv.slice(2));
   console.log(
-    `materializing verdicts for pilot_region "${pilotRegion}" (criteria with weight > 0 are scored with the ` +
+    `materializing verdicts for region "${pilotRegion}" (criteria with weight > 0 are scored with the ` +
       `illustrative weights; real PV is classified by the decided rules, real-pv-v1) ` +
       `(method_version=${CURRENT_METHOD_VERSION}, outcomes=${outcomes})`,
   );
@@ -84,36 +115,32 @@ async function main() {
   const definitions = allDefinitions.filter((d) =>
     d.appliesTo.some((t) => (TECHNOLOGIES as readonly string[]).includes(t)),
   );
-  const allValues = await listCriterionValuesForPilotRegion(
-    pilotRegion,
-    definitions.map((d) => d.id),
-  );
+  const criterionIds = definitions.map((d) => d.id);
 
   if (unitIds.length === 0) {
-    console.warn(`no spatial_unit rows found for pilot_region "${pilotRegion}" — nothing to materialize`);
+    console.warn(`no spatial_unit rows found for region "${pilotRegion}" — nothing to materialize`);
     return;
-  }
-
-  const valuesByUnit = new Map<string, CriterionValue[]>();
-  for (const value of allValues) {
-    const list = valuesByUnit.get(value.spatialUnitId) ?? [];
-    list.push(value);
-    valuesByUnit.set(value.spatialUnitId, list);
   }
 
   // Flow F2's Q5 rule (decision memo): a limiting criterion is named against
   // the best value of that criterion among the units scored for the same
-  // technology in this region — the compared land — so the first pass finds
-  // those best values.
-  const limitingReference = new Map<Technology, LimitingReference>(
-    TECHNOLOGIES.map((technology) => [
-      technology,
-      {
-        best: computeLimitingReference({ technology, valuesByUnit, definitions, normalize: illustrativeNormalize }),
-        minGap: LIMITING_MIN_GAP,
-      },
-    ]),
-  );
+  // technology in this region — the compared land — so a first pass finds
+  // those best values. Only weighted criteria have one; a real region's are
+  // all weight 0 (classified, real-pv-v1), so it skips the pass and the memory.
+  const weighted = definitions.some((d) => d.weight > 0);
+  let limitingReference: Map<Technology, LimitingReference> | undefined;
+  if (weighted) {
+    const valuesByUnit = groupByUnit(await listCriterionValuesForPilotRegion(pilotRegion, criterionIds));
+    limitingReference = new Map(
+      TECHNOLOGIES.map((technology) => [
+        technology,
+        {
+          best: computeLimitingReference({ technology, valuesByUnit, definitions, normalize: illustrativeNormalize }),
+          minGap: LIMITING_MIN_GAP,
+        },
+      ]),
+    );
+  }
 
   // Prüfhinweise per unit, counted with the one rule that words them
   // (lib/scoring/protection-flags.ts), so the map can mark flagged cells. Only
@@ -130,65 +157,88 @@ async function main() {
     return protectionFlags(overlapsByUnit.get(strict.spatialUnitId) ?? [], strict.value).length;
   };
 
-  const verdicts: SuitabilityVerdict[] = [];
   let skippedVerdicts = 0;
   let outcomeCount = 0;
+  let done = 0;
 
-  for (const spatialUnitId of unitIds) {
-    const values = valuesByUnit.get(spatialUnitId) ?? [];
+  async function* verdicts(): AsyncGenerator<SuitabilityVerdict> {
+    for (const chunk of chunks(unitIds, CHUNK_UNITS)) {
+      const valuesByUnit = groupByUnit(await listCriterionValuesForUnits(chunk, criterionIds));
+      for (const spatialUnitId of chunk) {
+        const values = valuesByUnit.get(spatialUnitId) ?? [];
 
-    for (const technology of TECHNOLOGIES) {
-      try {
-        const verdict = computeSuitability({
-          spatialUnitId,
-          technology,
-          values,
-          definitions,
-          normalize: illustrativeNormalize,
-          suitabilityThreshold: ILLUSTRATIVE_SUITABILITY_THRESHOLD,
-          methodVersion: CURRENT_METHOD_VERSION,
-          limitingReference: limitingReference.get(technology),
-        });
-        verdicts.push(technology === "wind" ? verdict : { ...verdict, protectionFlagCount: flagCount(values) });
-      } catch (err) {
-        if (err instanceof SelaScoringError) {
-          // No scoreable criterion values for this unit/technology yet —
-          // skip rather than aborting the whole run (roadmap §4.3's
-          // contract: absence is not evidence of anything).
-          skippedVerdicts += 1;
-          continue;
+        for (const technology of TECHNOLOGIES) {
+          try {
+            const verdict = computeSuitability({
+              spatialUnitId,
+              technology,
+              values,
+              definitions,
+              normalize: illustrativeNormalize,
+              suitabilityThreshold: ILLUSTRATIVE_SUITABILITY_THRESHOLD,
+              methodVersion: CURRENT_METHOD_VERSION,
+              limitingReference: limitingReference?.get(technology),
+            });
+            yield technology === "wind" ? verdict : { ...verdict, protectionFlagCount: flagCount(values) };
+          } catch (err) {
+            if (err instanceof SelaScoringError) {
+              // No scoreable criterion values for this unit/technology yet —
+              // skip rather than aborting the whole run (roadmap §4.3's
+              // contract: absence is not evidence of anything).
+              skippedVerdicts += 1;
+              continue;
+            }
+            throw err;
+          }
         }
-        throw err;
-      }
-    }
 
-    if (outcomes !== "illustrative") continue;
-    for (const scenario of SCENARIOS) {
-      for (const dimension of OUTCOME_DIMENSIONS) {
-        const aggregated = illustrativeOutcomeAggregate(scenario, dimension, values);
-        const row = computeOutcomeRow({
-          spatialUnitId,
-          scenario,
-          dimension,
-          aggregated,
-          methodVersion: CURRENT_METHOD_VERSION,
-        });
-        await upsertOutcomeRow(row);
-        outcomeCount += 1;
+        if (outcomes !== "illustrative") continue;
+        for (const scenario of SCENARIOS) {
+          for (const dimension of OUTCOME_DIMENSIONS) {
+            const aggregated = illustrativeOutcomeAggregate(scenario, dimension, values);
+            const row = computeOutcomeRow({
+              spatialUnitId,
+              scenario,
+              dimension,
+              aggregated,
+              methodVersion: CURRENT_METHOD_VERSION,
+            });
+            await upsertOutcomeRow(row);
+            outcomeCount += 1;
+          }
+        }
       }
+      done += chunk.length;
+      if (unitIds.length > CHUNK_UNITS) console.log(`  ${done} / ${unitIds.length} units`);
     }
   }
 
-  await replaceVerdictsForPilotRegion(pilotRegion, CURRENT_METHOD_VERSION, verdicts);
+  const verdictCount = await replaceVerdictsForPilotRegion(pilotRegion, CURRENT_METHOD_VERSION, verdicts());
+  overlapsByUnit.clear();
   if (outcomes === "methods") {
-    valuesByUnit.clear();
     await materializeCitedMethods(pilotRegion, unitIds);
   }
-  const verdictCount = verdicts.length;
   console.log(
     `materialized ${verdictCount} verdicts (${skippedVerdicts} skipped — no scoreable criteria) ` +
       `and ${outcomeCount} illustrative outcome rows across ${unitIds.length} units`,
   );
+
+  console.log("materializing the overview pyramid and per-region counts (ingest/08_materialize_overview.sql)");
+  const sql = (await readFile(OVERVIEW_SQL, "utf8"))
+    // psql variables, resolved here: the file is also runnable with psql -v.
+    .replaceAll(":'grid_region'", `'${pilotRegion.replaceAll("'", "''")}'`)
+    .replaceAll(":'method_version'", `'${CURRENT_METHOD_VERSION.replaceAll("'", "''")}'`)
+    .replace(/^\\set .*$/gm, "");
+  const client = await getPool().connect();
+  try {
+    const result = await client.query(sql);
+    const last = Array.isArray(result) ? result[result.length - 1] : result;
+    for (const row of last?.rows ?? []) {
+      console.log(`  ${row.region_id}: ${row.hexagons} hexagons of ${row.level_m} m over ${row.cells} cells`);
+    }
+  } finally {
+    client.release();
+  }
 }
 
 main()

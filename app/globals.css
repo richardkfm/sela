@@ -863,3 +863,156 @@ input[type="range"].slider {
     break-inside: avoid;
   }
 }
+
+/* --- Regions, URL state and filters (ADR-0012, roadmap-planning-tool.md) --- */
+
+.explorer-where a {
+  color: inherit;
+}
+.explorer-intro details {
+  border-top: 1px solid var(--hairline);
+  padding-top: 0.5rem;
+}
+.explorer-intro details + details {
+  margin-top: 0.5rem;
+}
+.explorer-intro summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.explorer-intro summary::-webkit-details-marker {
+  display: none;
+}
+.explorer-intro summary::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 120ms;
+}
+.explorer-intro details[open] summary::before {
+  transform: rotate(45deg);
+}
+.explorer-intro summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 3px;
+}
+.intro-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.intro-list strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.region-select select {
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+}
+.region-select select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explorer-views a[aria-current="page"] {
+  background: var(--text-primary);
+  color: var(--ground);
+  border-color: var(--text-primary);
+}
+.filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.filter-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.filter-option input {
+  margin: 0.2rem 0 0;
+  accent-color: var(--text-primary);
+}
+.filter-option input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.legend-overview {
+  border-left: 3px solid var(--text-secondary);
+  padding-left: 0.6rem;
+}
+
+/* --- Page shell: every screen below the map (design-language.md §3) ----- */
+
+.page-shell {
+  padding: 1.5rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.page-shell-wide {
+  max-width: 76rem;
+}
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.page-header .wordmark {
+  margin: 0;
+}
+.page-crumbs {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.page-crumbs a {
+  color: inherit;
+}
+.page-crumbs span[aria-hidden] {
+  color: var(--text-secondary);
+}
+.page-title {
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.page-lead {
+  margin: 0.2rem 0 0;
+  color: var(--text-secondary);
+}
+@media print {
+  .page-header {
+    border-bottom: 1px solid #000;
+  }
+}

@@ -25,6 +25,82 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
 
 ## [Unreleased]
 
+### Added — two Länder, the sector view kept, a planning tool for two audiences
+
+- **Brandenburg and Sachsen as a whole, with every Landkreis as a sector view** (ADR-0012; set by
+  the project owner on 2026-10-10 — "add Saxony and Brandenburg as a whole, keep the small sector
+  view" — and implemented under that instruction, **pending the owner's confirmation in review**;
+  the plan, assumptions, unknowns and risks are in `docs/product/roadmap-planning-tool.md`):
+  - a `region` table (migration `0010`): Land › Landkreis › fixture, with AGS, parent, VG25
+    boundary and cell count; `uckermark-12073` becomes a Landkreis of `brandenburg-12`, existing
+    installs are registered and their cells stamped by the migration;
+  - every cell is stamped with its *Gemeinde*'s AGS at ingest (`spatial_unit.ags`,
+    `ingest/real/24_stamp_ags.sql`), so a Landkreis of a Land grid is a prefix test, not a second
+    grid; every region-scoped read takes a `RegionScope`;
+  - ingest by region id: `REGION=brandenburg-12 | sachsen-14 | uckermark-12073 | <slug>-<ags>`;
+    the Land's own sources follow from the AGS; the boundaries of both Länder are committed in
+    `ingest/regions/` (the Uckermark's moved there), any other Landkreis is cut from the VG25
+    archive on the fly; `19_regions.sh` registers the Land and its Kreise with boundaries;
+  - the materialiser runs in chunks of 50 000 units and writes, after the verdicts, the
+    **overview pyramid** (`unit_overview`: 1 km and 5 km hexagons with counts per class and the
+    most frequent class per technology — ties to the more restrictive class), the legend's
+    counts (`region_verdict_count`), the credited sources (`region_source`) and `region.unit_count`
+    (`ingest/08_materialize_overview.sql`);
+  - tiles below zoom 11 are cut from the overview under the same `v_*` keys the cells use; cells
+    are drawn from zoom 11 (they were drawn from zoom 9, under a pixel wide) and are addressable
+    from zoom 12 as before; a click on an overview hexagon takes the reader one band closer;
+  - the legend says what the overview is whenever the map is below the cell zoom, and hovering a
+    hexagon gives its cell count and the share of its most frequent class
+    (`design-language.md` §4.2b);
+  - the region boundary is served from the row (`/api/region/[id]/outline`) with the VG25 notice;
+    `public/pilot-uckermark.geojson` and `02c_pilot_boundary_display.sh` are gone.
+- **Sachsen's protected areas** (`lfulg-sn-schutzgebiete`, `docs/data/sources.md` §2.13): the
+  LfULG's LUIS downloads (NSG, Nationalpark, LSG, Biosphärenreservat, FFH, SPA), `dl-de/by-2-0`
+  per the GDI-DE record of the service that serves the same data, read at source; confirmed under
+  the owner's instruction, pending review. `01_fetch.sh` gained a `multi-file` kind;
+  `14_protection.sh` loads the Land's source by AGS. Sachsen ships with the PV classification,
+  Prüfhinweise, the energy outcome and *Gemeinde* search; peat climate, water and habitat stay
+  *noch nicht eingelesen* there (research rows §2.14, `mvp.md` U11). The Brandenburg WFS fetches
+  now cover the whole Land.
+- **Usable for planners and for individuals** (`roadmap-planning-tool.md` Phase 3):
+  - a region switch (Länder as buttons, the Landkreise of a Land as one select, "Ganzes Land") and
+    *Gemeinde* search across the whole region shown;
+  - **the link is the view**: region, technology, map position, the selected cell and the cells
+    chosen together live in the URL (`lib/explorer-url.ts`), with a "Link kopieren" button;
+  - display filters — only cells without exclusion, only cells without Prüfhinweis — on the
+    paint, never on the counts;
+  - a site exports as **GeoJSON or CSV** with every class, measured value, Prüfhinweis and the
+    sources (`/api/site/export`); an export that cannot cite itself does not render;
+  - "So lesen Sie die Karte" and "Für Planende" in the panel, folded away once read;
+  - one page shell for every screen below the map (`components/PageShell.tsx`): the trail
+    Land › Landkreis › Gemeinde › page, and "back to the map" returns to the same region and cell;
+  - the advisory note names the Land's authority (LfU Brandenburg, LfULG Sachsen); copy that
+    said "LfU" or "Uckermark" where a Land is meant now says "Landesamt" or names the region.
+- `scripts/install.sh --data brandenburg|sachsen` beside `uckermark`; `SELA_REGION` for the ingest
+  and the explorer's default; `pnpm db:materialize -- --region=` (`--pilot-region=` still works).
+- Docs: ADR-0012; `sources.md` §2.13, §2.14, §3, §6; `design-language.md` §3, §4.2b, §7b; `mvp.md`
+  F1, U11; `scoring-criteria.md` protection rows and §6; `ingest/regions/README.md`; the status
+  lines in `CLAUDE.md` and `README.md`.
+- Tests: unit tests for the URL state, the zoom bands and the region ids (142 in all); the
+  Playwright selectors follow the renamed list.
+
+### Changed
+
+- **BREAKING:** migration `0010` must run before the app starts; an install that migrates without
+  re-materialising shows no overview below zoom 11 until `pnpm db:materialize` runs, and says so.
+- **BREAKING:** `replaceVerdictsForPilotRegion` and `replaceOutcomesForPilotRegion` take an
+  iterable (sync or async) and stream their batches; `listMunicipalities`, `findUnitAt`,
+  `countVerdicts`, `listRegionSources` and `unitTile` take a `RegionScope`;
+  `resolvePilotRegion`/`getRegionSummary` are `resolveRegion`/`getRegionSummary` over the
+  `region` table; `PilotRegionInfo` carries `level`, `ags` and `land`.
+- `04_generate_grid.sql` checks `&&` before `ST_Equals`, so the dedupe uses the index.
+- `02b_extract_pilot_boundary.sh` wrote a null geometry (OGR's SQL dialect drops a GeoPackage's
+  geometry column when it is not named) — it had never been run; corrected and run, its Uckermark
+  output matches the committed boundary point for point.
+- `MethodNote` takes `authorityDe`; `Legend` takes `overview` and `hasOverview`; `Map` takes
+  `showBoundary`, `initialView`, `filter` and reports `onViewChange`.
+
+
 ### Added — Docker installer and prebuilt images
 
 - **Docker installer and prebuilt images** (ADR-0011; options chosen by the owner on

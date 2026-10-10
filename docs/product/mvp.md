@@ -1,6 +1,6 @@
 # sela MVP — product definition
 
-**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-08-21
+**Version band:** `0.1.x` (planning) · **Status:** first draft · **Last updated:** 2026-10-10 (F1 amended for two Länder; U11)
 
 This is the source of truth for what the first version of sela does and does not do. Later domain, data, and architecture documents refine it; they do not silently widen it.
 
@@ -74,6 +74,12 @@ Two rules that keep the comparison honest:
 
 **F1 — Find a parcel.** Search by address, municipality, or coordinates, or click the map. → The parcel is identified with its land-cover class and current use.
 *Amended 2026-09-28 (roadmap Step 5, `docs/domain/decision-memo-finding-land.md`):* search by *Gemeinde* (BKG VG25) and by coordinates (WGS84, ETRS89/UTM) is built; **address search is not**, because it needs a geocoder, a new data source behind its own gate.
+*Amended 2026-10-10 (ADR-0012, `docs/product/roadmap-planning-tool.md`):* the regions are the Länder
+Brandenburg and Sachsen as a whole, with every Landkreis as a sector view and the Uckermark as
+before; search by *Gemeinde* runs across the region shown (a Land's few hundred); a view — region,
+technology, position, selection — is a link. Sachsen ships with suitability and energy only;
+climate, water and habitat stay *noch nicht eingelesen* there until a source passes the gate
+(`docs/data/sources.md` §2.14).
 
 **F2 — Understand suitability.** For a selected parcel, see per technology whether it is suitable, and immediately *why*: the two or three criteria driving the verdict, and the single criterion that limits it most.
 *Amended 2026-09-28 (`docs/domain/decision-memo-pv-method.md`):* for real regions, PV is **classified, not scored** — the "why" is each criterion in its own class (protection, land-cover tier, irradiation by national quartile, slope as a measured value), and there is no single limiting criterion and no ranking within a class until a cited outcome (roadmap Step 3) can tell cells apart.
@@ -154,6 +160,7 @@ Recorded rather than assumed. Each blocks or reshapes work in a later band.
 | U7 | Per-source licensing (dl-de/by-2-0, ODbL, restricted) and whether derived scores may be redistributed. | Whether the platform can be public at all |
 | U8 | Basemap provider and its attribution and licensing terms. | Visual register, legal attribution — see `design-language.md` |
 | U9 | Wordmark, logo, and final public name. | Public launch identity — see `design-language.md` |
+| U11 | *(added 2026-10-10)* Peat, water and habitat sources for Sachsen — and for every Land after Brandenburg. Candidates: the Thünen *Kulisse organischer Böden* (national, CC BY 4.0 per its listing, no carbon stock), the LfULG *Biotopkartierung* (selective, 1996–2008); no Saxon water-balance model found. Until one passes the gate, Sachsen's comparison shows those dimensions as *noch nicht eingelesen* (`docs/data/sources.md` §2.14). | The `preserve`/`restore` scenarios outside Brandenburg |
 | U10 | Terrain for the 3D parcel preview at public launch. basemap.de 3D Gelände is licensed "zu Testzwecken" for its beta (`docs/data/sources.md` §2.6): usable while sela is pre-release, not a basis for `1.0`. Options: final basemap.de 3D terms, a self-built tile set from a `dl-de/by-2-0` DEM (DGM200 is licence-clean but coarser than one cell), or no terrain. | The preview's terrain at `1.0` — not the rest of the product; `SELA_TERRAIN=none` removes it in one step |
 
 ## 10. Success criteria

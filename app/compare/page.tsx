@@ -16,6 +16,7 @@ import { SourceAttribution } from "@/components/SourceAttribution";
 import { scenarioToTokenKey, scenarioTokens } from "@/lib/design/tokens";
 import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
 import { pilotRegionInfo } from "@/lib/pilot-region";
+import { PageShell, regionCrumbs } from "@/components/PageShell";
 import { formatCriterionValue } from "@/lib/scoring/format-value";
 import { CURRENT_METHOD_VERSION } from "@/lib/scoring/method-version";
 import { CITED_OUTCOME_METHODS } from "@/lib/scoring/nature";
@@ -66,6 +67,7 @@ export default async function CompareCellsPage({ searchParams }: { searchParams:
   const set = await loadUnitSet(ids);
   const first = set.units[0];
   const regionKind = first ? pilotRegionInfo(first.unit.pilotRegion).kind : "fixture";
+  const crumbs = first ? await regionCrumbs(first.unit.pilotRegion, { municipality: first.municipality }) : [];
   const idList = set.units.map((u) => u.unit.id).join(",");
   const scenarioLabel = scenarioTokens[scenarioToTokenKey[scenario]].labelDe;
 
@@ -87,17 +89,19 @@ export default async function CompareCellsPage({ searchParams }: { searchParams:
   const methodVersions = [CURRENT_METHOD_VERSION, ...CITED_OUTCOME_METHODS.map((c) => c.method.methodVersion)];
 
   return (
-    <main style={{ padding: "1.5rem", maxWidth: "76rem", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <MethodNote kind={regionKind} />
+    <PageShell
+      crumbs={crumbs}
+      current="Zellen nebeneinander"
+      wide
+      title={`${set.units.length} Zellen nebeneinander — ${scenarioLabel}`}
+      actions={
+        <Link className="btn btn-small" href={`/site?ids=${idList}`}>
+          Als eine Fläche zusammenfassen
+        </Link>
+      }
+    >
+      <MethodNote kind={regionKind} authorityDe={first ? pilotRegionInfo(first.unit.pilotRegion).land?.protectionAuthorityDe : undefined} />
       <div>
-        <p className="no-print">
-          <Link href="/">← Zur Karte</Link>
-          {" · "}
-          <Link href={`/site?ids=${idList}`}>Als eine Fläche zusammenfassen</Link>
-        </p>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 600, margin: "0.25rem 0" }}>
-          {set.units.length} Zellen nebeneinander — {scenarioLabel}
-        </h1>
         <p className="muted" style={{ margin: 0 }}>
           Dieselben Angaben wie auf der Seite jeder Zelle, nebeneinander. sela ordnet nicht in eine Reihenfolge; ob eine
           Zelle „besser“ ist, hängt davon ab, was man abwägt.
@@ -272,6 +276,6 @@ export default async function CompareCellsPage({ searchParams }: { searchParams:
         </ul>
       </section>
       <PrintFooter sources={sources} methodVersions={methodVersions} />
-    </main>
+    </PageShell>
   );
 }

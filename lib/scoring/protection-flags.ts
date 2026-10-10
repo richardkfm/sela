@@ -72,7 +72,7 @@ export function formatShareDe(share: number): string {
 function flagFor(overlap: ProtectionOverlap, strictShareOfCell: number): ProtectionFlag | null {
   if (overlap.share < PROTECTION_FLAG_MIN_SHARE) return null;
   const share = formatShareDe(overlap.share);
-  const where = `nach den Übersichtsdaten des LfU zu ${share}`;
+  const where = `nach den Übersichtsdaten des Landesamts zu ${share}`;
   const base = { category: overlap.category, areaCode: overlap.areaCode, name: overlap.name, share: overlap.share, sourceId: overlap.sourceId };
   switch (overlap.category) {
     case "ffh":
@@ -108,7 +108,7 @@ function flagFor(overlap: ProtectionOverlap, strictShareOfCell: number): Protect
         legalRef,
         shortDe: `teilweise im ${label} „${overlap.name}“ (${share})`,
         textDe:
-          `Teilweise im ${label} „${overlap.name}“ (${share} der Fläche, nach den Übersichtsdaten des LfU). ` +
+          `Teilweise im ${label} „${overlap.name}“ (${share} der Fläche, nach den Übersichtsdaten des Landesamts). ` +
           `Für diesen Teil gelten die Verbote der Schutzgebietsverordnung (${legalRef}).`,
       };
     }

@@ -42,7 +42,7 @@ question as much as a build question (`CLAUDE.md` §3, data sources and licensin
    it would have shown.
 5. **No fetched data in any image.** The ingest image holds the `ingest/` directory as committed
    — its scripts, the synthetic fixtures, and the VG25-derived pilot boundary
-   (`ingest/pilot/`, CC BY 4.0, attribution in `ingest/pilot/README.md`) that the public
+   (`ingest/regions/`, CC BY 4.0, attribution in `ingest/regions/README.md`) that the public
    repository already publishes. Every dataset is fetched on the user's machine by
    `ingest/01_fetch.sh`, under the licence gate in `docs/data/sources.md`.
 6. **One `compose.yaml` for both routes.** Each sela service names its `image` and keeps its

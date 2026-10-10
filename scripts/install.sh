@@ -8,6 +8,10 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 REAL_REGION="uckermark-12073"
+# Region ids (ADR-0012): a Landkreis or a whole Land; the Land's own sources follow from the id.
+REGION_UCKERMARK="uckermark-12073"
+REGION_BRANDENBURG="brandenburg-12"
+REGION_SACHSEN="sachsen-14"
 DATA=""
 BUILD=0
 
@@ -17,11 +21,13 @@ die() { printf 'install: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<'EOF'
-Usage: scripts/install.sh [--data fixture|uckermark|none] [--build]
+Usage: scripts/install.sh [--data fixture|uckermark|brandenburg|sachsen|none] [--build]
 
   (no options)       ask which data to load
   --data fixture     synthetic test data — small and fast, not a real place
   --data uckermark   the real Landkreis Uckermark — ≈ 1 GB download, several minutes
+  --data brandenburg the whole Land Brandenburg — ≈ 1.5 GB download, about 1.1 million cells, an hour or more
+  --data sachsen     the whole Freistaat Sachsen — ≈ 1.4 GB download, about 0.7 million cells, an hour or more
   --data none        start the app and the database only
   --build            build the images from this checkout instead of pulling them
 
@@ -36,7 +42,7 @@ EOF
 while [ $# -gt 0 ]; do
   case "$1" in
     --data)
-      [ $# -ge 2 ] || die "--data needs a value: fixture, uckermark or none"
+      [ $# -ge 2 ] || die "--data needs a value: fixture, uckermark, brandenburg, sachsen or none"
       DATA="$2"
       shift 2
       ;;
@@ -48,8 +54,8 @@ while [ $# -gt 0 ]; do
 done
 
 case "$DATA" in
-  "" | fixture | uckermark | none) ;;
-  *) die "--data must be fixture, uckermark or none, not '$DATA'" ;;
+  "" | fixture | uckermark | brandenburg | sachsen | none) ;;
+  *) die "--data must be fixture, uckermark, brandenburg, sachsen or none, not '$DATA'" ;;
 esac
 
 # --- Prerequisites ----------------------------------------------------------
@@ -62,18 +68,22 @@ docker info >/dev/null 2>&1 \
 
 # --- Which data: asked first, so everything after it runs unattended --------
 if [ -z "$DATA" ]; then
-  [ -t 0 ] || die "not running interactively — pass --data fixture, --data uckermark or --data none"
+  [ -t 0 ] || die "not running interactively — pass --data fixture, --data uckermark, --data brandenburg, --data sachsen or --data none"
   say "Which data should sela load?"
   say "  1) Synthetic test data — small and fast, not a real place (default)"
   say "  2) Real Landkreis Uckermark — downloads ≈ 1 GB from the publishers, takes several minutes"
-  say "  3) None — start the app and the database only"
+  say "  3) The whole Land Brandenburg — ≈ 1.5 GB download, about 1.1 million cells, an hour or more"
+  say "  4) The whole Freistaat Sachsen — ≈ 1.4 GB download, about 0.7 million cells, an hour or more"
+  say "  5) None — start the app and the database only"
   printf 'Choice [1]: '
   read -r answer || answer=""
   case "$answer" in
     "" | 1) DATA=fixture ;;
     2) DATA=uckermark ;;
-    3) DATA=none ;;
-    *) die "unknown choice '$answer' — expected 1, 2 or 3" ;;
+    3) DATA=brandenburg ;;
+    4) DATA=sachsen ;;
+    5) DATA=none ;;
+    *) die "unknown choice '$answer' — expected 1 to 5" ;;
   esac
 fi
 
@@ -277,18 +287,23 @@ case "$DATA" in
     step "Materialising scores for fixture-region"
     SELA_MATERIALIZE_REGION=fixture-region docker compose --profile ingest run --rm materialize
     ;;
-  uckermark)
-    step "Loading the Landkreis Uckermark (≈ 1 GB download from the publishers)"
-    docker compose --profile ingest run --rm ingest
-    step "Materialising scores for $REAL_REGION"
-    SELA_MATERIALIZE_REGION="$REAL_REGION" docker compose --profile ingest run --rm materialize
+  uckermark | brandenburg | sachsen)
+    case "$DATA" in
+      uckermark) REGION="$REGION_UCKERMARK"; WHAT="the Landkreis Uckermark (≈ 1 GB download from the publishers)" ;;
+      brandenburg) REGION="$REGION_BRANDENBURG"; WHAT="the whole Land Brandenburg (≈ 1.5 GB download, about 1.1 million cells — an hour or more)" ;;
+      sachsen) REGION="$REGION_SACHSEN"; WHAT="the whole Freistaat Sachsen (≈ 1.4 GB download, about 0.7 million cells — an hour or more)" ;;
+    esac
+    step "Loading $WHAT"
+    docker compose --profile ingest run --rm -e REGION="$REGION" ingest
+    step "Materialising scores and the overview for $REGION"
+    SELA_MATERIALIZE_REGION="$REGION" docker compose --profile ingest run --rm materialize
     ;;
 esac
 
 step "sela is running"
 say "  Open:    $APP_URL"
 if [ "$DATA" = none ]; then
-  say "  Data:    none loaded — run this again with --data fixture or --data uckermark"
+  say "  Data:    none loaded — run this again with --data fixture, uckermark, brandenburg or sachsen"
 fi
 say "  Logs:    docker compose logs -f app"
 say "  Stop:    docker compose down      (add -v to delete the database as well)"

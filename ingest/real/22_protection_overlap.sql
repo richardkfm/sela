@@ -3,8 +3,10 @@
 -- Prüfhinweise of decision memo Q1c/Q2d: FFH, SPA and LSG areas are named, not
 -- excluded, and a Naturschutzgebiet overlapping less than half a cell is named
 -- with its share. Biosphärenreservat overlaps are stored too; they are not
--- shown (memo Q1: BNatSchG § 25 not read at source).
--- Invoke with: psql "$DATABASE_URL" -v pilot_region='uckermark-12073' -f 22_protection_overlap.sql
+-- shown (memo Q1: BNatSchG § 25 not read at source). Saxony's Naturparke and
+-- Flächennaturdenkmäler (14_protection.sh) are not loaded into staging.protection
+-- at all: neither is a category the decided rules name.
+-- Invoke with: psql "$DATABASE_URL" -v pilot_region='uckermark-12073' -v protection_source='lfu-bb-schutzgebiete' -f 22_protection_overlap.sql
 --
 -- Every overlap is stored, however small; which ones the interface shows is a
 -- rule in lib/scoring/protection-flags.ts (≥ 1 % of the cell). An area can be
@@ -33,7 +35,7 @@ DELETE FROM protection_overlap po USING spatial_unit su
 WHERE su.id = po.spatial_unit_id AND su.pilot_region = :'pilot_region';
 
 INSERT INTO protection_overlap (spatial_unit_id, category, area_code, name, share, source_id)
-SELECT id, category, area_code, name, least(share, 1), 'lfu-bb-schutzgebiete'
+SELECT id, category, area_code, name, least(share, 1), :'protection_source'
 FROM (
   SELECT c.id, p.category, p.area_code, p.name,
          ST_Area(ST_Intersection(c.geom, ST_Union(p.geom))) / c.area AS share

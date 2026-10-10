@@ -4,6 +4,7 @@
 // (ADR-0002); TypeScript only matches names.
 
 import { query } from "../client";
+import { scopeWhere, type RegionScope } from "./regions";
 import type { BBox } from "./spatial-units";
 
 export interface Municipality {
@@ -24,13 +25,21 @@ interface MunicipalityRow {
   north: number;
 }
 
-/** Every Gemeinde of a pilot region, alphabetically. A Landkreis has a few dozen; the name match runs in TypeScript. */
-export async function listMunicipalities(pilotRegion: string): Promise<Municipality[]> {
+/**
+ * Every Gemeinde of a region, alphabetically — a Landkreis has a few dozen, a
+ * Land a few hundred; the name match runs in TypeScript. The Gemeinden are
+ * loaded per grid region; a Landkreis view takes those with its AGS prefix.
+ */
+export async function listMunicipalities(scope: RegionScope): Promise<Municipality[]> {
   const rows = await query<MunicipalityRow>(
     `SELECT ags, name, kind, ST_XMin(g) AS west, ST_YMin(g) AS south, ST_XMax(g) AS east, ST_YMax(g) AS north
-     FROM (SELECT ags, name, kind, ST_Transform(geom, 4326) AS g FROM municipality WHERE pilot_region = $1) m
+     FROM (
+       SELECT ags, name, kind, ST_Transform(geom, 4326) AS g
+       FROM municipality
+       WHERE pilot_region = $1 ${scope.kreisAgs ? "AND left(ags, 5) = $2" : ""}
+     ) m
      ORDER BY name`,
-    [pilotRegion],
+    scope.kreisAgs ? [scope.gridRegion, scope.kreisAgs] : [scope.gridRegion],
   );
   return rows.map((r) => ({
     ags: r.ags,
@@ -58,15 +67,16 @@ export async function getMunicipalityOutline(
 
 /**
  * The Gemeinde each unit lies in — the one containing a point on the unit's
- * surface, so a cell on a municipal border is named once. Units outside every
- * loaded Gemeinde (the fixture) are absent from the map.
+ * surface, stamped on the cell at ingest (`spatial_unit.ags`, ADR-0012), so a
+ * cell on a municipal border is named once. Units outside every loaded
+ * Gemeinde (the fixture) are absent from the map.
  */
 export async function municipalitiesForUnits(ids: readonly string[]): Promise<Map<string, { ags: string; name: string }>> {
   if (ids.length === 0) return new Map();
   const rows = await query<{ id: string; ags: string; name: string }>(
     `SELECT u.id, m.ags, m.name
      FROM spatial_unit u
-     JOIN municipality m ON m.pilot_region = u.pilot_region AND ST_Contains(m.geom, ST_PointOnSurface(u.geom))
+     JOIN municipality m ON m.ags = u.ags
      WHERE u.id = ANY($1::uuid[])`,
     [ids],
   );
@@ -74,15 +84,16 @@ export async function municipalitiesForUnits(ids: readonly string[]): Promise<Ma
 }
 
 /**
- * The unit of a pilot region containing a point given in `epsg` (4326 as
- * lon/lat, or an ETRS89 / UTM zone), or null when the point lies in none.
+ * The unit of a region containing a point given in `epsg` (4326 as lon/lat,
+ * or an ETRS89 / UTM zone), or null when the point lies in none.
  */
-export async function findUnitAt(pilotRegion: string, x: number, y: number, epsg: 4326 | 25832 | 25833): Promise<string | null> {
+export async function findUnitAt(scope: RegionScope, x: number, y: number, epsg: 4326 | 25832 | 25833): Promise<string | null> {
+  const where = scopeWhere(scope, "su", 4);
   const rows = await query<{ id: string }>(
-    `SELECT id FROM spatial_unit
-     WHERE pilot_region = $1 AND ST_Contains(geom, ST_Transform(ST_SetSRID(ST_MakePoint($2, $3), $4::integer), 25832))
+    `SELECT su.id FROM spatial_unit su
+     WHERE ${where.sql} AND ST_Contains(su.geom, ST_Transform(ST_SetSRID(ST_MakePoint($1, $2), $3::integer), 25832))
      LIMIT 1`,
-    [pilotRegion, x, y, epsg],
+    [x, y, epsg, ...where.params],
   );
   return rows[0]?.id ?? null;
 }

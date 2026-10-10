@@ -12,8 +12,8 @@
 --
 -- NOTE none of these rows makes anything publishable on its own. They satisfy
 -- docs/data/sources.md §7 condition 4 (the notice exists and renders). Since
--- 2026-09-23 the Uckermark ingest (ingest/real/) writes criterion_value rows
--- that cite them.
+-- 2026-09-23 the real ingest (ingest/real/) writes criterion_value rows that
+-- cite them; since 2026-10-10 for Brandenburg and Sachsen as a whole (ADR-0012).
 
 INSERT INTO source (
   id, dataset, publisher, version, retrieved_at, licence, redistributable, url,
@@ -96,6 +96,23 @@ INSERT INTO source (
     -- The service's own AccessConstraints: dl-de/by-2-0, "Als Bezeichnung des
     -- Bereitstellers ist „© Landesamt für Umwelt Brandenburg" anzugeben."
     '© Landesamt für Umwelt Brandenburg dl-de/by-2-0',
+    'https://www.govdata.de/dl-de/by-2-0',
+    true
+  ),
+  (
+    'lfulg-sn-schutzgebiete',
+    'Schutzgebiete in Sachsen (LUIS-Download): NSG, Nationalpark, LSG, Biosphärenreservat (Stand 01.01.2026), FFH-Gebiete (Grundschutzverordnungen, Stand 06/2025), Vogelschutzgebiete (Meldestand 10/2006, Aktualisierung 12/2009)',
+    'Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie (LfULG)',
+    'Shapefiles vom LUIS-Download, abgerufen 2026-10-10; Grenzen folgen nicht zwingend Flurstücksgrenzen (Hinweis des LfULG)',
+    DATE '2026-10-10',
+    'dl-de/by-2-0',
+    true,
+    'https://luis.sachsen.de/natur/schutzgebiete.html',
+    -- The GDI-DE record of the LfULG service serving the same data: dl-de/by-2-0,
+    -- "Quelle: Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie";
+    -- the archives' own note asks for "Herausgeber: Sächsisches Landesamt für
+    -- Umwelt, Landwirtschaft und Geologie" on publication (sources.md §2.13).
+    '© Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie (LfULG) dl-de/by-2-0',
     'https://www.govdata.de/dl-de/by-2-0',
     true
   ),

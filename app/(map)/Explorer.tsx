@@ -1,27 +1,32 @@
 "use client";
 
 // The map explorer's state and layout (roadmap §5.1, design-language.md §3):
-// a full-bleed map, one quiet panel on the left that says what the colours
-// mean and lists the units in view, and — once a unit is chosen — one card on
-// the right that says *why*, with the way on to the comparison.
+// a full-bleed map, one quiet panel on the left that says where you are, what
+// the colours mean and lists the units in view, and — once a unit is chosen —
+// one card on the right that says *why*, with the way on to the comparison.
 //
 // State lives here rather than in Map.tsx so the map, the legend, the list
 // and the selection card can never disagree about which technology is shown
-// or which unit is selected.
+// or which unit is selected. The state that makes a view worth sharing —
+// technology, map position, selection, group — is mirrored into the URL
+// (lib/explorer-url.ts), so a link opens the same way for the next reader.
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MethodNote } from "@/components/MethodNote";
 import { TechnologySwitch } from "@/components/TechnologySwitch";
 import type { Municipality } from "@/lib/db/queries/municipalities";
-import type { RegionSummary, VerdictCounts } from "@/lib/db/queries/regions";
-import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE } from "@/lib/map/verdict-style";
-import type { PilotRegionInfo } from "@/lib/pilot-region";
+import type { RegionNode, RegionSummary, VerdictCounts } from "@/lib/db/queries/regions";
+import { parseExplorerUrl, serializeExplorerUrl, type MapView } from "@/lib/explorer-url";
+import { INTERACTIVE_MIN_ZOOM, CELL_MIN_ZOOM } from "@/lib/map/tiles";
+import { TECHNOLOGY_LABEL_DE, VERDICT_LABEL_DE, type MapVerdict } from "@/lib/map/verdict-style";
 import { TECHNOLOGIES, type Technology } from "@/lib/scoring/types";
 import { MAX_GROUP_CELLS, toggleInGroup } from "@/lib/search/group";
 import { GroupPanel } from "./GroupPanel";
+import { Intro } from "./Intro";
 import { Legend } from "./Legend";
-import { Map, type FocusRequest, type FramePadding, type HoverInfo, type MapOutline, type VisibleUnit } from "./Map";
+import { Map, type FocusRequest, type FramePadding, type HoverInfo, type MapFilter, type MapOutline, type VisibleUnit } from "./Map";
+import { RegionSwitch } from "./RegionSwitch";
 import { SearchBox } from "./SearchBox";
 import { SelectionPanel } from "./SelectionPanel";
 import { UnitList } from "./UnitList";
@@ -33,16 +38,25 @@ const WIDE_PADDING_WITH_SELECTION: FramePadding = { ...WIDE_PADDING, right: 400 
 const NARROW_PADDING: FramePadding = { top: 32, right: 32, bottom: 320, left: 32 };
 
 const COUNT = new Intl.NumberFormat("de-DE");
+const PERCENT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
+
+const NO_FILTER: MapFilter = { onlyClasses: null, withoutFlags: false };
+
+function regionTitle(region: RegionSummary): string {
+  if (region.level === "fixture") return region.nameDe;
+  if (region.level === "land") return region.nameDe;
+  return `${region.bez ?? "Landkreis"} ${region.nameDe}`;
+}
 
 export function Explorer({
   region,
-  otherRegions,
+  regions,
   initialTechnology,
   initialCounts,
   dataAttribution,
 }: {
   region: RegionSummary;
-  otherRegions: PilotRegionInfo[];
+  regions: readonly RegionNode[];
   initialTechnology: Technology;
   initialCounts: VerdictCounts;
   dataAttribution: string;
@@ -55,11 +69,23 @@ export function Explorer({
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [focus, setFocus] = useState<FocusRequest | null>(null);
   const [visible, setVisible] = useState<VisibleUnit[] | null>(null);
+  const [view, setView] = useState<MapView | null>(null);
   const [narrow, setNarrow] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [group, setGroup] = useState<string[]>([]);
   const [outline, setOutline] = useState<MapOutline | null>(null);
+  const [filter, setFilter] = useState<MapFilter>(NO_FILTER);
   const nonce = useRef(0);
+  // True once the link's state has been applied; the URL is written only after that,
+  // so the first write never overwrites a link with the defaults.
+  const restored = useRef(false);
+
+  // The URL follows the state; replaceState, so Back still leaves the explorer.
+  useEffect(() => {
+    if (!restored.current) return;
+    const next = serializeExplorerUrl(region.id, { technology, view, selectedId, group });
+    if (window.location.search !== next) window.history.replaceState(window.history.state, "", next);
+  }, [region.id, technology, view, selectedId, group]);
 
   const toggleGroup = useCallback((id: string) => {
     setGroup((current) => {
@@ -109,6 +135,21 @@ export function Explorer({
     },
     [countsByTech, region.id],
   );
+  // The link's state (lib/explorer-url.ts), applied once after mount — on the
+  // client only, so the server's markup and the first client render agree. The
+  // map reads the view itself at mount (Map.tsx), so the first framing is the
+  // link's; everything else is applied here.
+  useEffect(() => {
+    const initial = parseExplorerUrl(new URLSearchParams(window.location.search));
+    if (initial.technology && initial.technology !== initialTechnology) void changeTechnology(initial.technology);
+    if (initial.group.length > 0) setGroup([...initial.group]);
+    if (initial.selectedId) {
+      if (initial.view) setSelectedId(initial.selectedId);
+      else void selectFromList(initial.selectedId);
+    }
+    restored.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -130,12 +171,17 @@ export function Explorer({
 
   const padding = narrow ? NARROW_PADDING : selectedId ? WIDE_PADDING_WITH_SELECTION : WIDE_PADDING;
   const counts = countsByTech[technology];
+  const overview = view !== null && view.zoom < CELL_MIN_ZOOM;
+
+  const setClassFilter = (classes: readonly MapVerdict[] | null) =>
+    setFilter((current) => ({ ...current, onlyClasses: classes }));
 
   return (
     <div className="map-stage">
       <Map
         key={region.id}
         region={region.id}
+        showBoundary={region.kind === "real"}
         regionBBox={region.bbox}
         dataAttribution={dataAttribution}
         technology={technology}
@@ -145,27 +191,38 @@ export function Explorer({
         framePadding={padding}
         groupIds={group}
         outline={outline}
+        filter={filter}
         onSelect={setSelectedId}
         onToggleGroup={toggleGroup}
         onHover={setHover}
         onVisibleUnits={setVisible}
+        onViewChange={setView}
       />
 
       <aside className="panel explorer-side" aria-label="Legende und Flächenliste">
         <header className="explorer-masthead">
           <p className="wordmark">sela</p>
           <h1>Flächen im Vergleich</h1>
-          <p className="muted">
-            {region.kind === "real" ? `Pilotregion ${region.nameDe}` : region.nameDe} · Eignung, Erhalt und
-            Renaturierung nebeneinander
+          <p className="muted explorer-where">
+            {region.parent && (
+              <>
+                <Link href={`/?region=${region.parent.id}`}>{region.parent.nameDe}</Link>
+                <span aria-hidden> › </span>
+              </>
+            )}
+            <span>{regionTitle(region)}</span>
           </p>
         </header>
 
-        <MethodNote compact kind={region.kind} />
+        <MethodNote compact kind={region.kind} authorityDe={region.land?.protectionAuthorityDe} />
+
+        <Intro regionKind={region.kind} />
 
         {region.kind === "real" && (
-          <SearchBox region={region.id} onMunicipality={showMunicipality} onUnit={selectFromList} />
+          <SearchBox region={region.id} regionLabel={regionTitle(region)} onMunicipality={showMunicipality} onUnit={selectFromList} />
         )}
+
+        <RegionSwitch region={region} regions={regions} />
 
         <section aria-labelledby="tech-heading" className="explorer-section">
           <h2 id="tech-heading" className="overline">
@@ -186,7 +243,65 @@ export function Explorer({
           )}
         </section>
 
-        <Legend technology={technology} counts={counts} total={region.unitCount} regionKind={region.kind} />
+        <Legend
+          technology={technology}
+          counts={counts}
+          total={region.unitCount}
+          regionKind={region.kind}
+          overview={overview}
+          hasOverview={region.hasOverview}
+        />
+
+        <section aria-labelledby="filter-heading" className="explorer-section">
+          <h2 id="filter-heading" className="overline">
+            Anzeige einschränken
+          </h2>
+          <div className="filter-list">
+            {region.kind === "real" && technology !== "wind" && (
+              <>
+                <label className="filter-option">
+                  <input
+                    type="checkbox"
+                    checked={filter.onlyClasses !== null}
+                    onChange={(event) => setClassFilter(event.target.checked ? ["unrestricted", "restricted", "suitable"] : null)}
+                  />
+                  <span>nur Zellen ohne Ausschluss zeigen</span>
+                </label>
+                <label className="filter-option">
+                  <input
+                    type="checkbox"
+                    checked={filter.withoutFlags}
+                    onChange={(event) => setFilter((current) => ({ ...current, withoutFlags: event.target.checked }))}
+                  />
+                  <span>nur Zellen ohne Prüfhinweis zeigen (ab Zoomstufe {INTERACTIVE_MIN_ZOOM})</span>
+                </label>
+              </>
+            )}
+            {region.kind === "real" && technology === "wind" && (
+              <label className="filter-option">
+                <input
+                  type="checkbox"
+                  checked={filter.onlyClasses !== null}
+                  onChange={(event) => setClassFilter(event.target.checked ? ["excluded"] : null)}
+                />
+                <span>nur Ausschlüsse zeigen</span>
+              </label>
+            )}
+            {region.kind === "fixture" && (
+              <label className="filter-option">
+                <input
+                  type="checkbox"
+                  checked={filter.onlyClasses !== null}
+                  onChange={(event) => setClassFilter(event.target.checked ? ["suitable"] : null)}
+                />
+                <span>nur „geeignet“ zeigen</span>
+              </label>
+            )}
+          </div>
+          <p className="explorer-note muted">
+            Ausgeblendete Zellen bleiben in der Legende gezählt; die Einschränkung ändert nur, was gezeichnet wird.
+          </p>
+        </section>
 
         <section aria-labelledby="view-heading" className="explorer-section">
           <h2 id="view-heading" className="overline">
@@ -194,18 +309,33 @@ export function Explorer({
           </h2>
           <div className="explorer-views">
             <button type="button" className="btn btn-small" onClick={() => setFocus({ kind: "region", nonce: ++nonce.current })}>
-              {region.kind === "real" ? "Ganze Region" : "Ganzer Beispieldatensatz"}
+              {region.level === "land" ? "Ganzes Land" : region.level === "kreis" ? "Ganzer Landkreis" : "Ganzer Beispieldatensatz"}
             </button>
-            {otherRegions.map((other) => (
-              <Link key={other.id} className="btn btn-small" href={`/?region=${other.id}`}>
-                {other.kind === "real" ? `Pilotregion ${other.nameDe}` : other.nameDe}
-              </Link>
-            ))}
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  setAnnouncement("Link zu diesem Ausschnitt kopiert.");
+                } catch {
+                  setAnnouncement("Der Link steht in der Adresszeile des Browsers.");
+                }
+              }}
+            >
+              Link kopieren
+            </button>
           </div>
           <p className="explorer-note muted">
-            {region.kind === "real"
-              ? `${COUNT.format(region.unitCount)} Rasterzellen à 100 m über den ganzen Landkreis. Die Messwerte sind echt; eingeordnet wird nach veröffentlichten Regeln, ohne Punktzahl.`
-              : `Die ${COUNT.format(region.unitCount)} Beispielflächen liegen bewusst bei 0° N 0° O, damit sie nicht mit einem echten Ort verwechselt werden.`}
+            {view ? (
+              <>
+                Zoomstufe <span className="tabular-nums">{view.zoom.toFixed(1)}</span> ·{" "}
+                {overview ? "Übersicht in Waben" : view.zoom < INTERACTIVE_MIN_ZOOM ? "Zellen als Textur" : "einzelne Zellen anwählbar"}.
+                Der Link enthält Gebiet, Ausschnitt und Auswahl.
+              </>
+            ) : (
+              "Der Link dieser Seite enthält Gebiet, Ausschnitt und Auswahl."
+            )}
           </p>
         </section>
 
@@ -243,10 +373,23 @@ export function Explorer({
 
       {hover && (
         <div className="panel map-tooltip" style={{ left: hover.x, top: hover.y }} aria-hidden="true">
-          <span className="tabular-nums">{hover.id.slice(0, 8)}</span>
-          <span className="muted"> · </span>
-          <span>{VERDICT_LABEL_DE[hover.verdict]}</span>
-          {hover.score != null && <span className="muted tabular-nums"> · {hover.score.toFixed(2)}</span>}
+          {hover.overview ? (
+            <>
+              <span>{hover.overview.levelM >= 1000 ? `${hover.overview.levelM / 1000}-km-Wabe` : `${hover.overview.levelM}-m-Wabe`}</span>
+              <span className="muted"> · </span>
+              <span className="tabular-nums">{COUNT.format(hover.overview.n)} Zellen</span>
+              <span className="muted"> · am häufigsten </span>
+              <span>{VERDICT_LABEL_DE[hover.verdict]}</span>
+              <span className="muted tabular-nums"> ({PERCENT.format(hover.overview.share * 100)} %)</span>
+            </>
+          ) : (
+            <>
+              <span className="tabular-nums">{hover.id.slice(0, 8)}</span>
+              <span className="muted"> · </span>
+              <span>{VERDICT_LABEL_DE[hover.verdict]}</span>
+              {hover.score != null && <span className="muted tabular-nums"> · {hover.score.toFixed(2)}</span>}
+            </>
+          )}
         </div>
       )}
 

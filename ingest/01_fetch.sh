@@ -127,6 +127,17 @@ case "$KIND" in
       fi
     fi
     ;;
+  multi-file)
+    # Several pinned files from one directory (the LfULG Sachsen downloads):
+    # each is fetched and checked against its byte count like a single file.
+    BASE=$(q '.sources[$id].fetch.baseUrl')
+    q '.sources[$id].fetch.files[] | "\(.filename) \(.pinnedBytes // "")"' > "$OUT_DIR/.files.tmp"
+    while read -r name pinned; do
+      [ -n "$name" ] || continue
+      fetch_one "$BASE$name" "$OUT_DIR/$name" "$pinned"
+    done < "$OUT_DIR/.files.tmp"
+    rm -f "$OUT_DIR/.files.tmp"
+    ;;
   annual-series)
     BASE=$(q '.sources[$id].fetch.baseUrl')
     TPL=$(q '.sources[$id].fetch.filenameTemplate')

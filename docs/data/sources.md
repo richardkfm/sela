@@ -1,6 +1,6 @@
 # Data source inventory
 
-**Version band:** `0.3.x` · **Status:** BKG, DWD and LfU Brandenburg **Confirmed, fetched and ingested** for the Uckermark; LBGR *Moorbodenkarte* and LfU ArcEGMO water balance **Confirmed, fetched and ingested** (2026-09-24); BfN and OSM still gated — see §1 · **Last updated:** 2026-09-24
+**Version band:** `0.3.x` · **Status:** BKG, DWD and LfU Brandenburg **Confirmed, fetched and ingested** for the Uckermark; LBGR *Moorbodenkarte* and LfU ArcEGMO water balance **Confirmed, fetched and ingested** (2026-09-24); LfULG Sachsen Schutzgebiete **Confirmed and fetched** (2026-10-10, pending the owner's confirmation in review); BfN and OSM still gated — see §1 · **Last updated:** 2026-10-10
 
 This is the gate `docs/architecture/roadmap-to-first-deployment.md` §2.2 and §3.1 requires before
 any dataset enters ingestion: `CLAUDE.md` §5 forbids asserting a licence that has not been
@@ -27,8 +27,14 @@ read at the source cited. Where that has not happened, the row says so.
 | LBGR Brandenburg *Moorbodenkarte* (WFS-MBK) | `dl-de/by-2-0` | **Yes**, with attribution + change notice | **Confirmed and ingested** 2026-09-24 — peat soils and carbon stock for the climate outcome (§2.9) |
 | LfU Brandenburg *Wasserhaushalt* 1991–2020 (ArcEGMO) | `dl-de/by-2-0` | **Yes**, with attribution, source and data date | **Confirmed and ingested** 2026-09-24 — water balance for the soil-and-water outcome (§2.10). *Keine Rückschlüsse auf liegenschaftsrechtliche Belange* |
 | LfU Brandenburg *Biotopkataster* (BBK) | `dl-de/by-2-0` per metadata; **CC BY 4.0** per the archive's documentation — to settle with LfU | **Yes** under either licence, with attribution + change notice | **Confirmed and ingested** 2026-09-28 under the owner's delegation of that day — nature capital as categories (§2.12). Selective outside FFH areas and Großschutzgebiete |
+| LfULG Sachsen Schutzgebiete (LUIS-Download) | `dl-de/by-2-0` per the GDI-DE record of the LfULG service; the archives themselves say *öffentlich zugänglich*, cite on publication | **Yes**, with attribution + change notice | **Confirmed and fetched** 2026-10-10 under the owner's instruction to add Sachsen (ADR-0012), pending confirmation in review — protection exclusions and Prüfhinweise for Sachsen (§2.13) |
+| Thünen *Kulisse organischer Böden* (national peat map) | CC BY 4.0 per OpenAgrar (not read at the record itself — bot check) | Presumably yes; not verified | **Research row** (§2.14) — the route to peat climate outside Brandenburg; not fetched |
+| LfULG Sachsen Biotopkartierung (SBK2/SBK3, bt_lrt) | `dl-de/by-2-0` per the INSPIRE record *Lebensräume und Biotope*; the download pages name none | Presumably yes; not verified | **Research row** (§2.14) — selective, 1996–2008; not fetched |
 
-**The machine gate stands open for eight rows and closed for two.** The eighth,
+**The machine gate stands open for nine rows and closed for two.** The ninth,
+`lfulg-sn-schutzgebiete`, was opened on 2026-10-10 under the owner's instruction to add Sachsen
+(§2.13, ADR-0012, `docs/product/roadmap-planning-tool.md` A6) — recorded as pending the owner's
+confirmation in review, like the 2026-09-28 rows. The eighth,
 `lfu-bb-biotopkataster`, was opened on 2026-09-28 (roadmap Step 4, §2.12,
 `docs/domain/decision-memo-habitat.md`).
 Before that change it stood open for seven rows and closed for two: `ingest/sources.manifest.json`
@@ -206,9 +212,15 @@ sits on the same host, under the same publisher, one directory across from CLC5 
 analogy with §2.2 and corrected only after the in-archive terms document was read. Per-product
 verification is not ceremony.
 
-**What was extracted.** Landkreis Uckermark, AGS `12073` — see `ingest/pilot/README.md` for the
-region, its measured extent, and why that region. Only one polygon out of the federal coverage is
-used; the rest of the archive is fetched but not ingested.
+**What was extracted.** Landkreis Uckermark, AGS `12073` — see `ingest/regions/README.md` for the
+region, its measured extent, and why that region. **Since 2026-10-10 (ADR-0012):** also the Land
+boundaries of Brandenburg (AGS `12`, `vg25_lan`, 29 697 km²) and Sachsen (AGS `14`, 18 478 km²),
+committed in `ingest/regions/`; every Landkreis of a Land is read from `vg25_krs` at ingest for the
+region navigation; and the *Gemeinden* of a whole Land from `vg25_gem` (Brandenburg and Sachsen
+together: 831 rows with `GF = 9`). The extraction script `02b_extract_pilot_boundary.sh` was run
+for the first time on 2026-10-10 and found to write a null geometry (OGR's SQL dialect drops the
+geometry column of a GeoPackage when it is not named); corrected, its Uckermark output matches the
+committed file point for point (12 733 vertices, no difference).
 
 ### 2.6 BKG basemap.de 3D Gelände — terrain for the 3D parcel preview (display only)
 
@@ -297,9 +309,9 @@ Brandenburg pilot instead of waiting.
 | | |
 |---|---|
 | Publisher | Landesamt für Umwelt Brandenburg (LfU); service operated by the Landesvermessung und Geobasisinformation Brandenburg (LGB) |
-| Use in sela | `pv_protection_status`, `wind_protection_status` — ADR-0004 exclusions, **Uckermark only** |
+| Use in sela | `pv_protection_status`, `wind_protection_status` — ADR-0004 exclusions, **Brandenburg** (Sachsen reads the LfULG's, §2.13) |
 | Service | `https://inspire.brandenburg.de/services/schutzg_wfs`, WFS 2.0.0, native **EPSG:25833** (reprojected to 25832 on load) |
-| Layers fetched | `app:nsg` (Naturschutzgebiete), `app:natp` (Nationalpark), `app:ffh` (FFH-Gebiete), `app:spa` (Vogelschutzgebiete), `app:lsg` (Landschaftsschutzgebiete), `app:br` (Biosphärenreservat) — bbox 13.2–14.5° E, 52.8–53.6° N; feature counts per layer in `fetch-provenance.json` (e.g. 114 NSG, 1 Nationalpark) |
+| Layers fetched | `app:nsg` (Naturschutzgebiete), `app:natp` (Nationalpark), `app:ffh` (FFH-Gebiete), `app:spa` (Vogelschutzgebiete), `app:lsg` (Landschaftsschutzgebiete), `app:br` (Biosphärenreservat) — bbox 13.2–14.5° E, 52.8–53.6° N until 2026-10-10, **the whole Land (11.2–15.0° E, 51.3–53.6° N) since** (ADR-0012); feature counts per layer in `fetch-provenance.json` (e.g. 114 NSG, 1 Nationalpark for the Uckermark bbox) |
 | Licence | **`dl-de/by-2-0`**, from the service's own `AccessConstraints`: *"Als Bezeichnung des Bereitstellers ist „© Landesamt für Umwelt Brandenburg" anzugeben."* |
 | Use limitation | Digitised at **1:10 000**; the service describes the data as for information only and **not legally binding** (*nicht rechtsverbindlich*) |
 | Evidence | GetCapabilities read 2026-09-23 (`AccessConstraints`, feature-type list); the 1:10 000 scale and the not-legally-binding note from the service description in MetaVer, read the same day through a web-fetch summary rather than directly — re-read before `1.0` |
@@ -413,6 +425,58 @@ exact attribution given the LGB banner; that the Art. 13(1)(e) note does not res
 of derived facts; and how sela should word the absence of an entry. The questions are drafted in
 `docs/domain/decision-memo-habitat.md` §5.
 
+### 2.13 LfULG Sachsen Schutzgebiete (LUIS-Download) → protection exclusions and Prüfhinweise, Sachsen
+
+**Why this row exists.** The owner's instruction of 2026-10-10 adds Sachsen as a whole
+(`docs/product/roadmap-planning-tool.md`). The decided PV rules (ADR-0009) need the Land's
+Naturschutzgebiete and Nationalpark (exclusion) and its FFH, SPA and Landschaftsschutz areas
+(Prüfhinweise). BfN's federal service is still blocked (§2.1, §6), and Saxony's own WFS host
+(`geodienste.sachsen.de`, `luis.sachsen.de/arcgis/…`) answers 403 from this environment; the LUIS
+portal's download page does not.
+
+| | |
+|---|---|
+| Publisher | Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie (LfULG), Abteilung Naturschutz und Landschaftspflege; the NSG/LSG geometries come from the *Unteren Naturschutzbehörden*, the Nationalpark's from the SMUL (the archives' own notes) |
+| Use in sela | `pv_protection_status`, `wind_protection_status` for Sachsen (NSG, Nationalpark); `protection_overlap` for the Prüfhinweise (FFH, SPA, LSG; Biosphärenreservat stored, not shown — memo Q1). Naturparke and Flächennaturdenkmäler are offered too and **not loaded**: neither is a category the decided rules name |
+| Artefacts | `https://luis.sachsen.de/natur/download/` — `nsg.zip` (956 280 bytes), `nlp.zip` (83 868), `lsg.zip` (4 592 216), `br.zip` (51 197), `FFH_GrundschutzVO.zip` (4 614 417), `SPA_Okt_2006_Dez_2009.zip` (2 405 665) — **fetched 2026-10-10**, pinned by byte count; sha256 per file in `data/raw/lfulg-sn-schutzgebiete/fetch-provenance.json`. `np.zip` and `fnd.zip` exist and are not fetched |
+| Content | Shapefiles, **EPSG:25833** (ETRS89 / UTM 33N, stated in each archive's note and `.prj`), reprojected to 25832 on load. NSG: 366 features; LSG: 273; Nationalpark: 2 (both *Sächsische Schweiz*, `NLP1`); Biosphärenreservat: 1; FFH: 756 polygons (every one with an `EU_NR`); SPA: 172. Attributes: `KATEGORIE` (nach BNatSchG), `STATUS` (`F` festgesetzt, `ES` einstweilig sichergestellt), `SG_NR`, `NAME`, `RVO_DATUM`, `RVO_1`/`RVO_2` (the ordinance), `PRAEZI` (digitising precision), `ERFDAT`/`UEBDAT`; FFH and SPA: `GEBIET`, `EU_NR`, `RECHTS_GL` |
+| Currency | NSG, LSG, Nationalpark, Biosphärenreservat: *Stand 01.01.2026, maßgeblich ist das Inkrafttreten der Rechtsgrundlage*. FFH: *Stand 06/2025*; the boundaries are those of the *FFH-Grundschutzverordnungen* published in the Sächsisches Amtsblatt, Sonderdruck 2/2011 (13.04.2011); *"Im Zweifelsfall gelten immer die Angaben der Originalverordnung."* SPA: *Meldestand Oktober 2006 (Meldung 6. November 2006)*, updated 12/2009 |
+| Scale | FFH: *Erstellungsmaßstab 1:10 000*, digitised on ATKIS Basis-DLM and TK10, *"Abweichung max. 2 mm (entspricht 50 m in der Natur)"*. SPA: *Digitalisierungsmaßstab 1:25 000*. NSG/LSG: per feature in `PRAEZI` |
+| Use limitation | Every note: *"Die Schutzgebietsgrenzen entsprechen nicht zwingend Flurstücks- und Bewirtschaftungsgrenzen. Diesbezügliche Fragen beantworten die Unteren Naturschutzbehörden."* FFH: polygons without an EU number are *"technisch bedingte Inselflächen, die nicht zum FFH-Gebiet gehören"* — none in the fetched file, and `14_protection.sh` filters them anyway. For the two FFH areas without a Grundschutzverordnung (1 E *Nationalpark Sächsische Schweiz*, 69 E *Buchenwälder bei Steinbach*) the Nationalpark's and the NSG's boundaries were taken over |
+| Licence | **`dl-de/by-2-0`**, read at source on 2026-10-10 from the GDI-DE catalogue record of the LfULG WFS that serves the same data (`9490f0e1-331d-4dd7-81b4-398f07fb64ab`, *WFS – Schutzgebiete in Sachsen (Naturschutzgebiete, Naturparke, Nationalparke, Landschaftsschutzgebiete, Biosphärenreservate, Flächennaturdenkmäler)*, `dateStamp` 2026-06-01, read through the CSW `GetRecordById` of `gdk.gdi-de.org`): *"Dieser Dienst kann gemäß den Nutzungsbestimmungen von Datenlizenz Deutschland – Namensnennung – Version 2.0 (dl-by-de/2.0) (https://www.govdata.de/dl-de/by-2-0) unter Angabe der Quelle: „Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie" genutzt werden."*, `accessConstraints` *"Es gelten keine Zugriffsbeschränkungen"*, `useLimitation` *"Es gelten keine Bedingungen."*; the record's linkage names the download page read here. **The download page itself and the archives name no licence**; each archive's note says *"Nutzungsanmerkung: öffentlich zugänglich"* and *"Die Daten sind bei Veröffentlichung wie folgt zu zitieren: Herausgeber: Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie; Bearbeitung: Abteilung Naturschutz und Landschaftspflege"* |
+| Evidence | The six archives and their notes (`nsg.txt`, `nlp.txt`, `lsg.txt`, `br.txt`, `ffh_Grundschutzverordnung.txt`, `SPA.txt`), the LUIS page `luis.sachsen.de/natur/schutzgebiete.html` (*Stand 01.01.2026* per file; footer links only to Impressum and Datenschutz), and the GDI-DE record — all read 2026-10-10 |
+
+**Derived outputs — permitted on the record's terms, with a caveat recorded.** `dl-de/by-2-0`
+permits changed, public use with the source note and a change notice (§2.2). The assumption
+taken (roadmap-planning-tool.md U1) is that the record's licence governs the downloads too: same
+publisher, same data, the record points at the page. The archives' own words — public, cite the
+publisher on publication — are consistent with that and name no other term. **Open with LfULG:**
+to confirm the licence of the downloads in writing, and whether the Nationalpark's and the SMUL's
+geometry are covered by the same statement. Until then the notice sela renders
+(`© Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie (LfULG) dl-de/by-2-0 (Daten
+verändert)`) satisfies both the record and the archives' citation request.
+
+**Which Saxon categories the decided rules read.** The exclusion rule (memo Q1, ADR-0009) names
+Naturschutzgebiete and Nationalparke by their BNatSchG categories; Saxony's `KATEGORIE` is *"nach
+Bundesnaturschutzgesetz"*. The rule has not been re-read against SächsNatSchG; it cites the
+category, never a permission outcome, and the Saxon caveat (boundaries ≠ parcel boundaries) is
+carried on every cell screen. The SPA layer is seventeen years old by its own date; a Prüfhinweis
+from it says so through the source's version.
+
+**"Nicht rechtsverbindlich" belongs in the interface** — as for Brandenburg (§2.8): recorded in
+`source.version`, rendered through the source notice, part of U6.
+
+### 2.14 Research rows for Sachsen — peat, water, habitat (not confirmed, not fetched)
+
+Sachsen ships with suitability and energy only; climate, water and habitat stay *noch nicht
+eingelesen* until one of these passes the gate (`docs/product/roadmap-planning-tool.md` A4, U3).
+
+| Candidate | What was read on 2026-10-10 | What is missing |
+|---|---|---|
+| **Thünen-Institut, *Aktualisierte Kulisse organischer Böden in Deutschland*** (Wittnebel, Frank, Tiemeyer 2023; data DOI `10.3220/DATA20230510130443-0`, method: Thünen Working Paper 212, DOI `10.3220/WP1683180852000`) — the national peat map, built from the Länder's maps (for Brandenburg from the LBGR's, §2.9) | Search results and the OpenAgrar listing give **CC BY 4.0** and a GeoPackage replaced on 2023-08-04 (`.lyr`/`.sld` corrected); 1.93 million ha of organic soils nationwide, with categories, cover/deep-ploughing flags, peat thickness and substrate | The record page itself could not be read (a bot check, as on 2026-09-24); the licence text, the file, its size and its attribute table are not read at source. It carries **no carbon stock**, so `peat_carbon_stock` would need another source or a Tier 1 default — a method change behind the scoring gate |
+| **LfULG Sachsen, *Selektive Biotopkartierung*** (SBK2 1996–2002, SBK3 2006–2008, `SBK2_ohne_Bund.zip`, `SBK3_ohne_Bund.zip`) and ***Biotoptypen- und Lebensraumtypenkartierung*** (`bt_lrt.zip`, in FFH areas), `luis.sachsen.de/natur/biotopkartierung.html` | The LUIS page lists the downloads with documentation (`Dateiinfo_Biotope.pdf`, `Datenbeschreibung_MINA_Biotope.pdf`); the INSPIRE record *Lebensräume und Biotope* (Sachsen) names `dl-de/by-2-0` with the source *"Geodaten Sachsen"*; the LUIS page states the data were captured for 1:10 000–1:5 000. The open-land mapping ended in 2009; biotopes are since recorded through FFH habitat monitoring | Not fetched; attribute tables, protection codes (§ 21 SächsNatSchG i. V. m. § 30 BNatSchG) and the licence of the ZIPs themselves not read. `habitat_overlap`'s columns follow Brandenburg's BBK conventions (ADR-0010) and would need a mapping |
+| **Water balance, Sachsen** | No statewide equivalent of Brandenburg's ArcEGMO *Elementarflächen* (§2.10) was found in a first search | A source to look for: the LfULG's *Wasserhaushaltsmodell* publications; none located as a download |
+
 ### 2.4 OpenStreetMap via Geofabrik — basemap, settlement geometry
 
 | | |
@@ -447,6 +511,7 @@ licence verified and then not attributed is worse than one never used.
 | LBGR Brandenburg | **`© Landesamt für Bergbau, Geologie und Rohstoffe Brandenburg (LBGR) dl-de/by-2-0 (Daten verändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The publisher's own example in the metadata record (read 2026-09-24), with its optional change notice made mandatory: a peat share or an area-weighted stock per cell is an alteration. The example writes *(Daten geändert)*; sela renders its one standard wording, *(Daten verändert)* (`lib/attribution.ts`), which says the same. |
 | LfU Brandenburg — **Biotopkataster** | **`© Landesamt für Umwelt Brandenburg <Jahr>, Biotopkataster Brandenburg, https://lfu.brandenburg.de, dl-de/by-2-0 (Daten verändert)`** | Follows the example in the archive's documentation (provider, year, URL, dataset name) under the licence the metadata states (§2.12). Replace the licence label if LfU confirms CC BY 4.0. |
 | LfU Brandenburg — **ArcEGMO water balance** | **`Landesamt für Umwelt Brandenburg, Wasserhaushaltsgrößen 1991–2020 (ArcEGMO), Stand 10.03.2023, dl-de/by-2-0 (Daten verändert)`** | The documentation requires *"Erlaubnisvermerk sowie Quelle und Stand der Daten"* (§5), so the data date is part of the notice, not optional. |
+| LfULG Sachsen | **`© Sächsisches Landesamt für Umwelt, Landwirtschaft und Geologie (LfULG) dl-de/by-2-0 (Daten verändert)`**, licence linked to `https://www.govdata.de/dl-de/by-2-0` | The source wording from the GDI-DE record of the LfULG service (read 2026-10-10); the archives ask for the publisher and the editing department to be cited on publication (§2.13). A per-cell covered share is an alteration. |
 | DWD | `Quelle: Deutscher Wetterdienst` (text form; the DWD logo is an accepted alternative) | Per §7 DWD-Gesetz. To be placed **immediately at the DWD information used**. For substantial modification DWD expects at minimum to be named in a central source list or the Impressum, together with a change notice — DWD's own examples include *"Datenbasis: Deutscher Wetterdienst, Einzelwerte gemittelt"*, which is precisely what sampling a 1 km grid onto hex cells is. The dataset additionally carries its own required citation: `DWD Climate Data Center (CDC): Gridded annual sum of incoming shortwave radiation (global radiation) on the horizontal plain for Germany based on ground and satellite measurements, Version V003, <current year>.` |
 | OSM | `© OpenStreetMap contributors` with the data made clear to be available under the Open Database License — linking to `https://www.openstreetmap.org/copyright` satisfies the latter for a browsable map; printed works must carry the full URL | ADR-0003 already records this as a standing duty on **every screen and every export**. Distributing OSM in data form requires naming and linking the licence directly. |
 
@@ -735,6 +800,23 @@ what the public is told about real land.
 
 Entries record what was actually fetched and read, so a later session does not repeat a dead end or
 mistake an attempt for a confirmation.
+
+### 2026-10-10, Brandenburg and Sachsen as a whole (ADR-0012)
+
+- `luis.sachsen.de/natur/schutzgebiete.html`, `…/natura2000.html`, `…/biotopkartierung.html`: read; download
+  links and *Stand* dates recorded; no licence statement on the pages.
+- Six LfULG archives fetched (byte counts in §2.13) and their notes read in full; shapefile fields and feature
+  counts read with `ogrinfo`; CRS EPSG:25833 confirmed from the `.prj` files.
+- GDI-DE CSW `GetRecordById` for `9490f0e1-331d-4dd7-81b4-398f07fb64ab`: licence, source wording, access
+  constraints and the linkage to the download page read verbatim (§2.13). The GeoNetwork JSON/XML formatter
+  of the same catalogue answered with an empty reply; `geodienste.sachsen.de`, `luis.sachsen.de/arcgis`,
+  `geoportal.sachsen.de/portal` and `umwelt.sachsen.de/…/ida` answered 403 or 401 from this environment.
+- `inspire-geoportal.ec.europa.eu` record `f1e47e21-…` (INSPIRE SN Schutzgebiete): redirects to
+  `data.europa.eu`; not read directly — its licence statement is known only from a search summary and is
+  **not** relied on.
+- VG25 archive re-fetched (325 132 397 bytes, the pinned size); `vg25_lan` and `vg25_krs` read for both Länder;
+  the Uckermark boundary re-cut and compared with the committed file (identical).
+- OpenAgrar record of the Thünen Kulisse: 2.7 KB JavaScript shell, not readable here (§2.14).
 
 ### 2026-09-28, roadmap Steps 4 and 5
 

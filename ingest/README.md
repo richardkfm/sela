@@ -12,28 +12,32 @@ ingest/
   01_fetch.sh <source_id>        fetch — gated on sources.manifest.json reading "confirmed";
                                   writes data/raw/<source_id>/ + fetch-provenance.json
   02_reproject.sh <in> <out>     reproject to EPSG:25832 (ogr2ogr, falls back to gdalwarp)
-  02b_extract_pilot_boundary.sh  cut one Landkreis out of the fetched VG25 archive
-  pilot/                         the real pilot-region boundary — see pilot/README.md
+  02b_extract_pilot_boundary.sh  cut a Land or a Landkreis out of the fetched VG25 archive
+  regions/                       the committed region boundaries (both Länder, the Uckermark) — see regions/README.md
   03_load.sh <file> <table>      load into staging.<table> via ogr2ogr -f PostgreSQL
-  04_generate_grid.sql           ST_HexagonGrid, clipped to the pilot boundary (ADR-0001)
+  04_generate_grid.sql           ST_HexagonGrid, clipped to the region boundary (ADR-0001)
   05_sample.sql                  sample/intersect onto cells — one example query per criterion
   05b_sample_illustrative_variation.sql  fixture-only: synthetic per-cell variation for the
                                   remaining fixture criteria (Phase 3, 0.3.0) — see fixtures/README.md
   06_write_criterion_values.sql  write criterion_value rows, each with its source_id
   07_materialize_scores.ts       Phase 3 (0.3.0), TypeScript-side, run separately (see below):
-                                  calls lib/scoring/ to populate suitability_verdict/outcome
+                                  calls lib/scoring/ to populate suitability_verdict/outcome, in
+                                  chunks of 50 000 units, then runs 08_materialize_overview.sql
+  08_materialize_overview.sql    ADR-0012: the overview pyramid (1 km, 5 km hexagons), the per-region
+                                  counts and sources the explorer reads
   run.sh [--fixture]             real: fetch, seed, then real/ (below); --fixture: 00-06 on fixtures/
-  real/                          the real pilot-region pipeline (boundary, CLC5, DWD, DGM200,
-                                  LfU protection → criterion_value) — see real/README.md
+  real/                          the real region pipeline (boundary, CLC5, DWD, DGM200, the Land's
+                                  protection → criterion_value) — see real/README.md
   seed_real_sources.sql          source rows and their verified Quellenvermerke
   fixtures/                      synthetic data proving the pipeline works — see fixtures/README.md
 ```
 
 ## Real ingestion
 
-`./run.sh` (no flags) is the real pipeline, end to end, for `PILOT_REGION` (default
-`uckermark-12073`). As of 2026-09-23 it fetches five sources, skips two, and writes
-`criterion_value` rows for four criteria (`real/README.md`):
+`./run.sh` (no flags) is the real pipeline, end to end, for `REGION` (default `uckermark-12073`;
+`brandenburg-12` or `sachsen-14` for a whole Land, or any `<slug>-<ags>` Landkreis — ADR-0012).
+It fetches the federal sources and the Land's own, skips the gated ones, and writes
+`criterion_value` rows (`real/README.md`):
 
 | Source id | Status | |
 |---|---|---|
@@ -41,7 +45,8 @@ ingest/
 | `bkg-vg25` | `confirmed` | fetched — **CC BY 4.0** (not `dl-de/by-2-0`; same publisher, different licence), supplies the pilot boundary |
 | `dwd-cdc-radiation` | `confirmed` | fetched and ingested — `pv_irradiation_annual`; CC BY 4.0, no share-alike |
 | `bkg-dgm200` | `confirmed` | fetched and ingested — `pv_slope`; `dl-de/by-2-0`, pinned by the publisher's md5 |
-| `lfu-bb-schutzgebiete` | `confirmed` | fetched (WFS) and ingested — both protection exclusions, Brandenburg only; `dl-de/by-2-0` |
+| `lfu-bb-schutzgebiete` | `confirmed` | fetched (WFS) and ingested — both protection exclusions, Brandenburg; `dl-de/by-2-0` |
+| `lfulg-sn-schutzgebiete` | `confirmed` (2026-10-10, pending confirmation) | fetched (LUIS downloads) — both protection exclusions and the Prüfhinweise, Sachsen; `dl-de/by-2-0` |
 | `bfn-schutzgebiete` | `to_confirm` | licence cleared (GeoNutzV); `geodienste.bfn.de` returns 403. Substituted by LfU for the pilot |
 | `osm-geofabrik` | **`withdrawn`** | ADR-0005: OSM left the stack. Not unconfirmed — deliberately not used |
 
@@ -114,7 +119,7 @@ GDAL-based container (which has no Node runtime) — it runs from the app/builde
 
 ```sh
 export DATABASE_URL=postgresql://sela:sela@localhost:5432/sela
-pnpm db:materialize -- --pilot-region=fixture-region
+pnpm db:materialize -- --region=fixture-region
 ```
 
 Against the fixture dataset this uses `lib/scoring/illustrative-weights.ts` — an arbitrary,
@@ -125,7 +130,7 @@ For the real region the same step runs the same illustrative weighting on real m
 (`docs/domain/scoring-criteria.md` §6):
 
 ```sh
-pnpm db:materialize -- --pilot-region=uckermark-12073
+pnpm db:materialize -- --region=uckermark-12073
 ```
 
 `--outcomes=illustrative|none` decides whether the illustrative *outcome* generator runs. It
