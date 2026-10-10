@@ -62,8 +62,9 @@ ogr2ogr -f PostgreSQL "PG:$DATABASE_URL" "$GPKG" \
   -lco SCHEMA=staging -lco GEOMETRY_NAME=geom -lco OVERWRITE=YES -overwrite -nln vg25_region \
   -nlt MULTIPOLYGON \
   -sql "SELECT geom, AGS AS ags, GEN AS name, BEZ AS bez, 'land' AS kind FROM vg25_lan WHERE AGS = '$LAND_AGS' AND GF = 9"
+# -append looks the layer up by the name given, so the schema is part of it here.
 ogr2ogr -f PostgreSQL "PG:$DATABASE_URL" "$GPKG" \
-  -lco SCHEMA=staging -lco GEOMETRY_NAME=geom -nln vg25_region -append -update \
+  -lco GEOMETRY_NAME=geom -nln staging.vg25_region -append -update \
   -nlt MULTIPOLYGON \
   -sql "SELECT geom, AGS AS ags, GEN AS name, BEZ AS bez, 'kreis' AS kind FROM vg25_krs WHERE AGS LIKE '$LAND_AGS%' AND GF = 9"
 

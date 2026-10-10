@@ -30,7 +30,7 @@ load() {
   table=$(ogrinfo -ro -q "$file" | sed -n 's/^1: \([^ ]*\).*/\1/p')
   ogr2ogr -f PostgreSQL "PG:$DATABASE_URL" "$file" \
     -lco GEOMETRY_NAME=geom -nln staging.protection -append -update \
-    -t_srs EPSG:25832 -nlt CONVERT_TO_LINEAR -nlt MULTIPOLYGON -makevalid \
+    -t_srs EPSG:25832 -nlt CONVERT_TO_LINEAR -nlt PROMOTE_TO_MULTI -makevalid \
     -dialect sqlite -sql "SELECT geometry AS the_geom, '$category' AS category, $fields FROM \"$table\" $where"
   echo "  protection: $category loaded from $(basename "$file")"
 }
