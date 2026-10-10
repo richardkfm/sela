@@ -195,10 +195,35 @@ has no Docker daemon, so the tools were installed natively).
 So a Land of Sachsen's size takes about **55 minutes** from fetch to a complete explorer (14 min
 ingest, 25 min verdicts, 13 min outcomes, 3 min overview) on four cores.
 
-**What that implies for Brandenburg** (29 697 km², about 1.1 million cells, not run here): roughly
-1.6 × Sachsen on every step — about 90 minutes — plus the Brandenburg-only steps (Moorbodenkarte,
-ArcEGMO water balance, Biotopkataster), which the Uckermark run has measured only for a tenth of
-the Land. The installer says "an hour or more"; for Brandenburg read "two".
+**Brandenburg, ingested end to end on 2026-10-10** (`REGION=brandenburg-12 ingest/run.sh`, the
+whole Land, 29 697 km²), run after Sachsen into the same database:
+
+| Step | Result |
+|---|---|
+| Whole ingest | **about 50 min**, in three segments because two steps failed on the Land's scale and were fixed and resumed (below): 10 min 55 s to the end of DGM200, 3 min 45 s for the Land loads, 35 min 42 s from sampling to the stamp |
+| Grid | **1 137 346** cells |
+| CLC5 inside the extent | 76 567 polygons |
+| LfU protected areas (WFS, statewide) | 641 NSG, 1 Nationalpark, 226 LSG, 5 Biosphärenreservate, 593 FFH, 27 SPA |
+| Moorbodenkarte / ArcEGMO water balance / Biotopkataster | 199 266 peat-soil and 300 000 carbon polygons; 1 157 871 *Elementarflächen*; 319 016 area, 88 434 line and 28 845 point biotopes (the counts the LfU's own documentation states) |
+| *Gemeinden* / Kreise | 413 / 18; every cell stamped, none outside a *Gemeinde* |
+| Criterion values | 10 496 488 (irradiation on 1 136 918 cells; slope, land cover, both protection shares, both peat shares and both water values on all; carbon stock on 260 802) |
+| Protection overlaps (Prüfhinweise evidence) | 1 117 945 rows: LSG 468 992, SPA 267 145, FFH 169 885, NSG 116 784, BR 90 884, Nationalpark 4 255 |
+| Habitat overlaps | 1 655 769 area, 345 518 line, 28 365 point biotope–cell pairs; 530 287 cells touch an area biotope, 504 533 of them a protected one |
+| Verdicts, overview, outcomes | not yet recorded — the materialiser was still running when this was written |
+
+**Found on the way, at the Land's scale, and fixed:** the protection loader (rewritten for two
+Länder) selected the geometry column by the shapefile's name, which the LfU GeoPackages do not
+use — it now reads the column's name from the file; the sampling step's raster reads (irradiation,
+slope) were a lateral join aggregated in one query, and on 1.14 million cells the planner sorted
+the join output with the raster tile on every row and spilled more temp space than the disk had —
+the pixel values are now read into a temp table first (the values written are unchanged).
+
+**Sizing, measured:** the `outcome` table holds 36 rows per cell (3 methods × 6 scenarios × 2
+metrics) and took 7.2 GB for Sachsen's 706 488 cells — about **10 GB per million cells**, half of
+it the unique key index over four text columns. The whole-Land pair therefore needs about 20 GB
+for outcomes alone; this is the number `ADR-0011`'s deployment sizing should use. The working
+environment here has a 40 GB disk budget, which the two Länder's outcomes do not fit together with
+the loaded sources; what was done about it is recorded below.
 
 **Found on the way, and fixed:** the outcome writer linked inputs by joining back onto `outcome`,
 which inside the transaction planned on stale statistics and went quadratic (117 rows/s — a day for
