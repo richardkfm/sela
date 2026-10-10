@@ -112,6 +112,12 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   on Sachsen's 8.5 million outcome rows.
 - `MethodNote` takes `authorityDe`; `Legend` takes `overview` and `hasOverview`; `Map` takes
   `showBoundary`, `initialView`, `filter` and reports `onViewChange`.
+- Found when the whole Land Brandenburg was run (1 137 346 cells): `14_protection.sh` selected
+  the geometry column by the shapefile's name, which the LfU GeoPackages do not use — it now reads
+  the column's name from the file; `20_sample.sql` read the irradiation and slope rasters in a
+  lateral join aggregated in one query, which the planner sorted with the raster tile attached to
+  every row and spilled more temp space than the disk had — the pixel values are read into a temp
+  table first, the written values unchanged.
 
 
 ### Added — Docker installer and prebuilt images
