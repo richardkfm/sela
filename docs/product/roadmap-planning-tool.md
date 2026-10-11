@@ -213,7 +213,7 @@ whole Land, 29 697 km²), run after Sachsen into the same database:
 | Habitat overlaps | 1 655 769 area, 345 518 line, 28 365 point biotope–cell pairs; 530 287 cells touch an area biotope, 504 533 of them a protected one |
 | Verdicts (`--steps=verdicts`) | **3 min 0 s** for 1 137 346 × 3 technologies (2 367 767 verdicts; 1 044 271 wind cells *nicht bewertet*); PV: *ohne Einschränkung* 409 629 · *eingeschränkt* 160 860 · *nicht vorgesehen* 473 782 · *ausgeschlossen* 93 075 — 8.2 % of the Land, against 15.8 % in the Uckermark seen as its sector and 3.6 % in Sachsen (`region_verdict_count`) |
 | Overview and per-region counts (`--steps=overview`) | **2 min 59 s**: 11 849 hexagons of 1 km and 541 of 5 km for the Land, plus each of the 18 Kreise's own (Uckermark 117 822 cells as a sector of the Land — 631 more than its own grid had, at the boundary, as §6 R3 predicted; Potsdam-Mittelmark 99 359 … Frankfurt (Oder) 5 658) |
-| Cited outcomes (`--steps=outcomes`) | **not run here**: at 10 GB per million cells (below) Brandenburg's outcomes need about 12 GB, and this environment's disk had 6 GB left with Sachsen's outcomes and the loaded sources in place. Running it means first dropping Sachsen's local outcome rows (recomputable in 13 min), which is the owner's call; the estimate from Sachsen's measured rate is about 20 min |
+| Cited outcomes (`--steps=outcomes`) | **two of three methods written, the third stopped by the disk**: `pv-yield-v1` 13 648 152 rows (modelled on 570 420 cells under `develop_pv`, from 3 411 610 criterion values) and `peat-climate-ipcc2013-v1` 13 648 152 rows (modelled on 358 933 cells under `preserve`, `restore` and `status_quo`, from 3 672 840 values — Brandenburg is the first Land where the climate method runs on a real source) committed within about 25 min; every modelled row has its `outcome_input` links. `water-arcegmo-v2` failed after 30 min 33 s with *No space left on device* and rolled back cleanly: at the measured 10 GB per million cells the three methods need about 12 GB, this environment's 40 GB disk had 14 GB free with Sachsen's outcomes kept (after the derived staging tables and the loaded raw archives were removed), and the third method did not fit. Re-running `--steps=outcomes` on a disk with room writes all three (the step replaces a region's rows per method); dropping Sachsen's local outcome rows first (recomputable in 13 min) would make room here — the owner's call, not taken |
 
 **Found on the way, at the Land's scale, and fixed:** the protection loader (rewritten for two
 Länder) selected the geometry column by the shapefile's name, which the LfU GeoPackages do not
@@ -233,8 +233,10 @@ value at a time (under 1 ms); the pages render in well under a second.
 metrics) and took 7.2 GB for Sachsen's 706 488 cells — about **10 GB per million cells**, half of
 it the unique key index over four text columns. The whole-Land pair therefore needs about 20 GB
 for outcomes alone; this is the number `ADR-0011`'s deployment sizing should use. The working
-environment here has a 40 GB disk budget, which the two Länder's outcomes do not fit together with
-the loaded sources (the table above).
+environment here has a 40 GB disk budget, which the two Länder's outcomes do not fit (the table
+above). With a 100 m cell as the unit, a deployment of both Länder should plan **30 GB** for the
+database (outcomes 20, criterion values 4, cells 2, verdicts and overlaps 2, and room for the
+writer's transactions) besides the raw archives and the staging tables.
 
 **Found on the way, and fixed:** the outcome writer linked inputs by joining back onto `outcome`,
 which inside the transaction planned on stale statistics and went quadratic (117 rows/s — a day for

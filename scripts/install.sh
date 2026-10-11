@@ -26,7 +26,7 @@ Usage: scripts/install.sh [--data fixture|uckermark|brandenburg|sachsen|none] [-
   (no options)       ask which data to load
   --data fixture     synthetic test data — small and fast, not a real place
   --data uckermark   the real Landkreis Uckermark — ≈ 1 GB download, several minutes
-  --data brandenburg the whole Land Brandenburg — ≈ 1.5 GB download, about 1.1 million cells, about an hour and a quarter
+  --data brandenburg the whole Land Brandenburg — ≈ 1.5 GB download, about 1.1 million cells, about an hour and a half
   --data sachsen     the whole Freistaat Sachsen — ≈ 1.4 GB download, about 0.7 million cells, about an hour
   --data none        start the app and the database only
   --build            build the images from this checkout instead of pulling them
@@ -72,7 +72,7 @@ if [ -z "$DATA" ]; then
   say "Which data should sela load?"
   say "  1) Synthetic test data — small and fast, not a real place (default)"
   say "  2) Real Landkreis Uckermark — downloads ≈ 1 GB from the publishers, takes several minutes"
-  say "  3) The whole Land Brandenburg — ≈ 1.5 GB download, about 1.1 million cells, about an hour and a quarter"
+  say "  3) The whole Land Brandenburg — ≈ 1.5 GB download, about 1.1 million cells, about an hour and a half"
   say "  4) The whole Freistaat Sachsen — ≈ 1.4 GB download, about 0.7 million cells, about an hour"
   say "  5) None — start the app and the database only"
   printf 'Choice [1]: '
@@ -290,7 +290,7 @@ case "$DATA" in
   uckermark | brandenburg | sachsen)
     case "$DATA" in
       uckermark) REGION="$REGION_UCKERMARK"; WHAT="the Landkreis Uckermark (≈ 1 GB download from the publishers)" ;;
-      brandenburg) REGION="$REGION_BRANDENBURG"; WHAT="the whole Land Brandenburg (≈ 1.5 GB download, about 1.1 million cells — about an hour and a quarter)" ;;
+      brandenburg) REGION="$REGION_BRANDENBURG"; WHAT="the whole Land Brandenburg (≈ 1.5 GB download, about 1.1 million cells — about an hour and a half)" ;;
       sachsen) REGION="$REGION_SACHSEN"; WHAT="the whole Freistaat Sachsen (≈ 1.4 GB download, about 0.7 million cells — about an hour)" ;;
     esac
     step "Loading $WHAT"
