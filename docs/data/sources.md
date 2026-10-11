@@ -411,10 +411,10 @@ for a number.
 |---|---|
 | Publisher | Landesamt für Umwelt Brandenburg (LfU), Referat N3; *Prüfung und Bereitstellung*: LGB |
 | Use in sela | Per cell: mapped biotopes, whether the Kataster records them as protected (§ 30 BNatSchG i. V. m. § 18 BbgNatSchAG), FFH *Lebensraumtyp* and its conservation grade — shown as categories, never scored (`docs/domain/scoring-criteria.md` §4.3, `lib/scoring/habitat.ts`) |
-| Artefact | `https://data.geobasis-bb.de/geofachdaten/Natur_und_Landschaft/Biotope_und_Lebensraumtypen/biotope_lrt.zip` — **fetched 2026-09-28**, 181 214 958 bytes, `Last-Modified: Fri, 12 Jun 2026 05:53:54 GMT` (pinned), sha256 `0683757c899a399b7f31f5328deb78dc9d961cf1cb3bfa6ecca91f023865cf80` |
-| Content | Shapefiles `bbk_fl` (329 274 areas), `bbk_li` (87 528 lines), `bbk_pu` (28 601 points), EPSG:25833, statewide; attributes per `dok/doku_bbk_attributbeschreibung.pdf` (`PK_IDENT`, `BIOTYP(_T)`, `BBGNAT(_T)`, `FFHLRT(_T)`, `FFHGES`, `INTEN`, `DATUM_E/_F`). The conservation-grade labels (`A` *hervorragend*, `B` *gut*, `C` *durchschnittlich oder beschränkt*, `E` *Entwicklungsfläche*, `Z` *irrevers. gestört*, `9` *nicht bewertbar*, `0` *Alle anderen Werte*) were read from the WFS field `ffhges_t` on 2026-09-28. Dates of `1111-11-11` are placeholders and read as unknown |
+| Artefact | `https://data.geobasis-bb.de/geofachdaten/Natur_und_Landschaft/Biotope_und_Lebensraumtypen/biotope_lrt.zip` — **fetched 2026-09-28**, 181 214 958 bytes, `Last-Modified: Fri, 12 Jun 2026 05:53:54 GMT`, sha256 `0683757c899a399b7f31f5328deb78dc9d961cf1cb3bfa6ecca91f023865cf80`; **republished by LfU on 2026-10-07 and re-fetched 2026-10-10**: 170 946 521 bytes, `Last-Modified: Wed, 07 Oct 2026 07:14:39 GMT`, sha256 `201e88efdd5ef5c0285e1608bea11012201d1c98ddd212280d1924c9ab67086a` — the pin guard (`01_fetch.sh` exit 4) stopped the Brandenburg run on the size change, as designed |
+| Content | Shapefiles `bbk_fl` (319 016 areas; 329 274 in the June archive), `bbk_li` (88 434 lines; 87 528), `bbk_pu` (28 845 points; 28 601), EPSG:25833, statewide; attributes per `dok/doku_bbk_attributbeschreibung.pdf` (`PK_IDENT`, `BIOTYP(_T)`, `BBGNAT(_T)`, `FFHLRT(_T)`, `FFHGES`, `INTEN`, `DATUM_E/_F`). The conservation-grade labels (`A` *hervorragend*, `B` *gut*, `C` *durchschnittlich oder beschränkt*, `E` *Entwicklungsfläche*, `Z` *irrevers. gestört*, `9` *nicht bewertbar*, `0` *Alle anderen Werte*) were read from the WFS field `ffhges_t` on 2026-09-28. Dates of `1111-11-11` are placeholders and read as unknown |
 | Scale | Digitised at 1:10 000; *"Einsatzmaßstab 10.000 – 50.000"* |
-| Currency | *Stand* 20.04.2026 (`dok/doku_bbk_20260420.pdf`); *"Aktualisierungszyklus jährlich bis halbjährlich"* |
+| Currency | *Stand* 16.09.2026 (`dok/doku_bbk_20260916.pdf`, metadata 28.09.2026; the June archive: 20.04.2026, `doku_bbk_20260420.pdf`); *"Aktualisierungszyklus jährlich bis halbjährlich"* — and it does update: the archive changed under its URL between the two fetches |
 | Coverage | **Selective.** Complete biotope mapping in FFH areas (2001–) and Großschutzgebiete (1993–); outside them, the *selektive Biotopkartierung* records protected biotopes and FFH habitat types only (2007–2018). Areas being revised are left out of the Gesamtdatenbestand (`doku_bbk_wichtige_ergaenzungen.pdf`). An empty cell is **not** evidence that no biotope is there |
 | Licence | **Two statements that differ.** The WFS `AccessConstraints` (*"Datenlizenz Deutschland – Namensnennung – Version 2.0 … „© Landesamt für Umwelt Brandenburg“"*) and the MetaVer dataset record say `dl-de/by-2-0`; the archive's own documentation says *"Datenlizenz CC BY 4.0 Namensnennung 4.0 International … Namensnennung: "Landesamt für Umwelt Brandenburg"; Angabe der URL der Datenquelle; Angabe der Datensatzbezeichnung"*. The download directory's banner names *"GeoBasis-DE / LGB"* as *Bereitsteller*. Both licences allow changed, public use with attribution; sela's notice names LfU, the dataset and its URL under the licence the metadata states, and marks the change |
 | Access restriction | The INSPIRE note that blocked Step 4 reads *"Öffentlicher Zugriff beschränkt entsprechend Artikel 13(1)(e) der INSPIRE-Richtlinie: e) aufgrund nachteiliger Auswirkungen auf die Rechte des geistigen Eigentums"* — intellectual property, not personal data or the location of species. It sits on the **service** metadata records (WFS/WMS) only; the **dataset** record has no access constraint, and the documentation states *"Zugriffsbeschränkung keine"*, *"Kosten keine"* |
@@ -802,6 +802,15 @@ Entries record what was actually fetched and read, so a later session does not r
 mistake an attempt for a confirmation.
 
 ### 2026-10-10, Brandenburg and Sachsen as a whole (ADR-0012)
+
+- **Biotopkataster re-pinned.** The whole-Brandenburg run stopped at `lfu-bb-biotopkataster` with
+  `PIN MISMATCH` (manifest 181 214 958 bytes, server 170 946 521): LfU republished the archive on
+  2026-10-07. The new archive was fetched and read: `dok/doku_bbk_20260916.pdf` carries the same
+  licence line (*"Datenlizenz CC BY 4.0 … Namensnennung: 'Landesamt für Umwelt Brandenburg';
+  Angabe der URL der Datenquelle; Angabe der Datensatzbezeichnung"*), Stand der Bearbeitung
+  16.09.2026, metadata 28.09.2026; the three shapefiles carry the same fields; counts moved to
+  319 016 / 88 434 / 28 845. Re-pinned by size and `Last-Modified` (§2.12); the sha256 of both
+  archives is recorded.
 
 - `luis.sachsen.de/natur/schutzgebiete.html`, `…/natura2000.html`, `…/biotopkartierung.html`: read; download
   links and *Stand* dates recorded; no licence statement on the pages.

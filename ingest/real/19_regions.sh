@@ -62,14 +62,16 @@ ogr2ogr -f PostgreSQL "PG:$DATABASE_URL" "$GPKG" \
   -lco SCHEMA=staging -lco GEOMETRY_NAME=geom -lco OVERWRITE=YES -overwrite -nln vg25_region \
   -nlt MULTIPOLYGON \
   -sql "SELECT geom, AGS AS ags, GEN AS name, BEZ AS bez, 'land' AS kind FROM vg25_lan WHERE AGS = '$LAND_AGS' AND GF = 9"
+# -append looks the layer up by the name given, so the schema is part of it here.
 ogr2ogr -f PostgreSQL "PG:$DATABASE_URL" "$GPKG" \
-  -lco SCHEMA=staging -lco GEOMETRY_NAME=geom -nln vg25_region -append -update \
+  -lco GEOMETRY_NAME=geom -nln staging.vg25_region -append -update \
   -nlt MULTIPOLYGON \
   -sql "SELECT geom, AGS AS ags, GEN AS name, BEZ AS bez, 'kreis' AS kind FROM vg25_krs WHERE AGS LIKE '$LAND_AGS%' AND GF = 9"
 
 # Region ids for Kreise are <slug>-<ags>, the slug derived from the name the
 # way the committed ids are (uckermark-12073): lower-case ASCII, umlauts
-# transliterated, everything else a hyphen.
+# transliterated the German way (ä→ae, ö→oe, ü→ue, ß→ss: goerlitz-14626,
+# meissen-14627), everything else a hyphen.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -v land_id="$LAND_ID" -v land_ags="$LAND_AGS" <<'SQL'
 BEGIN;
 UPDATE region r SET geom = ST_Multi(v.geom)::geometry(MultiPolygon, 25832), name = v.name, bez = v.bez, source_id = 'bkg-vg25'
@@ -77,7 +79,8 @@ FROM staging.vg25_region v WHERE v.kind = 'land' AND r.id = :'land_id';
 
 INSERT INTO region (id, kind, ags, name, bez, parent_id, geom, source_id)
 SELECT trim(both '-' from regexp_replace(
-         translate(lower(v.name), 'äöüß', 'aous'), '[^a-z0-9]+', '-', 'g')) || '-' || v.ags,
+         replace(replace(replace(replace(lower(v.name), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'), 'ß', 'ss'),
+         '[^a-z0-9]+', '-', 'g')) || '-' || v.ags,
        'kreis', v.ags, v.name, v.bez, :'land_id', ST_Multi(v.geom)::geometry(MultiPolygon, 25832), 'bkg-vg25'
 FROM staging.vg25_region v
 WHERE v.kind = 'kreis'

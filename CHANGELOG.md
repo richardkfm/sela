@@ -77,7 +77,12 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   - the advisory note names the Land's authority (LfU Brandenburg, LfULG Sachsen); copy that
     said "LfU" or "Uckermark" where a Land is meant now says "Landesamt" or names the region.
 - `scripts/install.sh --data brandenburg|sachsen` beside `uckermark`; `SELA_REGION` for the ingest
-  and the explorer's default; `pnpm db:materialize -- --region=` (`--pilot-region=` still works).
+  and the explorer's default; `pnpm db:materialize -- --region=` (`--pilot-region=` still works)
+  and `--steps=verdicts,outcomes,overview` to run only the named parts — a Land takes tens of
+  minutes, and a run cut short is resumed, not restarted.
+- `lfu-bb-biotopkataster` re-pinned to the archive LfU republished on 2026-10-07 (Stand 16.09.2026;
+  same licence, layers and fields; 319 016 / 88 434 / 28 845 features) — the pin guard stopped the
+  whole-Brandenburg run on the size change, as designed (`sources.md` §2.12, §6).
 - Docs: ADR-0012; `sources.md` §2.13, §2.14, §3, §6; `design-language.md` §3, §4.2b, §7b; `mvp.md`
   F1, U11; `scoring-criteria.md` protection rows and §6; `ingest/regions/README.md`; the status
   lines in `CLAUDE.md` and `README.md`.
@@ -93,15 +98,33 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   `countVerdicts`, `listRegionSources` and `unitTile` take a `RegionScope`;
   `resolvePilotRegion`/`getRegionSummary` are `resolveRegion`/`getRegionSummary` over the
   `region` table; `PilotRegionInfo` carries `level`, `ags` and `land`.
-- `04_generate_grid.sql` decides "covered" against the boundary subdivided into small pieces (the
-  pieces' intersections must add up to the whole hexagon) instead of `ST_CoveredBy` against the
-  whole polygon, which detoasted a 75 000-vertex Land boundary per hexagon and did not finish for
-  Sachsen in 26 minutes; the same cells result. The dedupe checks `&&` before `ST_Equals`.
+- `04_generate_grid.sql` decides "covered" against the boundary subdivided into small pieces,
+  set-based (a hexagon wholly inside a piece, else the pieces' intersections adding up to the whole
+  hexagon) instead of `ST_CoveredBy` against the whole polygon, which detoasted a 75 000-vertex
+  Land boundary per hexagon and did not finish for Sachsen in 26 minutes; the same cells result
+  (the Uckermark: 117 191, in 6 seconds). The dedupe checks `&&` before `ST_Equals`.
 - `02b_extract_pilot_boundary.sh` wrote a null geometry (OGR's SQL dialect drops a GeoPackage's
   geometry column when it is not named) — it had never been run; corrected and run, its Uckermark
   output matches the committed boundary point for point.
+- `replaceOutcomesForPilotRegion` writes the `outcome_input` links from the ids `RETURNING` gives,
+  not by joining back onto `outcome`: inside the transaction the table's statistics predate the
+  delete, and the join re-hashed everything inserted so far on every batch — quadratic, 117 rows/s
+  on Sachsen's 8.5 million outcome rows.
 - `MethodNote` takes `authorityDe`; `Legend` takes `overview` and `hasOverview`; `Map` takes
   `showBoundary`, `initialView`, `filter` and reports `onViewChange`.
+- Found when the whole Land Brandenburg was run (1 137 346 cells): `14_protection.sh` selected
+  the geometry column by the shapefile's name, which the LfU GeoPackages do not use — it now reads
+  the column's name from the file; `20_sample.sql` read the irradiation and slope rasters in a
+  lateral join aggregated in one query, which the planner sorted with the raster tile attached to
+  every row and spilled more temp space than the disk had — the pixel values are read into a temp
+  table first, the written values unchanged.
+- Found on the first Land-sized explorer: every page took 7–20 s because the region summary asked
+  per region, with a correlated `EXISTS` on `spatial_unit.pilot_region`, whether it has a grid of
+  its own, and the planner scanned all cells for each Kreis that has none. `regions.ts` lists the
+  grid regions once by walking that index one distinct value at a time (a recursive skip scan).
+- `07_materialize_scores.ts --methods=water-arcegmo-v2[,…]` writes one cited method's rows alone:
+  each method is one transaction of its own, so a run that lost one method (a disk that filled)
+  is completed without rewriting the Land's others.
 
 
 ### Added — Docker installer and prebuilt images

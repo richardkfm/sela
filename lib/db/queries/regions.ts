@@ -69,8 +69,21 @@ interface RegionRow {
   has_grid: boolean;
 }
 
-const REGION_COLUMNS = `r.id, r.kind, r.ags, r.name, r.bez, r.parent_id, r.unit_count,
-  EXISTS (SELECT 1 FROM spatial_unit su WHERE su.pilot_region = r.id) AS has_grid`;
+// Which regions have a grid of their own is read by walking the index on
+// spatial_unit.pilot_region one distinct value at a time (a recursive "skip
+// scan": a handful of index probes). Asked per region as a correlated EXISTS,
+// the planner expected a match early and scanned all 1.8 million cells for
+// every Kreis that has none — 18 scans, 7.5 s, for Brandenburg's children.
+const GRID_REGIONS = `WITH RECURSIVE grid_regions AS (
+    (SELECT pilot_region FROM spatial_unit ORDER BY pilot_region LIMIT 1)
+    UNION ALL
+    SELECT (SELECT su.pilot_region FROM spatial_unit su WHERE su.pilot_region > g.pilot_region ORDER BY su.pilot_region LIMIT 1)
+    FROM grid_regions g WHERE g.pilot_region IS NOT NULL
+  )`;
+const REGION_SELECT = `${GRID_REGIONS}
+  SELECT r.id, r.kind, r.ags, r.name, r.bez, r.parent_id, r.unit_count,
+    r.id IN (SELECT pilot_region FROM grid_regions WHERE pilot_region IS NOT NULL) AS has_grid
+  FROM region r`;
 
 function toNode(row: RegionRow): RegionNode {
   return {
@@ -85,7 +98,7 @@ function toNode(row: RegionRow): RegionNode {
 }
 
 async function regionRow(id: string): Promise<RegionRow | null> {
-  const rows = await query<RegionRow>(`SELECT ${REGION_COLUMNS} FROM region r WHERE r.id = $1`, [id]);
+  const rows = await query<RegionRow>(`${REGION_SELECT} WHERE r.id = $1`, [id]);
   return rows[0] ?? null;
 }
 
@@ -122,7 +135,7 @@ export async function resolveRegion(requested: string | null, fallback: string):
 /** Every region with cells to show, Länder first, for the region switch. */
 export async function listAvailableRegions(): Promise<RegionNode[]> {
   const rows = await query<RegionRow>(
-    `SELECT ${REGION_COLUMNS} FROM region r WHERE r.unit_count > 0 ORDER BY r.kind = 'fixture', r.kind = 'kreis', r.name`,
+    `${REGION_SELECT} WHERE r.unit_count > 0 ORDER BY r.kind = 'fixture', r.kind = 'kreis', r.name`,
   );
   return rows.map(toNode);
 }
@@ -135,10 +148,10 @@ export async function getRegionSummary(regionId: string): Promise<RegionSummary 
 
   const [parentRows, childRows, bboxRows, overviewRows] = await Promise.all([
     row.parent_id
-      ? query<RegionRow>(`SELECT ${REGION_COLUMNS} FROM region r WHERE r.id = $1`, [row.parent_id])
+      ? query<RegionRow>(`${REGION_SELECT} WHERE r.id = $1`, [row.parent_id])
       : Promise.resolve([] as RegionRow[]),
     query<RegionRow>(
-      `SELECT ${REGION_COLUMNS} FROM region r WHERE r.parent_id = $1 AND r.unit_count > 0 ORDER BY r.name`,
+      `${REGION_SELECT} WHERE r.parent_id = $1 AND r.unit_count > 0 ORDER BY r.name`,
       [row.id],
     ),
     regionBBox(row.id, scope),

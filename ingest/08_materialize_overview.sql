@@ -30,6 +30,11 @@ FROM region r
 WHERE r.kind = 'kreis' AND r.parent_id = :'grid_region'
   AND EXISTS (SELECT 1 FROM spatial_unit su WHERE su.pilot_region = :'grid_region' AND left(su.ags, 5) = r.ags);
 
+-- Fresh statistics: the verdicts were just written in bulk, and a plan made on
+-- stale counts turned the join below into nested loops on a Land.
+ANALYZE suitability_verdict;
+ANALYZE spatial_unit;
+
 -- One row per cell with its three verdicts; cells without a verdict row read "unscored".
 CREATE TEMP TABLE cell_verdict AS
 SELECT su.id, su.ags, ST_Centroid(su.geom) AS centre,
@@ -91,6 +96,9 @@ SELECT region_id, level_m, i, j, technology, verdict, count(*) AS n
 FROM overview_cell
 CROSS JOIN LATERAL (VALUES ('pv', v_pv), ('agripv', v_agripv), ('wind', v_wind)) AS tv(technology, verdict)
 GROUP BY region_id, level_m, i, j, technology, verdict;
+-- The per-hexagon counts below look this table up once per hexagon.
+CREATE INDEX ON overview_class (region_id, level_m, i, j);
+ANALYZE overview_class;
 
 CREATE TEMP TABLE overview_dominant AS
 SELECT DISTINCT ON (oc.region_id, oc.level_m, oc.i, oc.j, oc.technology)

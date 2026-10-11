@@ -6,7 +6,14 @@
 // ingest/README.md "Materializing scores (Phase 3, 0.3.0)".
 //
 // Usage: pnpm db:materialize -- --region=fixture-region [--outcomes=illustrative|methods|none]
+//                                [--steps=verdicts,outcomes,overview] [--methods=water-arcegmo-v2,…]
 //        (--pilot-region= is accepted as the older spelling)
+//
+// --steps runs only the named parts — a Land takes tens of minutes, and a
+// run cut short (the Sachsen run of 2026-10-10 lost its outcome pass to a
+// time limit after the verdicts had committed) is resumed, not restarted.
+// Each part replaces its own rows; none depends on the others having run in
+// the same invocation.
 //
 // Outcomes default to `illustrative` for the synthetic fixture and `methods`
 // for every real region. The illustrative outcome shapes invent energy,
@@ -53,21 +60,53 @@ import {
 } from "../lib/scoring/illustrative-weights";
 
 type OutcomeMode = "illustrative" | "methods" | "none";
+type Step = "verdicts" | "outcomes" | "overview";
+const ALL_STEPS: readonly Step[] = ["verdicts", "outcomes", "overview"];
 
 /** Units per chunk: ~100 000 cells × a dozen values is a few hundred MB of rows, well inside a 2 GB heap. */
 const CHUNK_UNITS = 50_000;
 
 const OVERVIEW_SQL = path.join(path.dirname(fileURLToPath(import.meta.url)), "08_materialize_overview.sql");
 
-function parseArgs(argv: readonly string[]): { pilotRegion: string; outcomes: OutcomeMode } {
+function parseArgs(argv: readonly string[]): {
+  pilotRegion: string;
+  outcomes: OutcomeMode;
+  steps: ReadonlySet<Step>;
+  methods: ReadonlySet<string> | null;
+} {
   const flag = argv.find((a) => a.startsWith("--region=") || a.startsWith("--pilot-region="));
   const pilotRegion = flag ? flag.slice(flag.indexOf("=") + 1) : "fixture-region";
   const outcomesFlag = argv.find((a) => a.startsWith("--outcomes="))?.slice("--outcomes=".length);
   if (outcomesFlag !== undefined && !["illustrative", "methods", "none"].includes(outcomesFlag)) {
     throw new Error(`--outcomes must be "illustrative", "methods" or "none", got "${outcomesFlag}"`);
   }
+  const stepsFlag = argv.find((a) => a.startsWith("--steps="))?.slice("--steps=".length);
+  const steps = new Set<Step>(ALL_STEPS);
+  if (stepsFlag !== undefined) {
+    steps.clear();
+    for (const step of stepsFlag.split(",").map((x) => x.trim()).filter(Boolean)) {
+      if (!(ALL_STEPS as readonly string[]).includes(step)) throw new Error(`--steps: unknown step "${step}" (verdicts, outcomes, overview)`);
+      steps.add(step as Step);
+    }
+    if (steps.size === 0) throw new Error("--steps names no step");
+  }
+  // --methods=water-arcegmo-v2[,…] runs only the named cited methods of the
+  // outcome step: each method's rows are one transaction of its own, so a
+  // run that lost one method (a disk that filled, a kill) is completed by
+  // writing that method alone rather than rewriting the Land's others.
+  const methodsFlag = argv.find((a) => a.startsWith("--methods="))?.slice("--methods=".length);
+  let methods: ReadonlySet<string> | null = null;
+  if (methodsFlag !== undefined) {
+    const known = CITED_OUTCOME_METHODS.map((c) => c.method.methodVersion);
+    const named = methodsFlag.split(",").map((x) => x.trim()).filter(Boolean);
+    for (const m of named) {
+      if (!known.includes(m)) throw new Error(`--methods: unknown method "${m}" (${known.join(", ")})`);
+    }
+    if (named.length === 0) throw new Error("--methods names no method");
+    methods = new Set(named);
+  }
   const fallback: OutcomeMode = pilotRegion === "fixture-region" ? "illustrative" : "methods";
-  return { pilotRegion, outcomes: (outcomesFlag as OutcomeMode | undefined) ?? fallback };
+  return { pilotRegion, outcomes: (outcomesFlag as OutcomeMode | undefined) ?? fallback, steps, methods };
 }
 
 function* chunks<T>(items: readonly T[], size: number): Generator<readonly T[]> {
@@ -85,8 +124,13 @@ function groupByUnit(values: readonly CriterionValue[]): Map<string, CriterionVa
 }
 
 /** The cited outcome methods (ADR-0008): each method's rows replace its previous run in one transaction, chunk by chunk. */
-async function materializeCitedMethods(pilotRegion: string, unitIds: readonly string[]): Promise<void> {
+async function materializeCitedMethods(
+  pilotRegion: string,
+  unitIds: readonly string[],
+  only: ReadonlySet<string> | null,
+): Promise<void> {
   for (const cited of CITED_OUTCOME_METHODS) {
+    if (only && !only.has(cited.method.methodVersion)) continue;
     await upsertOutcomeMethod(cited.method);
     let valueCount = 0;
     async function* rows(): AsyncGenerator<OutcomeRowWithInputs> {
@@ -102,9 +146,9 @@ async function materializeCitedMethods(pilotRegion: string, unitIds: readonly st
 }
 
 async function main() {
-  const { pilotRegion, outcomes } = parseArgs(process.argv.slice(2));
+  const { pilotRegion, outcomes, steps, methods } = parseArgs(process.argv.slice(2));
   console.log(
-    `materializing verdicts for region "${pilotRegion}" (criteria with weight > 0 are scored with the ` +
+    `materializing ${[...steps].join(", ")} for region "${pilotRegion}" (criteria with weight > 0 are scored with the ` +
       `illustrative weights; real PV is classified by the decided rules, real-pv-v1) ` +
       `(method_version=${CURRENT_METHOD_VERSION}, outcomes=${outcomes})`,
   );
@@ -213,15 +257,18 @@ async function main() {
     }
   }
 
-  const verdictCount = await replaceVerdictsForPilotRegion(pilotRegion, CURRENT_METHOD_VERSION, verdicts());
-  overlapsByUnit.clear();
-  if (outcomes === "methods") {
-    await materializeCitedMethods(pilotRegion, unitIds);
+  if (steps.has("verdicts")) {
+    const verdictCount = await replaceVerdictsForPilotRegion(pilotRegion, CURRENT_METHOD_VERSION, verdicts());
+    console.log(
+      `materialized ${verdictCount} verdicts (${skippedVerdicts} skipped — no scoreable criteria) ` +
+        `and ${outcomeCount} illustrative outcome rows across ${unitIds.length} units`,
+    );
   }
-  console.log(
-    `materialized ${verdictCount} verdicts (${skippedVerdicts} skipped — no scoreable criteria) ` +
-      `and ${outcomeCount} illustrative outcome rows across ${unitIds.length} units`,
-  );
+  overlapsByUnit.clear();
+  if (steps.has("outcomes") && outcomes === "methods") {
+    await materializeCitedMethods(pilotRegion, unitIds, methods);
+  }
+  if (!steps.has("overview")) return;
 
   console.log("materializing the overview pyramid and per-region counts (ingest/08_materialize_overview.sql)");
   const sql = (await readFile(OVERVIEW_SQL, "utf8"))

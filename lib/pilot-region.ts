@@ -36,6 +36,8 @@ export interface LandConfig {
   readonly protectionSourceId: string;
   /** The authority named in the advisory note beside DWD and BKG. */
   readonly protectionAuthorityDe: string;
+  /** A Gemeinde of this Land the search hint can name. */
+  readonly searchExampleDe: string;
   /**
    * Which outcome inputs the Land has a confirmed source for. Where one is
    * missing the methods say *noch nicht modelliert*; the screens add that the
@@ -53,6 +55,7 @@ export const LAENDER: Readonly<Record<string, LandConfig>> = {
     jurisdictions: ["DE", "DE-BB"],
     protectionSourceId: "lfu-bb-schutzgebiete",
     protectionAuthorityDe: "LfU Brandenburg",
+    searchExampleDe: "Prenzlau",
     outcomeSources: { peat: true, water: true, habitat: true },
   },
   "14": {
@@ -62,6 +65,7 @@ export const LAENDER: Readonly<Record<string, LandConfig>> = {
     jurisdictions: ["DE", "DE-SN"],
     protectionSourceId: "lfulg-sn-schutzgebiete",
     protectionAuthorityDe: "LfULG Sachsen",
+    searchExampleDe: "Görlitz",
     // docs/product/roadmap-planning-tool.md A4: no Saxon or national source has
     // passed the licence gate for these yet (sources.md §2.14).
     outcomeSources: { peat: false, water: false, habitat: false },

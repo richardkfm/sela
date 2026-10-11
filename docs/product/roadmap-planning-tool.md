@@ -165,9 +165,83 @@ confirmation in review (A6).
 
 ## 7. What was verified here, and what was not
 
-Recorded as the work completed; see `CHANGELOG.md` for the final state.
+Recorded as the work completed; see `CHANGELOG.md` for the final state. Everything below ran
+against a local PostgreSQL 16 / PostGIS 3.4 / GDAL 3.8 on four cores and 15 GB (this environment
+has no Docker daemon, so the tools were installed natively).
 
-- Unit tests and the fixture pipeline run against a local PostGIS (this environment has no
-  Docker daemon; PostgreSQL 16, PostGIS 3.4 and GDAL 3.8 were installed natively).
-- The Saxon protected-area archives were fetched and read (§2.13).
-- VG25 was fetched; the Land and Kreis boundaries were cut from it with the committed script.
+- 142 unit tests; the fixture pipeline (migrate, ingest, materialise with the overview); the
+  Playwright suite (31 existing and 8 new tests for the overview tiles and the export) — all pass.
+- The Saxon protected-area archives were fetched and read (`sources.md` §2.13); the licence read
+  at the GDI-DE record of the service.
+- VG25 was fetched; the Land boundaries were cut from it with the committed script, whose first
+  real run showed it had written null geometries before (fixed; the Uckermark output is identical
+  to the committed file).
+
+**Sachsen, ingested end to end on 2026-10-10** (`REGION=sachsen-14 ingest/run.sh`):
+
+| Step | Result |
+|---|---|
+| Whole ingest (fetch verification, boundary, grid, loads, sampling, overlaps, stamp) | **13 min 43 s** |
+| Grid (`04_generate_grid.sql`, set-based) | **706 488** cells; 18 713 of them covered across several boundary pieces; under 3 min. The first form — `ST_CoveredBy` against the whole 74 390-vertex boundary — did not finish in 26 min (ADR-0012) |
+| CLC5 inside the extent | 44 202 polygons |
+| LfULG protected areas | 366 NSG, 2 Nationalpark parts, 273 LSG, 1 Biosphärenreservat, 756 FFH, 172 SPA |
+| *Gemeinden* / Kreise | 418 / 13; every cell stamped, none outside a *Gemeinde* |
+| Criterion values | 3 531 083 (irradiation on 705 131 cells — the 1 km grid has no value at 1 357 cell centres —, slope, land cover and both protection shares on all) |
+| Protection overlaps (Prüfhinweise evidence) | 510 387 rows: LSG 247 090, SPA 115 926, FFH 101 600, NSG 29 796, BR 12 064, Nationalpark 3 911 |
+| Verdicts (`07_materialize_scores.ts`, chunks of 50 000) | about 25 min for 706 488 × 3 technologies; PV: *ohne Einschränkung* 295 665 · *eingeschränkt* 114 714 · *nicht vorgesehen* 270 710 · *ausgeschlossen* 25 399; wind: 25 399 excluded, the rest *nicht bewertet* |
+| Overview and per-region counts (`08_materialize_overview.sql`) | 3 min 15 s: 7 431 hexagons of 1 km and 352 of 5 km for the Land, plus each Kreis's own (Bautzen 92 113 cells … Chemnitz 8 518) |
+| Cited outcomes (`--steps=outcomes`, after the writer fix) | **12 min 48 s** for the three methods: 8 477 856 rows each (706 488 cells × 6 scenarios × 2 metrics); `pv-yield-v1` modelled on 410 005 cells under `develop_pv` (820 011 rows) from 2 118 107 criterion values, *trifft nicht zu* elsewhere, *noch nicht modelliert* for agri-PV and wind; peat climate and water *noch nicht modelliert* throughout (no Saxon source); 3 235 584 `outcome_input` links, no modelled row without one. The first form of the writer managed 117 rows/s (ADR-0012, `CHANGELOG.md`) |
+
+So a Land of Sachsen's size takes about **55 minutes** from fetch to a complete explorer (14 min
+ingest, 25 min verdicts, 13 min outcomes, 3 min overview) on four cores. The Sachsen verdict
+figure was not timed in isolation (that run was interrupted and resumed); Brandenburg's 1.6 ×
+larger verdict pass took 3 min timed on its own, so read the Sachsen figure as an upper bound.
+
+**Brandenburg, ingested end to end on 2026-10-10** (`REGION=brandenburg-12 ingest/run.sh`, the
+whole Land, 29 697 km²), run after Sachsen into the same database:
+
+| Step | Result |
+|---|---|
+| Whole ingest | **about 50 min**, in three segments because two steps failed on the Land's scale and were fixed and resumed (below): 10 min 55 s to the end of DGM200, 3 min 45 s for the Land loads, 35 min 42 s from sampling to the stamp |
+| Grid | **1 137 346** cells |
+| CLC5 inside the extent | 76 567 polygons |
+| LfU protected areas (WFS, statewide) | 641 NSG, 1 Nationalpark, 226 LSG, 5 Biosphärenreservate, 593 FFH, 27 SPA |
+| Moorbodenkarte / ArcEGMO water balance / Biotopkataster | 199 266 peat-soil and 300 000 carbon polygons; 1 157 871 *Elementarflächen*; 319 016 area, 88 434 line and 28 845 point biotopes (the counts the LfU's own documentation states) |
+| *Gemeinden* / Kreise | 413 / 18; every cell stamped, none outside a *Gemeinde* |
+| Criterion values | 10 496 488 (irradiation on 1 136 918 cells; slope, land cover, both protection shares, both peat shares and both water values on all; carbon stock on 260 802) |
+| Protection overlaps (Prüfhinweise evidence) | 1 117 945 rows: LSG 468 992, SPA 267 145, FFH 169 885, NSG 116 784, BR 90 884, Nationalpark 4 255 |
+| Habitat overlaps | 1 655 769 area, 345 518 line, 28 365 point biotope–cell pairs; 530 287 cells touch an area biotope, 504 533 of them a protected one |
+| Verdicts (`--steps=verdicts`) | **3 min 0 s** for 1 137 346 × 3 technologies (2 367 767 verdicts; 1 044 271 wind cells *nicht bewertet*); PV: *ohne Einschränkung* 409 629 · *eingeschränkt* 160 860 · *nicht vorgesehen* 473 782 · *ausgeschlossen* 93 075 — 8.2 % of the Land, against 15.8 % in the Uckermark seen as its sector and 3.6 % in Sachsen (`region_verdict_count`) |
+| Overview and per-region counts (`--steps=overview`) | **2 min 59 s**: 11 849 hexagons of 1 km and 541 of 5 km for the Land, plus each of the 18 Kreise's own (Uckermark 117 822 cells as a sector of the Land — 631 more than its own grid had, at the boundary, as §6 R3 predicted; Potsdam-Mittelmark 99 359 … Frankfurt (Oder) 5 658) |
+| Cited outcomes (`--steps=outcomes`) | **all three methods, about 35 min in two runs**: `pv-yield-v1` 13 648 152 rows (modelled on 570 420 cells under `develop_pv`, from 3 411 610 criterion values) and `peat-climate-ipcc2013-v1` 13 648 152 rows (modelled on 358 933 cells under `preserve`, `restore` and `status_quo`, from 3 672 840 values — the first Land where the climate method runs on a real source) in about 25 min; `water-arcegmo-v2` 13 648 152 rows (modelled on all 1 137 346 cells under `preserve` and `status_quo`, from 2 274 692 values) in **9 min 45 s** — every modelled row has its `outcome_input` links. The water method's first attempt, in the same run as the other two, failed after 30 min with *No space left on device* and rolled back cleanly: the three methods need about 12 GB and this environment's 40 GB disk had 14 GB free with Sachsen's outcomes in place. It was written on its own (`--methods=water-arcegmo-v2`, added for exactly this) after Sachsen's 16 955 712 peat and water outcome rows were deleted locally — every one of them *noch nicht modelliert* with no input, since Sachsen has no peat or water source, and the explorer shows the same words when the rows are absent; they are recomputed in minutes when Sachsen gets a source |
+
+**Found on the way, at the Land's scale, and fixed:** the protection loader (rewritten for two
+Länder) selected the geometry column by the shapefile's name, which the LfU GeoPackages do not
+use — it now reads the column's name from the file; the sampling step's raster reads (irradiation,
+slope) were a lateral join aggregated in one query, and on 1.14 million cells the planner sorted
+the join output with the raster tile on every row and spilled more temp space than the disk had —
+the pixel values are now read into a temp table first (the values written are unchanged).
+
+**Found on the first Land-sized explorer, and fixed:** every page took 7–20 s. The region summary
+asked, per region, whether it has a grid of its own with a correlated `EXISTS` on
+`spatial_unit.pilot_region`; the planner expected an early match and scanned all 1.8 million
+cells for each of the 18 Kreise that have none (7.5 s), and the region switch asked the same of
+all 34 regions (14 s). The grid regions are now listed once by walking the index one distinct
+value at a time (under 1 ms); the pages render in well under a second.
+
+**Sizing, measured:** the `outcome` table holds 36 rows per cell (3 methods × 6 scenarios × 2
+metrics) and took 7.2 GB for Sachsen's 706 488 cells — about **10 GB per million cells**, half of
+it the unique key index over four text columns. The whole-Land pair therefore needs about 20 GB
+for outcomes alone; this is the number `ADR-0011`'s deployment sizing should use. The working
+environment here has a 40 GB disk budget, which the two Länder's outcomes do not fit (the table
+above). With a 100 m cell as the unit, a deployment of both Länder should plan **30 GB** for the
+database (outcomes 20, criterion values 4, cells 2, verdicts and overlaps 2, and room for the
+writer's transactions) besides the raw archives and the staging tables.
+
+**Found on the way, and fixed:** the outcome writer linked inputs by joining back onto `outcome`,
+which inside the transaction planned on stale statistics and went quadratic (117 rows/s — a day for
+Sachsen; now from `RETURNING` ids); the materialiser could not be resumed when a run was cut short
+after its verdict pass (`--steps=verdicts,outcomes,overview` now runs the named parts); the Kreis
+ids transliterated umlauts one letter to one (`gorlitz`), now the German way (`goerlitz-14626`,
+`meissen-14627`); the region registration appended to its staging table without the schema; the
+overview's per-hexagon counts had no index on their temp table.
