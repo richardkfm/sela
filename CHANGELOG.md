@@ -122,6 +122,9 @@ Breaking changes to public interfaces, scoring semantics, or data contracts are 
   per region, with a correlated `EXISTS` on `spatial_unit.pilot_region`, whether it has a grid of
   its own, and the planner scanned all cells for each Kreis that has none. `regions.ts` lists the
   grid regions once by walking that index one distinct value at a time (a recursive skip scan).
+- `07_materialize_scores.ts --methods=water-arcegmo-v2[,…]` writes one cited method's rows alone:
+  each method is one transaction of its own, so a run that lost one method (a disk that filled)
+  is completed without rewriting the Land's others.
 
 
 ### Added — Docker installer and prebuilt images
